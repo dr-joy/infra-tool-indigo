@@ -4,11 +4,10 @@ import { db } from '../db.js';
 import { HttpError } from './utils.js';
 import { SESSION_COOKIE_NAME } from './auth-config.js';
 import { getActiveSession } from './session.js';
+import { loadMemberships, type Actor, type Membership } from './authorize.js';
 
-// Lớp 1 (phiên) + lớp 1.5 (trạng thái tài khoản) của chuỗi gác 5 lớp ở CR §6.2 — đúng 2 lớp đứng
-// TRƯỚC authorize(). authorize() (lớp ngữ cảnh team → hiển thị → năng lực → vai đặc biệt) thuộc Lát 3
-// (Council 1aa7fe8b), CHƯA tồn tại — route Lát 2 tạm dùng guard viết tay (requireAdmin) thay cho
-// authorize(), sẽ refactor lại khi Lát 3 có policyKind phù hợp (xem docs/exchanges/2026-09-21.md).
+// Lớp 1 (phiên) + lớp 1.5 (trạng thái tài khoản) của chuỗi gác 5 lớp ở CR §6.2 — đúng 2 lớp đứng TRƯỚC
+// authorize() (server/lib/authorize.ts, Lát 3 — lớp ngữ cảnh team → hiển thị → năng lực → vai đặc biệt).
 export interface AuthenticatedUser {
   id: number;
   email: string;
@@ -16,6 +15,13 @@ export interface AuthenticatedUser {
   avatar: string | null;
   status: 'pending' | 'active' | 'disabled';
   systemRole: 'user' | 'admin';
+  memberships: Membership[];
+}
+
+// Dựng actor cho authorize() từ req.user — memberships/systemRole đã được load MỚI mỗi request ở
+// loadUserFromSessionCookie (FR-4a, không cache).
+export function actorFromRequest(req: Request): Actor {
+  return { userId: req.user!.id, systemRole: req.user!.systemRole, memberships: req.user!.memberships };
 }
 
 declare global {
@@ -52,7 +58,8 @@ function loadUserFromSessionCookie(req: Request): AuthenticatedUser | null {
     displayName: row.display_name,
     avatar: row.avatar,
     status: row.status as AuthenticatedUser['status'],
-    systemRole: row.system_role as AuthenticatedUser['systemRole']
+    systemRole: row.system_role as AuthenticatedUser['systemRole'],
+    memberships: loadMemberships(row.id)
   };
 }
 
@@ -76,16 +83,6 @@ export const requireSession: RequestHandler = (req: Request, _res: Response, nex
 export const requireActiveAccount: RequestHandler = (req: Request, _res: Response, next: NextFunction) => {
   if (req.user!.status !== 'active') {
     throw new HttpError(403, 'Tài khoản đang chờ Admin duyệt team/vai trò', 'ACCOUNT_PENDING');
-  }
-  next();
-};
-
-// Guard viết tay thay authorize() lớp vai đặc biệt (tạm thời — xem comment đầu file). Chỉ dùng cho
-// route Admin thật rõ ràng (duyệt/từ chối join-request, thu hồi phiên) — KHÔNG dùng cho ngữ cảnh team
-// (đó là việc của authorize() ở Lát 3).
-export const requireAdmin: RequestHandler = (req: Request, _res: Response, next: NextFunction) => {
-  if (req.user!.systemRole !== 'admin') {
-    throw new HttpError(403, 'Chỉ Admin được thực hiện hành động này', 'FORBIDDEN_ADMIN_ONLY');
   }
   next();
 };

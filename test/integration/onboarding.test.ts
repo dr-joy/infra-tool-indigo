@@ -323,13 +323,33 @@ test('duyệt với teamId Admin tự sửa nhưng KHÔNG tồn tại -> 404 rõ
 
   const approve = await fetch(`${base}/api/admin/join-requests/${jr.id}/approve`, {
     method: 'POST', headers: { ...cookieHeader(adminSession), 'Content-Type': 'application/json' },
-    body: JSON.stringify({ rowVersion: jr.row_version, teamId: 999999 })
+    body: JSON.stringify({ rowVersion: jr.row_version, approvedTeamId: 999999 })
   });
   assert.equal(approve.status, 404);
 
   // Đơn KHÔNG được đổi thành approved dù ghi team_members thất bại giữa đường -> transaction rollback đúng.
   const stillPending = db.prepare("SELECT status FROM join_requests WHERE id = ?").get(jr.id) as { status: string };
   assert.equal(stillPending.status, 'pending');
+});
+
+test('POST .../approve: THIẾU rowVersion -> 409, KHÔNG được tự khớp version hiện tại (Council review run e8d20dc3)', async () => {
+  const teamId = seedTeam('Team Approve Thiếu Version');
+  const adminSession = await loginAsAdmin();
+  const userSession = await loginAs('missing-version-approve@drjoy.jp', 'Thiếu rowVersion lúc duyệt');
+  await fetch(`${base}/api/onboarding/join-request`, {
+    method: 'POST', headers: { ...cookieHeader(userSession), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ teamId, role: 'member' })
+  });
+  const list = await (await fetch(`${base}/api/admin/join-requests`, { headers: cookieHeader(adminSession) })).json();
+  const jr = list.joinRequests[list.joinRequests.length - 1];
+
+  const approve = await fetch(`${base}/api/admin/join-requests/${jr.id}/approve`, {
+    method: 'POST', headers: { ...cookieHeader(adminSession), 'Content-Type': 'application/json' },
+    body: JSON.stringify({})
+  });
+  assert.equal(approve.status, 409);
+  const stillPending = db.prepare("SELECT status FROM join_requests WHERE id = ?").get(jr.id) as { status: string };
+  assert.equal(stillPending.status, 'pending', 'không được duyệt khi thiếu rowVersion');
 });
 
 test('FR-34: đánh dấu đã đọc chỉ áp dụng cho đúng chủ thông báo, đọc lại vẫn còn trong danh sách với read_at', async () => {

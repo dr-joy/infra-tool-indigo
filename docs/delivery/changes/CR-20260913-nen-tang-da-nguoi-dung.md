@@ -1333,7 +1333,9 @@ authorize(input: AuthorizeInput): AuthorizationDecision
 - `GET|POST|PATCH|DELETE /api/admin/teams`, `/api/admin/teams/:id/members`, `/api/admin/feature-visibility`, `/api/admin/release-coordinator`
 - `GET /api/teams/:teamId/members` (mọi thành viên team đó xem được, chốt 19/09) `POST`/`DELETE /api/teams/:teamId/members/:userId` (chỉ Leader — FR-12)
 - `POST /api/admin/users/:id/revoke-sessions` — Admin thu hồi toàn bộ phiên của một user (FR-4a)
-- `GET /api/notifications`, `PATCH /api/notifications/:id/read`
+- `GET /api/notifications`, `POST /api/notifications/:id/read` (SỬA 21/09 — lỗi đánh máy lúc soạn CR ghi
+  `PATCH`; code thật Lát 2 dùng `POST`, đúng vì đây là hành động "đánh dấu đã đọc", không phải cập nhật
+  toàn bộ tài nguyên; xác nhận qua Council `f0a0e1bb`, xem [exchange 2026-09-21](../../exchanges/2026-09-21.md))
 - `GET /api/audit` — nhật ký thao tác quan trọng, projection theo Admin (metadata) hoặc Leader (chi tiết team mình) — FR-11a
 - `GET /api/release/schedule-board` — lịch release chung, field-set khác nhau theo vai trò (FR-24)
 - `POST /api/release/batches/:id/submit|lock|unlock-request|approve-unlock|force-time` (FR-25, FR-26, FR-27)

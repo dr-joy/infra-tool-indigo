@@ -1,0 +1,29 @@
+{
+  "agent": "codex",
+  "bodyMarkdown": "#### Reviewer\n\nPhản đối chặn: đề xuất “mở rộng `policyKind: team_feature` với `scope.teamId` tùy chọn” không khớp hợp đồng đã chốt ngày 19/09. Hợp đồng đó đã hỗ trợ hành động toàn cục: gọi `authorize()` với `scope.teamId: null` và `feature: null`; nhờ vậy bỏ qua kiểm feature/membership, rồi policy kiểm đúng `actor.systemRole = admin`. Không nên gọi các route Admin toàn cục là `team_feature`, vì sẽ làm mờ ý nghĩa tầng bật/tắt chức năng và khiến kiểm thử fail-closed bị sai.\n\nCách sửa: giữ 6 route đi qua `authorize()`, nhưng khai báo rõ `feature: null`, `scope.teamId: null`, và policy chỉ cho `admin`. Kế hoạch test cũng phải tách: chỉ route có feature/team scope mới kiểm `FEATURE_DISABLED` và `NOT_TEAM_MEMBER`; route Admin toàn cục kiểm `ROLE_FORBIDDEN` khi không phải Admin.\n\nTôi không phản đối các phần còn lại: sửa hai route disable/enable và hai field approve theo thiết kế; giữ `ON DELETE CASCADE` khi chưa có xoá cứng; và bổ sung `GET /api/teams` vào inventory. Đã đối chiếu đề xuất vòng 2 với hợp đồng `authorize()` và inventory Lát 3 trong Council `1aa7fe8b`, cùng code Lát 2 hiện có.\n\n```yaml\nturn_result:\n  agent: \"codex\"\n  round: 2\n  blocking_objections: 1\n  new_decisions: 0\n  questions_for_user: 0\n  permission_requests: 0\n  converged: false\n  note: \"Cần giữ đúng cơ chế đã chốt: route Admin toàn cục gọi authorize với feature và teamId đều rỗng, không gộp chúng thành quyền team_feature.\"\n  rules_version_seen: \"RULES-2026-09-04-a\"\n  session_id: \"f0a0e1bb-844f-432e-ba2a-a07a68246127\"\n```\n",
+  "createdAt": "2026-09-21T13:40:09.706Z",
+  "questionCards": [],
+  "recordId": "f0a0e1bb-844f-432e-ba2a-a07a68246127-agent_turn-3",
+  "recordType": "agent_turn",
+  "roles": [
+    "Reviewer",
+    "QA",
+    "Infra"
+  ],
+  "round": 2,
+  "rulesVersion": "RULES-2026-09-04-a",
+  "schemaVersion": 1,
+  "sessionId": "f0a0e1bb-844f-432e-ba2a-a07a68246127",
+  "turnResult": {
+    "agent": "codex",
+    "blocking_objections": 1,
+    "converged": false,
+    "new_decisions": 0,
+    "note": "Cần giữ đúng cơ chế đã chốt: route Admin toàn cục gọi authorize với feature và teamId đều rỗng, không gộp chúng thành quyền team_feature.",
+    "permission_requests": 0,
+    "questions_for_user": 0,
+    "round": 2,
+    "rules_version_seen": "RULES-2026-09-04-a",
+    "session_id": "f0a0e1bb-844f-432e-ba2a-a07a68246127"
+  }
+}

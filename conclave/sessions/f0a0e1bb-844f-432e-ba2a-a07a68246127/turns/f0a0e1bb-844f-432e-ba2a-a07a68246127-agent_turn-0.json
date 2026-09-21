@@ -1,0 +1,29 @@
+{
+  "agent": "codex",
+  "bodyMarkdown": "#### Reviewer\n\n**1. Cách tôi hiểu vấn đề**\n\n- Đây là khảo sát độc lập trước khi chốt thiết kế Lát 3, không sửa code hay tài liệu.\n- Quyết định 19/09 đã chốt: năm chức năng của team mới đều `off`; team đang chọn chỉ ở client; Member được xem thành viên của chính team.\n- Lát 3 phải bổ sung lõi `authorize()` fail-closed, policy cố định, resolver scope từ DB, schema visibility/config/audit, các route quản trị còn thiếu, và chuyển các route Lát 2 đang dùng `requireAdmin` sang cùng cơ chế.\n- Code hiện có xác nhận ba lệch hợp đồng chính:\n  - User status dùng `PATCH /admin/users/:id/status`, không phải hai route enable/disable.\n  - Approve join request nhận `teamId` và `role`, không phải `approvedTeamId` và `approvedRole`.\n  - Các route quản trị hiện dùng `requireAdmin` viết tay; chưa có `authorize()`.\n- Với hợp đồng thiết kế đã được Council chốt, tôi nghiêng về việc sửa code và test để khớp hợp đồng, thay vì sửa CR theo implementation tạm của Lát 2. Nếu giữ shape cũ, inventory, policy action và frontend sau này sẽ phải mang hai cách diễn đạt cho cùng một hành động.\n\n**2. Giả định đang dùng**\n\n- `applyAuthSchema()` là nơi mở rộng các bảng `teams` và `team_members` đã được kéo sớm ở Lát 2; bổ sung cột cần dùng migration idempotent, không tạo lại bảng.\n- `team_members.joined_at` nên được thêm nếu audit hoặc hiển thị cần mốc tham gia; dữ liệu cũ phải được backfill rõ ràng.\n- `app_config` là singleton có khóa `id = 1`, giữ `release_coordinator_team_id` và `row_version`; không chứa bootstrap email.\n- Mỗi team mới được tạo cùng transaction với đúng năm dòng visibility `off`; thiếu dòng là lỗi fail-closed, không phải trạng thái mặc định ngầm.\n- `authorize()` ném `HttpError` có mã máy đọc được và chỉ trả context đã chuẩn hóa khi cho phép; route không tự kiểm Member/Leader/Admin.\n- Kiểm tra quyền luôn lấy scope tài nguyên từ DB; team đang chọn từ client không phải bằng chứng phân quyền.\n\n**3. Chỗ chưa rõ hoặc rủi ro**\n\n- `POST /admin/join-requests/:id/approve` hiện trả `404` khi đơn không còn `pending`; thiết kế 19/09 yêu cầu idempotence ngữ nghĩa cho đơn đã duyệt. Cần xử lý đồng thời đúng cả optimistic concurrency và retry.\n- Đổi Leader, thay đổi visibility, và đổi team điều phối đều có race thực tế giữa hai Admin. `row_version` và `withTransaction()` phải bao phủ toàn bộ chuỗi kiểm tra–ghi–audit, không chỉ câu lệnh update cuối.\n- Cascade tắt Project → Weekly phải cùng transaction, ghi audit đủ nguyên nhân cascade, và không tự bật Weekly khi Project bật lại.\n- `team_members` hiện dùng `ON DELETE CASCADE`; điều này xung đột với yêu cầu giữ audit/lịch sử nếu cho xóa team hoặc user. Chính sách xóa team cần được làm rõ trong thiết kế trước khi thêm `audit_log`.\n- Sáu route Lát 2 cần refactor không nên chỉ thay middleware: onboarding cho tài khoản `pending`, notification của chính chủ, và admin action là các policy khác nhau; policy registry phải biểu đạt được chúng mà không vô tình đòi membership/team visibility.\n- Bộ 12 integration test Lát 2 bị ảnh hưởng trực tiếp bởi đổi URL/body. Cần cập nhật test hợp đồng cùng lúc và thêm test phủ mã lỗi mới: thiếu membership, feature tắt, thiếu vai trò và không phải Release Coordinator.\n- `requireActiveAccount` đã tồn tại nhưng chưa được route nào dùng. Khi lắp authorize, thứ tự `requireSession` → trạng thái active phù hợp → authorization phải được cố định để không làm pending user nhận lỗi quyền team sai.\n- Audit có hai projection khác nhau cho Admin và Leader; chỉ che UI không đủ, cần query/projection backend không trả payload nhạy cảm ngoài team.\n\n```yaml\nturn_result:\n  agent: \"codex\"\n  round: 1\n  blocking_objections: 0\n  new_decisions: 0\n  questions_for_user: 0\n  permission_requests: 0\n  converged: false\n  note: \"Đã đối chiếu quyết định ngày 19/09 với code Lát 2 và xác định các lệch hợp đồng, điểm race cùng yêu cầu fail-closed cần được thiết kế kỹ trước khi triển khai Lát 3.\"\n  rules_version_seen: \"RULES-2026-09-04-a\"\n  session_id: \"f0a0e1bb-844f-432e-ba2a-a07a68246127\"\n```\n",
+  "createdAt": "2026-09-21T13:23:42.964Z",
+  "questionCards": [],
+  "recordId": "f0a0e1bb-844f-432e-ba2a-a07a68246127-agent_turn-0",
+  "recordType": "agent_turn",
+  "roles": [
+    "Reviewer",
+    "QA",
+    "Infra"
+  ],
+  "round": 1,
+  "rulesVersion": "RULES-2026-09-04-a",
+  "schemaVersion": 1,
+  "sessionId": "f0a0e1bb-844f-432e-ba2a-a07a68246127",
+  "turnResult": {
+    "agent": "codex",
+    "blocking_objections": 0,
+    "converged": false,
+    "new_decisions": 0,
+    "note": "Đã đối chiếu quyết định ngày 19/09 với code Lát 2 và xác định các lệch hợp đồng, điểm race cùng yêu cầu fail-closed cần được thiết kế kỹ trước khi triển khai Lát 3.",
+    "permission_requests": 0,
+    "questions_for_user": 0,
+    "round": 1,
+    "rules_version_seen": "RULES-2026-09-04-a",
+    "session_id": "f0a0e1bb-844f-432e-ba2a-a07a68246127"
+  }
+}

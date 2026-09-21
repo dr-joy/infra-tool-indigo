@@ -266,10 +266,10 @@ test('FR-4a: Admin disable tài khoản -> request kế tiếp của user đó b
   const usersList = await (await fetch(`${base}/api/admin/users`, { headers: { Cookie: adminHeader } })).json();
   const row = usersList.users.find((u: { id: number }) => u.id === userId);
 
-  const patch = await fetch(`${base}/api/admin/users/${userId}/status`, {
-    method: 'PATCH',
+  const patch = await fetch(`${base}/api/admin/users/${userId}/disable`, {
+    method: 'POST',
     headers: { Cookie: adminHeader, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status: 'disabled', rowVersion: row.row_version })
+    body: JSON.stringify({ rowVersion: row.row_version })
   });
   assert.equal(patch.status, 200);
 
@@ -279,12 +279,35 @@ test('FR-4a: Admin disable tài khoản -> request kế tiếp của user đó b
   assert.equal(body.code, 'ACCOUNT_DISABLED');
 });
 
-test('requireAdmin: user thường gọi /admin/users -> 403 FORBIDDEN_ADMIN_ONLY', async () => {
-  const { sessionCookie } = await loginAs('not-admin@drjoy.jp', 'Không phải Admin');
-  const res = await fetch(`${base}/api/admin/users`, { headers: { Cookie: `__Host-tm_session=${sessionCookie}` } });
+test('authorize() ROLE_FORBIDDEN: user active nhưng KHÔNG phải Admin gọi /admin/users -> 403', async () => {
+  const adminSession = (await loginAsAdmin()).sessionCookie;
+  const userSession = (await loginAs('not-admin@drjoy.jp', 'Không phải Admin')).sessionCookie;
+  const adminHeader = `__Host-tm_session=${adminSession}`;
+  const userHeader = `__Host-tm_session=${userSession}`;
+
+  // Phải active (không pending) để thật sự đi tới bước kiểm role trong authorize(), không bị chặn
+  // sớm hơn bởi requireActiveAccount (ACCOUNT_PENDING) — 2 lớp gác khác nhau, không lẫn.
+  const teamRes = await fetch(`${base}/api/admin/teams`, {
+    method: 'POST', headers: { Cookie: adminHeader, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: `Team cho not-admin ${Date.now()}` })
+  });
+  const teamId = (await teamRes.json()).id;
+  const meBefore = await (await fetch(`${base}/api/auth/me`, { headers: { Cookie: userHeader } })).json();
+  await fetch(`${base}/api/onboarding/join-request`, {
+    method: 'POST', headers: { Cookie: userHeader, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ teamId, role: 'member' })
+  });
+  const list = await (await fetch(`${base}/api/admin/join-requests`, { headers: { Cookie: adminHeader } })).json();
+  const jr = list.joinRequests.find((r: { user_id: number }) => r.user_id === meBefore.user.id);
+  await fetch(`${base}/api/admin/join-requests/${jr.id}/approve`, {
+    method: 'POST', headers: { Cookie: adminHeader, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rowVersion: jr.row_version })
+  });
+
+  const res = await fetch(`${base}/api/admin/users`, { headers: { Cookie: userHeader } });
   assert.equal(res.status, 403);
   const body = await res.json();
-  assert.equal(body.code, 'FORBIDDEN_ADMIN_ONLY');
+  assert.equal(body.code, 'ROLE_FORBIDDEN');
 });
 
 test('POST /admin/users/:id/revoke-sessions: phiên cũ của user đó bị từ chối ngay sau khi Admin thu hồi', async () => {
