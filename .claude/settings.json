@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"d:\\\\Web-project-001\\\\.claude\" -Recurse)",
+      "Bash(grep -v \"//\\\\|import\\\\|require\")",
+      "Bash(python3 -c ' *)"
+    ]
+  }
+}

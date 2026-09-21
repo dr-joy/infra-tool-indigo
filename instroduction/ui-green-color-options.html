@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Phương án màu xanh chuẩn hệ thống</title>
+  <style>
+    :root {
+      --page-bg: #edf1f0;
+      --text: #1f2a2e;
+      --muted: #647174;
+      --border: #9ca3af;
+      --record: #f8fafc;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background-color: var(--page-bg);
+      background-image:
+        url("data:image/svg+xml,%3Csvg width='104' height='90' viewBox='0 0 104 90' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23515b5e' stroke-opacity='0.12' stroke-width='1.4'%3E%3Cpath d='M26 2 50 16v28L26 58 2 44V16L26 2Z'/%3E%3Cpath d='M78 2 102 16v28L78 58 54 44V16L78 2Z'/%3E%3Cpath d='M52 32 76 46v28L52 88 28 74V46l24-14Z'/%3E%3C/g%3E%3C/svg%3E"),
+        linear-gradient(135deg, rgba(208, 216, 214, 0.65), rgba(241, 245, 244, 0.84));
+      background-size: 104px 90px, 100% 100%;
+    }
+
+    main {
+      width: min(1280px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 28px 0 40px;
+    }
+
+    header {
+      margin-bottom: 18px;
+      padding: 18px 20px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      line-height: 1.25;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      --primary: #0f766e;
+      --primary-hover: #115e59;
+      --soft: #ecfdf5;
+      --soft-hover: #ccfbf1;
+      --soft-border: #5eead4;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .card h2 {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+
+    .tag {
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--soft);
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .swatches {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .swatch {
+      min-height: 76px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--record);
+    }
+
+    .swatch-color {
+      height: 32px;
+      background: var(--color);
+    }
+
+    .swatch-body {
+      padding: 7px 8px;
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .swatch-body strong {
+      display: block;
+      margin-bottom: 2px;
+      font-size: 11px;
+    }
+
+    .demo {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: var(--record);
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .label {
+      width: 128px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    button {
+      min-height: 36px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      padding: 0 13px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: default;
+      transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+    }
+
+    .primary {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .primary.hover {
+      border-color: var(--primary-hover);
+      background: var(--primary-hover);
+      color: #fff;
+    }
+
+    .neutral {
+      border-color: #cbd5e1;
+      background: #fff;
+      color: #334155;
+    }
+
+    .neutral.hover {
+      border-color: var(--soft-border);
+      background: var(--soft);
+      color: var(--primary);
+    }
+
+    .soft {
+      border-color: var(--soft-border);
+      background: var(--soft);
+      color: var(--primary);
+    }
+
+    .soft.hover {
+      border-color: var(--primary);
+      background: var(--soft-hover);
+      color: var(--primary-hover);
+    }
+
+    .icon {
+      width: 36px;
+      padding: 0;
+      font-size: 18px;
+    }
+
+    .note {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .option-a { --primary: #0f766e; --primary-hover: #115e59; --soft: #ecfdf5; --soft-hover: #ccfbf1; --soft-border: #5eead4; }
+    .option-b { --primary: #0d9488; --primary-hover: #0f766e; --soft: #f0fdfa; --soft-hover: #ccfbf1; --soft-border: #5eead4; }
+    .option-c { --primary: #047857; --primary-hover: #065f46; --soft: #ecfdf5; --soft-hover: #d1fae5; --soft-border: #6ee7b7; }
+    .option-d { --primary: #0e7490; --primary-hover: #155e75; --soft: #ecfeff; --soft-hover: #cffafe; --soft-border: #67e8f9; }
+    .option-e { --primary: #0f6f63; --primary-hover: #0b5d53; --soft: #eefcf8; --soft-hover: #d4f7ed; --soft-border: #79dec9; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>5 phương án màu xanh chuẩn cho hệ thống</h1>
+      <p>
+        Mỗi phương án có đủ case: nút đã xanh chuẩn, hover trên nút xanh, nút chưa có màu,
+        hover trên nút chưa có màu, trạng thái soft/selected và nút icon mũi tên.
+      </p>
+    </header>
+
+    <section class="grid">
+      <article class="card option-a">
+        <h2>Phương án 1 <span class="tag">Teal hiện tại dịu lại bằng hover</span></h2>
+        <div class="swatches">
+          <div class="swatch"><div class="swatch-color" style="--color: var(--primary)"></div><div class="swatch-body"><strong>Primary</strong>#0f766e</div></div>
+          <div class="swatch"><div class="swatch-color" style="--color: var(--primary-hover)"></div><div class="swatch-body"><strong>Primary hover</strong>#115e59</div></div>
+          <div class="swatch"><div class="swatch-color" style="--color: var(--soft)"></div><div class="swatch-body"><strong>Neutral hover</strong>#ecfdf5</div></div>
+          <div class="swatch"><div class="swatch-color" style="--color: var(--soft-border)"></div><div class="swatch-body"><strong>Soft border</strong>#5eead4</div></div>
+        </div>
+        <div class="demo">
+          <div class="row"><span class="label">Nút xanh</span><button class="primary">Tạo mới</button><button class="primary icon">&lt;</button><button class="primary icon">&gt;</button></div>
+          <div class="row"><span class="label">Hover nút xanh</span><button class="primary hover">Tạo mới</button><button class="primary hover icon">&lt;</button><button class="primary hover icon">&gt;</button></div>
+          <div class="row"><span class="label">Nút trắng</span><button class="neutral">Export</button><button class="neutral icon">&lt;</button><button class="neutral icon">&gt;</button></div>
+          <div class="row"><span class="label">Hover nút trắng</span><button class="neutral hover">Export</button><button class="neutral hover icon">&lt;</button><button class="neutral hover icon">&gt;</button></div>
+          <div class="row"><span class="label">Soft/selected</span><button class="soft">Đang chọn</button><button class="soft hover">Hover selected</button></div>
+        </div>
+        <p class="note">Gần nhất với hiện tại, ít rủi ro nhất. Hợp nếu chỉ thấy màu hiện tại hơi đậm ở một số nút.</p>
+      </article>
+
+      <article class="card option-b">
+        <h2>Phương án 2 <span class="tag">Teal sáng hơn</span></h2>
+        <div class="swatches">
+          <div class="swatch"><div class="swatch-color" style="--color: var(--primary)"></div><div class="swatch-body"><strong>Primary</strong>#0d9488</div></div>
+          <div class="swatch"><div class="swatch-color" style="--color: var(--primary-hover)"></div><div class="swatch-body"><strong>Primary hover</strong>#0f766e</div></div>
+          <div class="swatch"><div class="swatch-color" style="--color: var(--soft)"></div><div class="swatch-body"><strong>Neutral hover</strong>#f0fdfa</div></div>
+          <div class="swatch"><div class="swatch-color" style="--color: var(--soft-border)"></div><div class="swatch-body"><strong>Soft border</strong>#5eead4</div></div>
+        </div>
+        <div class="demo">
+          <div class="row"><span class="label">Nút xanh</span><button class="primary">Tạo mới</button><button class="primary icon">&lt;</button><button class="primary icon">&gt;</button></div>
+          <div class="row"><span class="label">Hover nút xanh</span><button class="primary hover">Tạo mới</button><button class="primary hover icon">&lt;</button><button class="primary hover icon">&gt;</button></div>
+          <div class="row"><span class="label">Nút trắng</span><button class="neutral">Export</button><button class="neutral icon">&lt;</button><button class="neutral icon">&gt;</button></div>
+          <div class="row"><span class="label">Hover nút trắng</span><button class="neutral hover">Export</button><button class="neutral hover icon">&lt;</button><button class="neutral hover icon">&gt;</button></div>
+          <div class="row"><span class="label">Soft/selected</span><button class="soft">Đang chọn</button><button class="soft hover">Hover selected</button></div>
+        </div>
+        <p class="note">Sáng, thân thiện, vẫn giữ nhận diện teal. Đây là lựa chọn cân bằng nếu muốn bớt nặng.</p>
+      </article>
+
+      <article class="card option-c">
+        <h2>Phương án 3 <span class="tag">Emerald công việc</span></h2>
+        <div class="swatches">
+          <div class="swatch"><div class="swatch-color" style="--color: var(--primary)"></div><div class="swatch-body"><strong>Primary</strong>#047857</div></div>
+          <div class="swatch"><div class="swatch-color" style="--color: var(--primary-hover)"></div><div class="swatch-body"><strong>Primary hover</strong>#065f46</div></div>
+          <div class="swatch"><div class="swatch-color" style="--color: var(--soft)"></div><div class="swatch-body"><strong>Neutral hover</strong>#ecfdf5</div></div>
+          <div class="swatch"><div class="swatch-color" style="--color: var(--soft-border)"></div><div class="swatch-body"><strong>Soft border</strong>#6ee7b7</div></div>
+        </div>
+        <div class="demo">
+          <div class="row"><span class="label">Nút xanh</span><button class="primary">Tạo mới</button><button class="primary icon">&lt;</button><button class="primary icon">&gt;</button></div>
+          <div class="row"><span class="label">Hover nút xanh</span><button class="primary hover">Tạo mới</button><button class="primary hover icon">&lt;</button><button class="primary hover icon">&gt;</button></div>
+          <div class="row"><span class="label">Nút trắng</span><button class="neutral">Export</button><button class="neutral icon">&lt;</button><button class="neutral icon">&gt;</button></div>
+          <div class="row"><span class="label">Hover nút trắng</span><button class="neutral hover">Export</button><button class="neutral hover icon">&lt;</button><button class="neutral hover icon">&gt;</button></div>
+          <div class="row"><span class="label">Soft/selected</span><button class="soft">Đang chọn</button><button class="soft hover">Hover selected</button></div>
+        </div>
+        <p class="note">Nghiêng xanh lá hơn, cảm giác task/project rõ. Ít giống màu cyan của MindMap.</p>
+      </article>
+
+      <article class="card option-d">
+        <h2>Phương án 4 <span class="tag">Cyan kỹ thuật</span></h2>
+        <div class="swatches">
+          <div class="swatch"><div class="swatch-color" style="--color: var(--primary)"></div><div class="swatch-body"><strong>Primary</strong>#0e7490</div></div>
+          <div class="swatch"><div class="swatch-color" style="--color: var(--primary-hover)"></div><div class="swatch-body"><strong>Primary hover</strong>#155e75</div></div>
+          <div class="swatch"><div class="swatch-color" style="--color: var(--soft)"></div><div class="swatch-body"><strong>Neutral hover</strong>#ecfeff</div></div>
+          <div class="swatch"><div class="swatch-color" style="--color: var(--soft-border)"></div><div class="swatch-body"><strong>Soft border</strong>#67e8f9</div></div>
+        </div>
+        <div class="demo">
+          <div class="row"><span class="label">Nút xanh</span><button class="primary">Tạo mới</button><button class="primary icon">&lt;</button><button class="primary icon">&gt;</button></div>
+          <div class="row"><span class="label">Hover nút xanh</span><button class="primary hover">Tạo mới</button><button class="primary hover icon">&lt;</button><button class="primary hover icon">&gt;</button></div>
+          <div class="row"><span class="label">Nút trắng</span><button class="neutral">Export</button><button class="neutral icon">&lt;</button><button class="neutral icon">&gt;</button></div>
+          <div class="row"><span class="label">Hover nút trắng</span><button class="neutral hover">Export</button><button class="neutral hover icon">&lt;</button><button class="neutral hover icon">&gt;</button></div>
+          <div class="row"><span class="label">Soft/selected</span><button class="soft">Đang chọn</button><button class="soft hover">Hover selected</button></div>
+        </div>
+        <p class="note">Mát và công nghệ hơn, nhưng có thể hơi xa màu project hiện tại.</p>
+      </article>
+
+      <article class="card option-e">
+        <h2>Phương án 5 <span class="tag">Teal mềm riêng</span></h2>
+        <div class="swatches">
+          <div class="swatch"><div class="swatch-color" style="--color: var(--primary)"></div><div class="swatch-body"><strong>Primary</strong>#0f6f63</div></div>
+          <div class="swatch"><div class="swatch-color" style="--color: var(--primary-hover)"></div><div class="swatch-body"><strong>Primary hover</strong>#0b5d53</div></div>
+          <div class="swatch"><div class="swatch-color" style="--color: var(--soft)"></div><div class="swatch-body"><strong>Neutral hover</strong>#eefcf8</div></div>
+          <div class="swatch"><div class="swatch-color" style="--color: var(--soft-border)"></div><div class="swatch-body"><strong>Soft border</strong>#79dec9</div></div>
+        </div>
+        <div class="demo">
+          <div class="row"><span class="label">Nút xanh</span><button class="primary">Tạo mới</button><button class="primary icon">&lt;</button><button class="primary icon">&gt;</button></div>
+          <div class="row"><span class="label">Hover nút xanh</span><button class="primary hover">Tạo mới</button><button class="primary hover icon">&lt;</button><button class="primary hover icon">&gt;</button></div>
+          <div class="row"><span class="label">Nút trắng</span><button class="neutral">Export</button><button class="neutral icon">&lt;</button><button class="neutral icon">&gt;</button></div>
+          <div class="row"><span class="label">Hover nút trắng</span><button class="neutral hover">Export</button><button class="neutral hover icon">&lt;</button><button class="neutral hover icon">&gt;</button></div>
+          <div class="row"><span class="label">Soft/selected</span><button class="soft">Đang chọn</button><button class="soft hover">Hover selected</button></div>
+        </div>
+        <p class="note">Giảm độ gắt của màu hiện tại nhưng vẫn giữ cảm giác thương hiệu riêng, không quá Tailwind mặc định.</p>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

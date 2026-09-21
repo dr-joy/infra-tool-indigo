@@ -1,0 +1,29 @@
+{
+  "agent": "codex",
+  "bodyMarkdown": "#### Reviewer\n\nTóm tắt ngắn: Tôi đồng ý với việc tách dữ liệu Team/Người/Group khỏi `automation-config.ts` và điều chỉnh hai backlog item. Tuy nhiên, tôi chưa thể ký phân loại module Announcement: bản vòng 6 đang dùng tiêu chí “không trực tiếp gọi CLI” để giữ lại code vốn chỉ phục vụ tính năng AI đã bị xóa, đồng thời tự thêm một màn nhập dữ liệu/tạo nội dung thủ công mà Leader chưa yêu cầu.\n\n**Phản đối chặn — code thuần nhưng không còn consumer vẫn thuộc chức năng phải xóa**\n\nBằng chứng call-site hiện tại:\n\n- `renderAnnouncementVi`/`renderAnnouncementJa` chỉ được gọi từ `server/routes/automation.ts`.\n- `getAnnouncementBatchContext`, `getKnownEmergencyTicketId` và `resolveConfiguredMentions` chỉ được gọi từ `server/routes/automation.ts`.\n- Các type `ReadyFacts` và validator trong `announcement-facts.ts` mô hình hóa dữ liệu do pipeline AI thu thập/xác minh; hiện không có form nhập tay nào tạo shape này.\n- Khi `routes/automation.ts` bị xóa, các phần trên không còn đường UI/API đang hoạt động nào sử dụng chúng.\n\nLeader đã nói bước mới là “người tự viết, tự đăng”, không phải “app tiếp tục dựng nội dung để người sao chép”. Vì vậy đề xuất giữ renderer rồi xây form nhập tay là một chức năng thay thế mới, không phải bảo toàn chức năng dữ liệu hiện có. Việc đó cần một quyết định sản phẩm và backlog riêng; không được âm thầm đưa vào CR xóa automation.\n\nCách sửa ma trận:\n\n- `announcement-render.ts`: xếp xóa cùng pipeline AI, trừ khi Leader sau này yêu cầu rõ tính năng tạo nội dung để sao chép.\n- `announcement-facts.ts`: xóa toàn bộ nếu sau khi bỏ pipeline không còn consumer; không giữ type chỉ để chuẩn bị cho một form chưa được duyệt.\n- `announcement-context.ts`:\n\n  - Xóa `getKnownEmergencyTicketId`, vì nó đọc `automation_result_data` do automation tạo.\n  - Xóa `getAnnouncementBatchContext` nếu không còn consumer ngoài pipeline AI; logic đọc batch cần dùng sau này có thể được viết lại trong module nghiệp vụ khi có use case thật.\n  - Không giữ `resolveConfiguredMentions` chỉ vì nó thuần; hiện nó phục vụ việc cấp mention cho executor.\n- `automation-config.ts`: tách và giữ đúng lớp lưu/validate dữ liệu Team/Người/Group mà Leader đã nêu rõ thuộc phạm vi Lên lịch. Chuyển route và UI cấu hình tương ứng ra khỏi `/automation` và màn “Cài đặt AI” sang module release; loại mọi thao tác resolve qua Claude.\n- `announcement-mention-settings.tsx` và `announcement-group-settings.tsx`: chỉ giữ phần CRUD dữ liệu đã có, đổi endpoint/vị trí màn hình; xóa các nút và luồng resolve AI.\n- Với mỗi hàm thuần, điều kiện giữ phải là có consumer thuộc chức năng được giữ sau tái cấu trúc, không chỉ là “không spawn CLI”.\n\n**Các phần tôi không phản đối**\n\n- `BL-20260822-001` chuyển `Dropped`.\n- `BL-20260823-001` chuyển `Inbox`.\n- Item tái cấu trúc mới là `Picked` duy nhất.\n- Giữ dữ liệu Team/Người/Group theo xác nhận trực tiếp của Leader và chuyển quyền sở hữu sang module release.\n- Xóa phần Claude bin, whitelist, rollout, approval lead-time, scheduler, dispatcher, verifier, candidate selection và activation.\n- Tiếp tục dựng ma trận đầy đủ trước khi mở Change Spec hay sửa code.\n\nSau khi sửa tiêu chí phân loại thành “còn consumer hợp lệ sau khi xóa hay không”, hai bên có thể hoàn thiện ma trận mà không giữ lại mã chết hoặc tự mở rộng sản phẩm.\n\n```yaml\nturn_result:\n  agent: \"codex\"\n  round: 6\n  blocking_objections: 1\n  new_decisions: 0\n  questions_for_user: 0\n  permission_requests: 0\n  converged: false\n  note: \"Chưa thể ký vì một số module thuần nhưng chỉ phục vụ pipeline AI đang được giữ lại và kéo theo tính năng nhập tay/tạo nội dung mới chưa được Leader yêu cầu; chỉ dữ liệu Team/Người/Group có consumer nghiệp vụ rõ ràng mới nên được tách sang module release.\"\n  rules_version_seen: \"RULES-2026-09-04-a\"\n  session_id: \"f18ab0fe-b546-4237-8d0f-e9879bc5aa18\"\n```\n",
+  "createdAt": "2026-09-12T01:33:28.153Z",
+  "questionCards": [],
+  "recordId": "f18ab0fe-b546-4237-8d0f-e9879bc5aa18-agent_turn-15",
+  "recordType": "agent_turn",
+  "roles": [
+    "Reviewer",
+    "QA",
+    "Infra"
+  ],
+  "round": 6,
+  "rulesVersion": "RULES-2026-09-04-a",
+  "schemaVersion": 1,
+  "sessionId": "f18ab0fe-b546-4237-8d0f-e9879bc5aa18",
+  "turnResult": {
+    "agent": "codex",
+    "blocking_objections": 1,
+    "converged": false,
+    "new_decisions": 0,
+    "note": "Chưa thể ký vì một số module thuần nhưng chỉ phục vụ pipeline AI đang được giữ lại và kéo theo tính năng nhập tay/tạo nội dung mới chưa được Leader yêu cầu; chỉ dữ liệu Team/Người/Group có consumer nghiệp vụ rõ ràng mới nên được tách sang module release.",
+    "permission_requests": 0,
+    "questions_for_user": 0,
+    "round": 6,
+    "rules_version_seen": "RULES-2026-09-04-a",
+    "session_id": "f18ab0fe-b546-4237-8d0f-e9879bc5aa18"
+  }
+}

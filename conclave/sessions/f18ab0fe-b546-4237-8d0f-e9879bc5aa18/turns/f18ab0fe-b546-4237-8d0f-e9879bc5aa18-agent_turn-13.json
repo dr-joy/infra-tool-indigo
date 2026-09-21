@@ -1,0 +1,29 @@
+{
+  "agent": "codex",
+  "bodyMarkdown": "#### Reviewer\n\nTóm tắt ngắn: Tôi đồng ý với phạm vi Leader vừa làm rõ: repo không còn gọi Claude/Codex cho bất kỳ tính năng nào, kể cả Announcement; thao tác AI chuyển ra ngoài app và thực hiện thủ công. Tuy nhiên, tôi chưa thể ký danh sách rút gọn hoặc phương án backlog vì đang đồng nhất “mã phục vụ Announcement” với “mã gọi AI”, có nguy cơ xóa cả logic thuần vẫn hữu ích cho quy trình thủ công.\n\n**Phản đối chặn 1 — không được xóa toàn bộ `announcement-*` chỉ vì bỏ executor**\n\n`server/lib/announcement-render.ts` là hàm thuần: nó nhận dữ liệu đã có rồi dựng nội dung văn bản/HTML VI–JA, escape HTML và tạo liên kết. File này không gọi CLI, không đọc secret, không dùng connector và không tự ghi ra ngoài. Chính comment trong code nói nó thay thế việc để AI tự soạn nội dung.\n\nVì vậy quyết định “không còn code gọi Claude/Codex” không tự suy ra rằng phải xóa renderer này. Trong quy trình mới, nó có thể phục vụ nút “Tạo nội dung để sao chép”, sau đó người dùng tự kiểm tra và đăng bằng Claude Desktop hoặc trực tiếp trên Dr.JOY. Xóa nó có thể làm mất một phần chức năng hỗ trợ “Lên lịch” mà không giúp loại bỏ thêm bất kỳ lời gọi AI nào.\n\nCác file cần phân loại theo hành vi, không theo tiền tố:\n\n- Xóa: `announcement-activation.ts` vì kích hoạt contract AI; `announcement-context.ts` nếu chỉ gom dữ liệu để gọi AI; `announcement-verify.ts` nếu chỉ kiểm chứng output AI; `announcement-candidates.ts` nếu chỉ xử lý phương án AI trả về.\n- Chưa được xếp xóa: `announcement-render.ts` và phần type/validator thuần có thể dùng để dựng nội dung thủ công.\n- Với từng file, ma trận phải có bằng chứng “có gọi/điều khiển CLI, xử lý output AI, hay là logic nghiệp vụ thuần”. Chỉ hai nhóm đầu mặc định bị xóa; nhóm nghiệp vụ thuần phải đánh giá theo giá trị còn lại của màn Lên lịch.\n\nCách sửa là đổi mục 3 từ “xóa hẳn toàn bộ `announcement-*`” thành phân loại từng file/function. Nếu quyết định cuối vẫn xóa renderer, Change Spec phải ghi rõ hành vi tạo nội dung nào biến mất và test nào chứng minh phần dữ liệu release còn lại đúng phạm vi Leader chấp nhận.\n\n**Phản đối chặn 2 — chưa đủ điều kiện chuyển `BL-20260823-001` thẳng sang `Ready`**\n\nItem hiện tại được thiết kế quanh việc AI dùng Team/Người/Group/nội dung mẫu. Khi bỏ AI:\n\n- Cần xác định người dùng sẽ tra cứu dữ liệu gì và sao chép dữ liệu đó ở đâu.\n- Các endpoint resolve người/group hiện gọi Claude phải bị xóa; cần xác định nhập ID thủ công, chọn từ dữ liệu nội bộ hay chỉ lưu tên.\n- Cần quyết định có giữ mẫu nội dung và renderer thuần hay không.\n- Priority và giá trị của màn hình mới không còn giống item P1 ban đầu.\n\nTheo định nghĩa backlog, khi phạm vi và dependency này chưa rõ thì item chưa đạt `Ready`. Cách sửa:\n\n- Chuyển `BL-20260822-001` sang `Dropped`, vì mục tiêu go-live AI đã bị quyết định sản phẩm thay thế.\n- Chuyển `BL-20260823-001` về `Inbox` hoặc tạo item kế nhiệm mới ở `Inbox`, ghi rõ nó cần được refine lại cho quy trình thủ công.\n- Chỉ chuyển sang `Ready` sau khi xác định dữ liệu, luồng sử dụng, nguồn ID và quan hệ với renderer/mẫu nội dung thuần.\n- Item tái cấu trúc mới vẫn là `Picked` và là WIP lớn duy nhất.\n\n**Các phần không phản đối**\n\n- Xóa toàn bộ runner, scheduler, prompt gọi AI, route automation, cấu hình CLI/tool, UI duyệt/kết quả AI, write guard, activation script, mock CLI và Skill Forge.\n- Archive dữ liệu lịch sử trước khi ngừng ghi/drop schema; chi tiết phải nằm trong ma trận DB.\n- Loại các field contract/trạng thái chỉ phục vụ AI sau khi đã xác minh không còn consumer thuần.\n- Bỏ nút, badge và trạng thái AI khỏi màn Lên lịch.\n- Dùng Đường C với `delivery-flow`, `security-gate`, `docs-sync`, backup DB, kiểm thử đối chiếu, `npm run check`, đóng gói và khởi động lại exe.\n- Tiếp tục dựng ma trận đầy đủ trước khi mở Change Spec hoặc sửa code.\n\n```yaml\nturn_result:\n  agent: \"codex\"\n  round: 5\n  blocking_objections: 2\n  new_decisions: 0\n  questions_for_user: 0\n  permission_requests: 0\n  converged: false\n  note: \"Chưa thể ký vì danh sách đang xóa cả logic Announcement thuần không gọi AI, đặc biệt bộ dựng nội dung có thể phục vụ thao tác thủ công, và BL-20260823-001 chưa đủ rõ để chuyển thẳng sang Ready sau khi mục tiêu AI bị loại bỏ.\"\n  rules_version_seen: \"RULES-2026-09-04-a\"\n  session_id: \"f18ab0fe-b546-4237-8d0f-e9879bc5aa18\"\n```\n",
+  "createdAt": "2026-09-12T01:30:29.030Z",
+  "questionCards": [],
+  "recordId": "f18ab0fe-b546-4237-8d0f-e9879bc5aa18-agent_turn-13",
+  "recordType": "agent_turn",
+  "roles": [
+    "Reviewer",
+    "QA",
+    "Infra"
+  ],
+  "round": 5,
+  "rulesVersion": "RULES-2026-09-04-a",
+  "schemaVersion": 1,
+  "sessionId": "f18ab0fe-b546-4237-8d0f-e9879bc5aa18",
+  "turnResult": {
+    "agent": "codex",
+    "blocking_objections": 2,
+    "converged": false,
+    "new_decisions": 0,
+    "note": "Chưa thể ký vì danh sách đang xóa cả logic Announcement thuần không gọi AI, đặc biệt bộ dựng nội dung có thể phục vụ thao tác thủ công, và BL-20260823-001 chưa đủ rõ để chuyển thẳng sang Ready sau khi mục tiêu AI bị loại bỏ.",
+    "permission_requests": 0,
+    "questions_for_user": 0,
+    "round": 5,
+    "rules_version_seen": "RULES-2026-09-04-a",
+    "session_id": "f18ab0fe-b546-4237-8d0f-e9879bc5aa18"
+  }
+}

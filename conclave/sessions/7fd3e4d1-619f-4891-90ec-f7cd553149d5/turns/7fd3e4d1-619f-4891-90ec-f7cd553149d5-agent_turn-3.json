@@ -1,0 +1,42 @@
+{
+  "agent": "codex",
+  "bodyMarkdown": "#### Reviewer\n\nTôi có **một phản đối chặn** với bản đề xuất kết luận hiện tại: kế hoạch vẫn chưa chốt nguồn có thẩm quyền của `replyToRef`, đồng thời ghi thiếu số call-site frontend.\n\n**Phản đối cụ thể**\n\nBản đề xuất viết “hai nơi giao diện Release tự tính”, nhưng code hiện có ba biểu thức độc lập:\n\n- Regular: `src/screens/release.tsx:426`.\n- Emergency giai đoạn tức thời: `src/screens/release.tsx:516`.\n- Emergency fixed schedule: `src/screens/release.tsx:549`.\n\nQuan trọng hơn, chỉ thay `relatedIds` bằng `replyToDefinitionId` tại ba chỗ này vẫn duy trì khoảng hở hiện tại:\n\n- `POST /schedules/regular-release/tasks` tin trực tiếp `task.replyToRef` từ frontend tại `server/routes/schedules.ts:268`.\n- `POST /schedules/emergency-release/tasks` cũng tin trực tiếp trường đó tại `server/routes/schedules.ts:514`.\n- Emergency có kiểm tra revision, nhưng hash tại `server/routes/schedules.ts:420-429` chỉ bao gồm `note`, `template_id` và template content, không bảo vệ quan hệ reply.\n\nKế hoạch triển khai cần chốt rõ: khi payload có `originRef`, backend phải tải definition tương ứng và tự lấy `reply_to_definition_id`; không lấy `replyToRef` do frontend khai báo làm nguồn có thẩm quyền. Payload không có `originRef` mới được giữ `replyToRef = null`. Khi đó:\n\n- Ba hàm frontend vẫn cần chuyển sang đọc trường mới để payload/UI nhất quán.\n- Hai route ghi task phải resolve lại từ DB nhằm chống payload giả hoặc dữ liệu frontend đã cũ.\n- Hash revision emergency nên bao gồm `reply_to_definition_id`, hoặc quan hệ này phải được đọc canonical ngay trong transaction và không cần tin giá trị/hash phía frontend.\n- `buildDefinitionTargetPayload()` tiếp tục là nguồn canonical cho đường regular số ít và sync.\n\n**Migration cần khóa thứ tự**\n\nTôi đồng ý phải dùng một đợt migration mới, nhưng cần ghi rõ trình tự để tránh mất nguồn trước khi backfill:\n\n1. Thêm nullable `reply_to_definition_id` vào hai bảng definition nếu chưa có.\n2. Parse `related_ids`, lấy chuỗi không rỗng đầu tiên và backfill trường mới.\n3. Archive chín cột cũ: `action_type`, `ai_note`, `related_ids` trên cả ba bảng.\n4. Drop chín cột trong transaction.\n5. Xoá `themCotAutomation()` để lần khởi động sau không thêm lại chúng.\n6. Schema tạo DB mới chỉ chứa `reply_to_definition_id`, không chứa ba cột cũ.\n7. Chạy lại migration phải là no-op và không sinh thêm archive.\n\nNếu JSON cũ hỏng, mảng rỗng, tự tham chiếu hoặc trỏ tới definition không tồn tại/cross-type, migration không nên tạo tham chiếu không hợp lệ. Các trường hợp đó cần được archive để truy vết rồi backfill thành `NULL`, kèm log số lượng cảnh báo.\n\n**Phạm vi kiểm tra tôi ký**\n\nTôi đã đối chiếu:\n\n- Toàn bộ `server/routes/schedules.ts`, gồm regular bulk, regular single/sync và emergency hai giai đoạn.\n- Ba đường dựng payload tại `src/screens/release.tsx`.\n- `server/lib/release-render.ts`, `server/routes/tasks.ts`, mapper, type, schema và migration.\n- Nhóm test migration, release rendering, schedules, task CRUD, emergency mention/fixed schedule và lỗi action type legacy.\n\nNgoài phản đối trên, tôi đồng ý với:\n\n- Trường đơn `reply_to_definition_id`.\n- Chỉ tham chiếu definition cùng loại, không tự tham chiếu.\n- Xoá definition đang bị tham chiếu phải trả `409`, không tự xoá/null hóa.\n- Xoá hoàn toàn drift và test dành riêng cho `actionType`/`aiNote`.\n- Giữ drift `replyToRef`.\n- Dọn picker `relatedIds` của task thường.\n- Viết migration mới thay vì sửa lịch sử của đợt migration đã phát hành.\n\n**Câu hỏi cho người dùng:**\n\n**Câu hỏi 1:**\n\nCó gộp việc xoá ô “team” cạnh từng người được mention và toàn bộ `mentionTeamHints` vào cùng lần sửa này không?\n\n**Bối cảnh:**\n\nÔ team chỉ được dùng để nối chỉ dẫn vào `aiNote` cho AI kiểm tra trước. AI automation đã bị xoá, nên dữ liệu này hiện không còn consumer thật; việc xoá `aiNote` sẽ khiến cả luồng chắc chắn không thể biên dịch nếu không sửa.\n\n**Vì sao chưa tự trả lời được:**\n\nĐây là quyết định phạm vi sản phẩm: dọn luôn phần giao diện đã mất tác dụng trong thay đổi hiện tại hay ghi nhận thành một việc riêng. Council có thể xác định tác động kỹ thuật nhưng không nên tự mở rộng phạm vi đã được Leader duyệt.\n\n**Ảnh hưởng mỗi lựa chọn:**\n\n| Lựa chọn | Ảnh hưởng |\n|---|---|\n| Gộp vào lần sửa này | Dọn trọn code chết trong cùng luồng, xoá các test `aiNote` tương ứng và không để lại UI vô tác dụng |\n| Tách thành việc riêng | Lần sửa hiện tại phải loại bỏ `mentionTeamHints` khỏi payload nhưng vẫn giữ một ô nhập không có nơi tiêu thụ, hoặc phải thiết kế tạm một nơi lưu mới không có nhu cầu nghiệp vụ đã xác nhận |\n\n**Các lựa chọn:**\n\n- Gộp việc xoá ô team và `mentionTeamHints` vào cùng lần sửa.\n- Tách việc dọn này thành một backlog item riêng.\n\n**Khuyến nghị:**\n\nGộp vào cùng lần sửa vì đây là hệ quả trực tiếp của việc xoá `aiNote`, không phải mở rộng sang một tính năng độc lập.\n\n**Bắt buộc sơ đồ:**\n\nKhông\n\n**Hình dung:**\n\n| Nếu chọn | Kết quả trên giao diện | Kết quả trong code |\n|---|---|---|\n| Gộp | Chỉ còn nhập tên người cần mention | Xoá ô team, `mentionTeamHints` và các test AI liên quan |\n| Tách | Ô team còn hiện nhưng chưa có tác dụng | Phải giữ nợ kỹ thuật hoặc tạo nơi lưu tạm chưa có nhu cầu nghiệp vụ |\n\n```yaml\nturn_result:\n  agent: \"codex\"\n  round: 2\n  blocking_objections: 1\n  new_decisions: 1\n  questions_for_user: 1\n  permission_requests: 0\n  converged: false\n  note: \"Chưa thể ký bản kết luận vì code có ba nơi frontend tự tính liên kết trả lời, không phải hai, và kế hoạch chưa chốt backend là nguồn có thẩm quyền; đề xuất backend luôn tự lấy quan hệ từ định nghĩa khi có originRef và hỏi Leader có dọn luôn ô team đã mất tác dụng hay không.\"\n  rules_version_seen: \"RULES-2026-09-04-a\"\n  session_id: \"7fd3e4d1-619f-4891-90ec-f7cd553149d5\"\n```\n",
+  "createdAt": "2026-09-12T09:28:39.659Z",
+  "questionCards": [
+    {
+      "context": "Ô team chỉ được dùng để nối chỉ dẫn vào `aiNote` cho AI kiểm tra trước. AI automation đã bị xoá, nên dữ liệu này hiện không còn consumer thật; việc xoá `aiNote` sẽ khiến cả luồng chắc chắn không thể biên dịch nếu không sửa.",
+      "impactPerOption": "| Lựa chọn | Ảnh hưởng |\n|---|---|\n| Gộp vào lần sửa này | Dọn trọn code chết trong cùng luồng, xoá các test `aiNote` tương ứng và không để lại UI vô tác dụng |\n| Tách thành việc riêng | Lần sửa hiện tại phải loại bỏ `mentionTeamHints` khỏi payload nhưng vẫn giữ một ô nhập không có nơi tiêu thụ, hoặc phải thiết kế tạm một nơi lưu mới không có nhu cầu nghiệp vụ đã xác nhận |",
+      "number": 1,
+      "options": "- Gộp việc xoá ô team và `mentionTeamHints` vào cùng lần sửa.\n- Tách việc dọn này thành một backlog item riêng.",
+      "question": "Có gộp việc xoá ô “team” cạnh từng người được mention và toàn bộ `mentionTeamHints` vào cùng lần sửa này không?",
+      "recommendation": "Gộp vào cùng lần sửa vì đây là hệ quả trực tiếp của việc xoá `aiNote`, không phải mở rộng sang một tính năng độc lập.",
+      "recommendationType": "recommendation",
+      "requiresDiagram": false,
+      "visualization": "| Nếu chọn | Kết quả trên giao diện | Kết quả trong code |\n|---|---|---|\n| Gộp | Chỉ còn nhập tên người cần mention | Xoá ô team, `mentionTeamHints` và các test AI liên quan |\n| Tách | Ô team còn hiện nhưng chưa có tác dụng | Phải giữ nợ kỹ thuật hoặc tạo nơi lưu tạm chưa có nhu cầu nghiệp vụ |",
+      "whyNotSelfAnswered": "Đây là quyết định phạm vi sản phẩm: dọn luôn phần giao diện đã mất tác dụng trong thay đổi hiện tại hay ghi nhận thành một việc riêng. Council có thể xác định tác động kỹ thuật nhưng không nên tự mở rộng phạm vi đã được Leader duyệt."
+    }
+  ],
+  "recordId": "7fd3e4d1-619f-4891-90ec-f7cd553149d5-agent_turn-3",
+  "recordType": "agent_turn",
+  "roles": [
+    "Reviewer",
+    "QA",
+    "Infra"
+  ],
+  "round": 2,
+  "rulesVersion": "RULES-2026-09-04-a",
+  "schemaVersion": 1,
+  "sessionId": "7fd3e4d1-619f-4891-90ec-f7cd553149d5",
+  "turnResult": {
+    "agent": "codex",
+    "blocking_objections": 1,
+    "converged": false,
+    "new_decisions": 1,
+    "note": "Chưa thể ký bản kết luận vì code có ba nơi frontend tự tính liên kết trả lời, không phải hai, và kế hoạch chưa chốt backend là nguồn có thẩm quyền; đề xuất backend luôn tự lấy quan hệ từ định nghĩa khi có originRef và hỏi Leader có dọn luôn ô team đã mất tác dụng hay không.",
+    "permission_requests": 0,
+    "questions_for_user": 1,
+    "round": 2,
+    "rules_version_seen": "RULES-2026-09-04-a",
+    "session_id": "7fd3e4d1-619f-4891-90ec-f7cd553149d5"
+  }
+}

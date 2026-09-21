@@ -1,0 +1,6067 @@
+[
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding-right",
+    "giaTri": "2.75rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background-color",
+    "giaTri": "#edf1f0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1f2a2e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdfa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#5eead4"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdfa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "conic-gradient(#0d9488 var(--progress), #e2e8f0 0)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#5eead4"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdfa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "column-gap",
+    "giaTri": "1.25rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background-color",
+    "giaTri": "#edf1f0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "rgba(237, 241, 240, 0.92)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "rgba(241, 245, 244, 0.9)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "rgba(241, 245, 244, 0.9)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "rgba(255, 255, 255, 0.7)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background-color",
+    "giaTri": "rgba(100, 116, 139, 0.16)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#006aff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#ef0000"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background-color",
+    "giaTri": "rgba(100, 116, 139, 0.16)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background-color",
+    "giaTri": "rgba(20, 184, 166, 0.08)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1f2937"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background-color",
+    "giaTri": "#64748b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#9ca3af"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#9ca3af"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#9ca3af"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#9ca3af"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#e5e7eb"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#9ca3af"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f3f4f6"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#9ca3af"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0284c7"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0284c7"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "white"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0369a1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0369a1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "white"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#9ca3af"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f3f4f6"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#9ca3af"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f3f4f6"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#9ca3af"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0284c7"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f3f4f6"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#9ca3af"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0284c7"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0284c7"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "white"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0369a1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0369a1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "white"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f3f4f6"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#9ca3af"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#9ca3af"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#1f2937"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#9ca3af"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#9ca3af"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#1f2937"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#1f2937"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "white"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "white"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "white"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#e5e7eb"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#6b7280"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#374151"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#e5e7eb"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#6b7280"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "linear-gradient(90deg, rgba(255, 247, 237, 0.92), rgba(254, 226, 226, 0.72), rgba(255, 237, 213, 0.84)),\n      white"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "linear-gradient(90deg, #fb923c, #ef4444, #f97316)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "radial-gradient(circle, rgba(251, 146, 60, 0.32) 0 1px, transparent 2px),\n      radial-gradient(circle, rgba(239, 68, 68, 0.22) 0 1px, transparent 2px),\n      linear-gradient(105deg, transparent 18%, rgba(255, 255, 255, 0.34) 28%, transparent 42%)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "linear-gradient(90deg, #fb923c, #ef4444, #f97316)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "linear-gradient(180deg, rgba(248, 250, 252, 0.95), rgba(226, 232, 240, 0.95)),\n      white"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f8fafc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#cbd5e1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdfa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#5eead4"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f8fafc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#cbd5e1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdfa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#5eead4"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f8fafc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#cbd5e1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdfa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#5eead4"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f8fafc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#cbd5e1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdfa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#5eead4"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#99f6e4"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#ccfbf1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#ccfbf1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "white"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "white"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "white"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "white"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "white"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#ef4444"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#ef4444"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "white"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#dc2626"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#dc2626"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "white"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "white"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "white"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#9ca3af"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#d1d5db"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#16a34a"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#b45309"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#dc2626"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#6b7280"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "7px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "9px 16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#374151"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "7px 12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "13px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdfa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f4f5f7"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#374151"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#e5e7eb"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#e9ebef"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#dc2626"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fef2f2"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "1.35rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1f2a37"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#6b7280"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.9rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.78rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding-left",
+    "giaTri": "2px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "10px 16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdfa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.82rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.75rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#8b8fa3"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "14px 16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.88rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#374151"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "8px 10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.9rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "10px 14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0f7ff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0b5394"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.9rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fdecea"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#f5c6cb"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#b02a37"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.88rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#374151"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "8px 0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "10px 14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0 6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#e0f2fe"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0369a1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.8rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1f2937"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "48px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#6b7280"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#cbd5e1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f8fafc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#5eead4"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdfa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "18px 18px 12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1f2a37"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.82rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#6b7280"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "12px 18px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "rgba(0,0,0,0.5)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "20px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "22px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "1.05rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1f2a37"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdfa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#ccfbf1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fef3c7"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#92400e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1f2a37"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.8rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#6b7280"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.9rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.9rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#374151"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "18px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "22px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.8rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "32px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdfa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#6b7280"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#ccfbf1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#ccfbf1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.9rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-top",
+    "giaTri": "4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.78rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#8b8fa3"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.85rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "10px 12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#f5c6cb"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fdf2f3"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#bbf7d0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdf4"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "2px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.9rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1f2a37"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.76rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#6b7280"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.72rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "2px 8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#ccfbf1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#dcfce7"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#15803d"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fee2e2"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#b91c1c"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "transparent"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#94a3b8"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fee2e2"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#dc2626"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#ef4444"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#dc2626"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#dc2626"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "14px 16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdfa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-left",
+    "giaTri": "10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "8px 16px 16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "3px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.86rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1f2a37"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.74rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#6b7280"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#6b7280"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.88rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "10px 12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#6b7280"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.78rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "14px 16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1f2a37"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "10px 16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.85rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f8f9fa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdfa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#374151"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "12px 20px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "4px 9px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#ccfbf1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fef3c7"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#92400e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1f2a37"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#eceef1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "5px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "5px 10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#6b7280"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdfa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "5px 12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdf4"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#166534"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fef2f2"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#991b1b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#fca5a5"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "24px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f5f6f8"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-top",
+    "giaTri": "18px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.85rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#374151"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "12px 14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.9rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1f2937"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0 auto"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.78rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff3cd"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#856404"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "2px 10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "1.08rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1f2a37"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "20px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.95em"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#9ca3af"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.85em"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "14px 18px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#bdc3c7"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f8f9fa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdfa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#27ae60"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#e8f8f5"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f3fbf6"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#e74c3c"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fdecea"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.92rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "8px 12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1e7e46"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#e8f8f5"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#b93a2b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fdecea"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#8a6d1f"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff8e6"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-left",
+    "giaTri": "auto"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.72rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "3px 9px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#27ae60"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#e74c3c"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1e7e46"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#d5f2e2"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#27ae60"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#27ae60"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#e74c3c"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#e74c3c"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "3px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-top",
+    "giaTri": "20px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "16px 18px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0f7ff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0 0 8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0056b3"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.8rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-top",
+    "giaTri": "24px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "32px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "36px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "3rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1f2a37"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "1.05rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#6b7280"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "8px 0 24px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "1.05rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0 auto 24px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "1.6rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1f2a37"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "conic-gradient(#0d9488 calc(var(--pct) * 1%), #eceef1 0)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "24px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f7f8fa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "1.5rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.74rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#6b7280"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#e74c3c"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fdecea"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "18px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "18px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "18px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "2px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fcfcfd"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "2px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "3px 0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "rgba(148, 163, 184, 0.28)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "transparent"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "9px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "4px 10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.8rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.82rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#6b7280"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.72rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#6b7280"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding-left",
+    "giaTri": "2px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-top",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.85rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#6d28d9"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#64748b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.85rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "16px 8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "rgba(255,255,255,0.82)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0f172a"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "8px 10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1e293b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f1f5f9"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#ccfbf1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.88rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0 7px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.88rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "rgba(255,255,255,0.82)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "8px 12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#e2e8f0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0 2px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.95rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0f172a"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "4px 8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "transparent"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#e2e8f0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.72rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#94a3b8"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "6px 12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1e293b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.85rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f8fafc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "5px 10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.8rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "5px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "transparent"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#475569"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f1f5f9"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.75rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#d97706"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#16a34a"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#94a3b8"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "2px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.75rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#475569"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "8px 12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "8px 12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fef2f2"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#b91c1c"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.85rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background-color",
+    "giaTri": "#f8fafc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "8px 18px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.85rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.95rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "12px 22px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "6px 14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0f172a"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.72rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#ccfbf1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "2px 8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#94a3b8"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "transparent"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "inherit"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#475569"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "2px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "5px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#1e293b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0 7px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "transparent"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#e2e8f0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "rgba(255,255,255,0.12)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "rgba(129,140,248,0.32)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#c7d2fe"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.9rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "rgba(239,68,68,0.22)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#fca5a5"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "rgba(255,255,255,0.15)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0 2px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "5px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f1f5f9"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#475569"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "13px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#c7d2fe"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#14b8a6"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "2px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "2px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "2px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "18px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "4px 10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "transparent"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#334155"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.85rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f1f5f9"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#ccfbf1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0 10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.85rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0 12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.82rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f1f5f9"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#64748b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0 8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fee2e2"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#dc2626"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.76rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#94a3b8"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "6px 6px 8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0 8px 8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "1px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "6px 6px 4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "transparent"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f1f5f9"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#ccfbf1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "7px 8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0 9px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f1f5f9"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#94a3b8"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "transparent"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.85rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0f172a"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0 6px 8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.72rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#94a3b8"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "8px 4px 4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "1px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "transparent"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "20px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f1f5f9"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "28px 8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#94a3b8"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.82rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "6px 6px 6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0 9px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f1f5f9"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#64748b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.72rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#e2e8f0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1e293b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#ccfbf1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "2px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "transparent"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#334155"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f1f5f9"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0f172a"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-right",
+    "giaTri": "5px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "2px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "transparent"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "15px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f1f5f9"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-top",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "5px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-right",
+    "giaTri": "4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "inherit"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-right",
+    "giaTri": "1px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "3px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "2px 7px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f1f5f9"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#475569"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.72rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#e2e8f0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1e293b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdfa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#ccfbf1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "5px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "2px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0 7px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f1f5f9"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#475569"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.72rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#e2e8f0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1e293b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdfa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#ccfbf1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "3px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "6px 9px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f8fafc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#334155"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.8rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdfa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "transparent"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#94a3b8"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fee2e2"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#dc2626"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "1px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "4px 6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#e2e8f0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0 4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "24px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "1.15rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0f172a"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#64748b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.9rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0 auto"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "5px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdf4"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#15803d"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#dcfce7"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "rgba(15,23,42,0.45)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "24px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "10px 12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "6px 14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f1f5f9"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#475569"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.85rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#e2e8f0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#ccfbf1 !important"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488 !important"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "14px 16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.82rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0f172a"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f8fafc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#64748b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.95rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "6px 8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#1e293b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#ccfbf1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "6px 4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.85rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "2px 7px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f1f5f9"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.78rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#334155"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#475569"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding-left",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f8fafc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "4px 12px 12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0f172a"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "8px 0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "20px 24px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0 auto"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "1.25rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0f172a"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#64748b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.88rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "4px 0 0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdfa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "7px 12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.83rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#ccfbf1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f8fafc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "14px 16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0 0 8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.85rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#334155"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-top",
+    "giaTri": "2px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.85rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#374151"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "7px 10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.85rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "none"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#64748b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.76rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f8fafc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "14px 16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#5eead4"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdfa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.95rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.8rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#475569"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.68rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#e2e8f0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#475569"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "2px 8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding-top",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "18px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f4f5f7"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "8px 14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.83rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#64748b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#eef2f5"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#5eead4"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdfa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "rgba(0,0,0,0.08)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.78rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "rgba(255,255,255,0.25)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "24px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "5px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.88rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1f2a37"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.78rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#64748b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "5px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.76rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "8px 10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.9rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#e2e8f0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#64748b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.72rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fffbeb"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "10px 12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.82rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#78350f"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-top",
+    "giaTri": "2px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#d97706"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "5px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.76rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#dc2626"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "5px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.76rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#b45309"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.85rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#374151"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "4px 0 12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-top",
+    "giaTri": "16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding-top",
+    "giaTri": "14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-top",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "10px 14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f8fafc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.85rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#334155"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "12px 14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.78rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0f172a"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#94a3b8"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f8fafc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#e2e8f0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#64748b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#5eead4"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#c4b5fd"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#7dd3fc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#fcd34d"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "12px 14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "7px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.88rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "8px 10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdf4"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#15803d"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fffbeb"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#b45309"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fef2f2"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#dc2626"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.8rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "3px 0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-top",
+    "giaTri": "2px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#15803d"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#b45309"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#dc2626"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "20px auto"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f8fafc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "32px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#16a34a"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0 0 12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "1.3rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0f172a"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0f172a"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#a5f3fc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.78rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "8px 12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "16px 18px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "20px 0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0 0 10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.95rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding-left",
+    "giaTri": "20px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.85rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#334155"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "14px 18px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0f172a"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "14px 16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.82rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1e293b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "12px 18px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f8fafc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "linear-gradient(135deg, #f0fdfa, #eff6ff)"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "16px 18px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "22px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.86rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#334155"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.8rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-top",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "none"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.82rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-top",
+    "giaTri": "10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding-top",
+    "giaTri": "10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0 0 8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.83rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#334155"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#e2e8f0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "1px 5px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.8rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "7px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.95rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1f2a37"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "22px 0 12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "6px 10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.82rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "none"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#64748b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.74rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "1.5rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#1f2a37"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.92rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.78rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#64748b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f8fafc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f8fafc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "12px 14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.82rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#64748b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0f172a"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#5eead4"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "2px 8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.82rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "none"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.8rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-top",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "8px 10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.9rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.76rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#64748b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "8px 14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f8fafc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-top",
+    "giaTri": "2px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "12px 14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.74rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#94a3b8"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "8px 0 4px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-top",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "7px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.84rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#64748b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "4px 0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-top",
+    "giaTri": "1px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#cbd5e1"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#15803d"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#16a34a"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#b45309"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-top",
+    "giaTri": "14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "5px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "none"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#64748b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.78rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-top",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "10px 12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f8fafc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "7px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0f172a"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#a5f3fc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "9px 14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.84rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#1e293b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "18px 20px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdf4"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "12px 14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.86rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#166534"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-top",
+    "giaTri": "1px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#16a34a"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding-left",
+    "giaTri": "22px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.86rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#334155"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin",
+    "giaTri": "6px 0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0f172a"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#5eead4"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "5px 9px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.76rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "4px 10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.74rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.78rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#64748b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-top",
+    "giaTri": "2px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-top",
+    "giaTri": "14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fffbeb"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "12px 14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.8rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#78350f"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#e2e8f0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "1px 6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.8rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "initial"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f0fdfa"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "8px 10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.85rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0f766e"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.74rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#64748b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "16px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f8fafc"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "11px 14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.86rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#334155"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f1f5f9"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-left",
+    "giaTri": "auto"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.7rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#64748b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#e2e8f0"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "2px 8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "14px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.78rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#64748b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#5eead4"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#94a3b8"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#fff"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.74rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.88rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "6px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "2px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "none"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#64748b"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "background",
+    "giaTri": "#f1f5f9"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#0d9488"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-top",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding-top",
+    "giaTri": "12px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.8rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "color",
+    "giaTri": "#475569"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "margin-bottom",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "gap",
+    "giaTri": "8px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "padding",
+    "giaTri": "8px 10px"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "font-size",
+    "giaTri": "0.88rem"
+  },
+  {
+    "file": "src/styles.css",
+    "thuocTinh": "border-color",
+    "giaTri": "#0d9488"
+  }
+]

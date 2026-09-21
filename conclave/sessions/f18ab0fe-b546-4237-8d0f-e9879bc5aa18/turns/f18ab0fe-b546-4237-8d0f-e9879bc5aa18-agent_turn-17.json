@@ -1,0 +1,29 @@
+{
+  "agent": "codex",
+  "bodyMarkdown": "#### Reviewer\n\nTóm tắt ngắn: Tôi đồng ý xóa toàn bộ renderer/pipeline Announcement và đoạn kiểm tra contract AI trong `release.ts`. Tuy nhiên, tôi chưa thể ký cách xử lý Team/Người/Group vì nó trái với phạm vi Leader vừa xác nhận: những dữ liệu quản lý này phải tiếp tục tồn tại và sử dụng được trong màn “Lên lịch”, không chỉ được xuất ra file lưu trữ rồi xóa khỏi app.\n\n**Phản đối chặn — “không còn consumer hiện tại” không thắng yêu cầu giữ chức năng rõ ràng của Leader**\n\nLeader đã ghi nguyên văn rằng màn “Lên lịch” sau khi sửa vẫn giữ “màn hình và dữ liệu quản lý”, bao gồm `Team/Nguoi/Group`. Vì vậy đây là một consumer bắt buộc của kiến trúc đích, dù consumer hiện tại đang nằm lẫn trong màn Cài đặt AI và route `/automation`.\n\nNếu chỉ archive bốn khóa JSON rồi xóa route/UI:\n\n- Người dùng không còn xem hoặc sửa Team/Người/Group trong app.\n- Màn “Lên lịch” không còn đầy đủ phần dữ liệu quản lý mà Leader yêu cầu giữ.\n- `BL-20260823-001` bị dùng như lý do trì hoãn một hành vi mà phạm vi tái cấu trúc hiện tại đã yêu cầu phải bảo toàn.\n\nCách sửa:\n\n- Tách phần CRUD thuần khỏi `announcement-mention-settings.tsx` và `announcement-group-settings.tsx`; xóa riêng các nút/luồng resolve qua Claude.\n- Chuyển UI CRUD còn lại sang module/màn “Lên lịch”, không giữ trong “Cài đặt AI”.\n- Chuyển các endpoint GET/PUT thuần từ `/api/automation/settings/...` sang route thuộc release.\n- Chuyển validator và lớp đọc/ghi bốn khóa ra khỏi `automation-config.ts` sang module dữ liệu release; đổi tên khóa trong một migration có kiểm soát hoặc tạm giữ khóa cũ nhưng quyền sở hữu mới phải rõ.\n- Backup/archive giá trị trước migration vẫn cần, nhưng archive không thay thế dữ liệu hoạt động.\n- Viết characterization test chứng minh giá trị Team/Người/Group trước và sau migration giống nhau, vẫn đọc/sửa được, trong khi mọi endpoint resolve AI và mọi lời gọi CLI đã biến mất.\n- `BL-20260823-001` vẫn có thể về `Inbox` đối với phần mở rộng Team/Người/Group/nội dung mẫu chưa được xây; nhưng phần CRUD đang tồn tại và được Leader yêu cầu giữ phải được chuyển nhà trong item tái cấu trúc hiện tại.\n\n**Các phần tôi không phản đối**\n\n- Xóa toàn bộ `announcement-render.ts`, `announcement-facts.ts`, `announcement-context.ts`, `announcement-verify.ts`, `announcement-candidates.ts`, `announcement-activation.ts` vì sau khi chuyển sang người tự viết/tự đăng, chúng không còn consumer được duyệt.\n- Xóa đoạn validate `automation_contract`, `announcement_locale`, rollout và target group phục vụ bật AI trong `release.ts`.\n- Xóa toàn bộ code CLI/tool/approval khỏi `automation-config.ts`.\n- `BL-20260822-001` chuyển `Dropped`; `BL-20260823-001` về `Inbox` cho phần phạm vi chưa rõ.\n- Tiếp tục rà các file còn lại và hoàn thiện ma trận trước khi mở Change Spec.\n\n```yaml\nturn_result:\n  agent: \"codex\"\n  round: 7\n  blocking_objections: 1\n  new_decisions: 0\n  questions_for_user: 0\n  permission_requests: 0\n  converged: false\n  note: \"Chưa thể ký vì phương án archive rồi xóa Team/Người/Group khỏi app trái với xác nhận trực tiếp của Leader rằng màn Lên lịch phải tiếp tục giữ màn hình và dữ liệu quản lý này; cần chuyển CRUD thuần sang module release và chỉ xóa phần resolve AI.\"\n  rules_version_seen: \"RULES-2026-09-04-a\"\n  session_id: \"f18ab0fe-b546-4237-8d0f-e9879bc5aa18\"\n```\n",
+  "createdAt": "2026-09-12T01:36:22.043Z",
+  "questionCards": [],
+  "recordId": "f18ab0fe-b546-4237-8d0f-e9879bc5aa18-agent_turn-17",
+  "recordType": "agent_turn",
+  "roles": [
+    "Reviewer",
+    "QA",
+    "Infra"
+  ],
+  "round": 7,
+  "rulesVersion": "RULES-2026-09-04-a",
+  "schemaVersion": 1,
+  "sessionId": "f18ab0fe-b546-4237-8d0f-e9879bc5aa18",
+  "turnResult": {
+    "agent": "codex",
+    "blocking_objections": 1,
+    "converged": false,
+    "new_decisions": 0,
+    "note": "Chưa thể ký vì phương án archive rồi xóa Team/Người/Group khỏi app trái với xác nhận trực tiếp của Leader rằng màn Lên lịch phải tiếp tục giữ màn hình và dữ liệu quản lý này; cần chuyển CRUD thuần sang module release và chỉ xóa phần resolve AI.",
+    "permission_requests": 0,
+    "questions_for_user": 0,
+    "round": 7,
+    "rules_version_seen": "RULES-2026-09-04-a",
+    "session_id": "f18ab0fe-b546-4237-8d0f-e9879bc5aa18"
+  }
+}

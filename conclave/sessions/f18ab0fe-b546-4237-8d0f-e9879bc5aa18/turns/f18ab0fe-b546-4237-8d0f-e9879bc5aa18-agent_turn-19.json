@@ -1,0 +1,30 @@
+{
+  "agent": "codex",
+  "bodyMarkdown": "#### Reviewer\n\nTóm tắt ngắn: Tôi không còn phản đối chặn đối với thiết kế sửa lại. Phần Team/Người/Group được chuyển nguyên dữ liệu và khả năng quản lý sang “Lên lịch”, trong khi mọi đường tra cứu hoặc thực thi qua AI bị xóa; cách này đồng thời đáp ứng hai yêu cầu tưởng như xung đột của Leader.\n\n**Phạm vi đã soi**\n\n- Bốn nhóm cấu hình hiện nằm trong `automation-config.ts` đúng là có thể tách ở ranh giới hàm đọc/ghi, chuẩn hóa và kiểm tra dữ liệu, không cần giữ Claude bin, whitelist, rollout hay thời gian duyệt.\n- Các endpoint GET/PUT cấu hình và endpoint resolve AI đang tách biệt đủ để chuyển CRUD sang route release rồi xóa resolve.\n- `announcement-context.ts` là logic tiêu thụ cấu hình lúc thực thi Announcement, không phải lớp CRUD; xóa toàn bộ file này sau khi chuyển lớp lưu trữ là phù hợp.\n- Giữ nguyên bốn khóa `app_settings` trong CR hiện tại tránh migration tên khóa không cần thiết; backup trước khi chuyển quyền sở hữu vẫn là hàng rào đúng.\n- Chuyển UI khỏi “Cài đặt AI” sang “Lên lịch/Cài đặt release” là cần thiết để dữ liệu còn thực sự sử dụng được.\n- Phân ranh backlog hợp lý: CRUD đang tồn tại thuộc CR tái cấu trúc; phần mở rộng chưa xây của `BL-20260823-001` trở lại `Inbox`.\n\n**Điều kiện phải khóa trong ma trận/FR trước khi đạt DoR**\n\nCách thêm hoặc sửa một người sau khi bỏ resolve AI chưa thể để dev tự chọn trong lúc code. BA phải ghi rõ request/response và UI đích: nhập trực tiếp Dr.JOY ID hay chọn từ một nguồn dữ liệu nội bộ đã tồn tại. Nếu repo chưa có nguồn nội bộ đủ tin cậy, phương án mặc định ít mở rộng nhất là cho nhập ID trực tiếp, giữ nguyên dữ liệu cũ và kiểm tra định dạng cục bộ; không được tự xây thêm cơ chế đồng bộ danh bạ trong CR này.\n\nĐiều kiện này chưa tạo phản đối chặn cho hướng thiết kế vòng 8 vì bản hiện tại chưa tuyên bố ma trận hoặc Change Spec đã hoàn tất.\n\n```yaml\nturn_result:\n  agent: \"codex\"\n  round: 8\n  blocking_objections: 0\n  new_decisions: 0\n  questions_for_user: 0\n  permission_requests: 0\n  converged: false\n  note: \"Không còn phản đối chặn: CRUD Team/Người/Group được chuyển sang Lên lịch và giữ dữ liệu sống, còn mọi đường resolve hoặc thực thi qua AI bị xóa; cách nhập người thay thế phải được khóa trong FR trước khi đạt DoR.\"\n  rules_version_seen: \"RULES-2026-09-04-a\"\n  session_id: \"f18ab0fe-b546-4237-8d0f-e9879bc5aa18\"\n  consensus_summary: \"Đồng ý hoàn toàn phản đối chặn của Codex vòng 7: rút lại phương án archive-rồi-xoá cho dữ liệu Team/Người/Group vì trái với xác nhận trực tiếp của Leader rằng Lên lịch vẫn giữ màn hình và dữ liệu này; sửa lại thành chuyển (không xoá) 4 cặp hàm đọc/ghi cấu hình từ automation-config.ts sang module release, chuyển endpoint và UI CRUD sang Lên lịch/Cài đặt release, chỉ xoá đúng phần logic resolve-qua-AI (announcement-context.ts, các prompt resolve tên/group); backup vẫn làm nhưng không thay thế việc giữ dữ liệu sống; BL-20260823-001 về Inbox chỉ cho phần mở rộng chưa xây, phần CRUD hiện có chuyển nhà ngay trong CR này.\"\n```\n",
+  "createdAt": "2026-09-12T01:38:40.967Z",
+  "questionCards": [],
+  "recordId": "f18ab0fe-b546-4237-8d0f-e9879bc5aa18-agent_turn-19",
+  "recordType": "agent_turn",
+  "roles": [
+    "Reviewer",
+    "QA",
+    "Infra"
+  ],
+  "round": 8,
+  "rulesVersion": "RULES-2026-09-04-a",
+  "schemaVersion": 1,
+  "sessionId": "f18ab0fe-b546-4237-8d0f-e9879bc5aa18",
+  "turnResult": {
+    "agent": "codex",
+    "blocking_objections": 0,
+    "consensus_summary": "Đồng ý hoàn toàn phản đối chặn của Codex vòng 7: rút lại phương án archive-rồi-xoá cho dữ liệu Team/Người/Group vì trái với xác nhận trực tiếp của Leader rằng Lên lịch vẫn giữ màn hình và dữ liệu này; sửa lại thành chuyển (không xoá) 4 cặp hàm đọc/ghi cấu hình từ automation-config.ts sang module release, chuyển endpoint và UI CRUD sang Lên lịch/Cài đặt release, chỉ xoá đúng phần logic resolve-qua-AI (announcement-context.ts, các prompt resolve tên/group); backup vẫn làm nhưng không thay thế việc giữ dữ liệu sống; BL-20260823-001 về Inbox chỉ cho phần mở rộng chưa xây, phần CRUD hiện có chuyển nhà ngay trong CR này.",
+    "converged": false,
+    "new_decisions": 0,
+    "note": "Không còn phản đối chặn: CRUD Team/Người/Group được chuyển sang Lên lịch và giữ dữ liệu sống, còn mọi đường resolve hoặc thực thi qua AI bị xóa; cách nhập người thay thế phải được khóa trong FR trước khi đạt DoR.",
+    "permission_requests": 0,
+    "questions_for_user": 0,
+    "round": 8,
+    "rules_version_seen": "RULES-2026-09-04-a",
+    "session_id": "f18ab0fe-b546-4237-8d0f-e9879bc5aa18"
+  }
+}

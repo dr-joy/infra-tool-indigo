@@ -1,0 +1,10 @@
+{
+  "createdAt": "2026-09-12T01:11:00.485Z",
+  "followUpId": "dc05d87e-7e8c-4d9c-9bcc-27aad328ba84",
+  "message": "Quyet dinh cua Leader (nguoi dung) cho Cau hoi 1 vong 2: chon Lua chon A - uu tien tai cau truc (tach Announcement khoi automation dinh ky, dung kiem thu doi chieu hanh vi truoc/sau lam tieu chi khong doi hanh vi Len lich) TRUOC, sau khi tai cau truc xong va kiem thu doi chieu PASS thi moi lam BL-20260823-001 (man cau hinh Team/Nguoi/Group), roi moi toi BL-20260822-001 (kiem thu Claude that + go-live thong bao khan cap nhieu doi nhom) tren nen code da tach. Khong lam song song. Hai backlog item BL-20260822-001/BL-20260823-001 tam dung, khong sua tiep vao vung code sap tai cau truc cho toi khi tai cau truc xong.",
+  "recordId": "f18ab0fe-b546-4237-8d0f-e9879bc5aa18-user_message-3",
+  "recordType": "user_message",
+  "rulesVersion": "RULES-2026-09-04-a",
+  "schemaVersion": 1,
+  "sessionId": "f18ab0fe-b546-4237-8d0f-e9879bc5aa18"
+}

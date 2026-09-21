@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>5 phương án màu chủ đạo và font hệ thống</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: #1f2a2e;
+      background-color: #edf1f0;
+      background-image:
+        url("data:image/svg+xml,%3Csvg width='104' height='90' viewBox='0 0 104 90' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23515b5e' stroke-opacity='0.12' stroke-width='1.4'%3E%3Cpath d='M26 2 50 16v28L26 58 2 44V16L26 2Z'/%3E%3Cpath d='M78 2 102 16v28L78 58 54 44V16L78 2Z'/%3E%3Cpath d='M52 32 76 46v28L52 88 28 74V46l24-14Z'/%3E%3C/g%3E%3C/svg%3E"),
+        linear-gradient(135deg, rgba(208, 216, 214, 0.65), rgba(241, 245, 244, 0.84));
+      background-size: 104px 90px, 100% 100%;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    main {
+      width: min(1360px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 28px 0 42px;
+    }
+
+    header {
+      margin-bottom: 18px;
+      padding: 18px 20px;
+      border: 1px solid #9ca3af;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.92);
+    }
+
+    h1 { margin: 0 0 8px; font-size: 24px; line-height: 1.25; }
+    p { margin: 0; color: #647174; line-height: 1.55; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(390px, 1fr));
+      gap: 16px;
+    }
+
+    .theme {
+      --primary: #0d9488;
+      --primary-hover: #0f766e;
+      --soft: #f0fdfa;
+      --soft-border: #5eead4;
+      --accent: #f97316;
+      --font: Inter, ui-sans-serif, system-ui, sans-serif;
+      overflow: hidden;
+      border: 1px solid #9ca3af;
+      border-radius: 10px;
+      background: #fff;
+      font-family: var(--font);
+    }
+
+    .theme-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 16px;
+      border-bottom: 1px solid #cbd5e1;
+      background: linear-gradient(90deg, var(--soft), #fff);
+    }
+
+    .theme h2 { margin: 0 0 5px; font-size: 19px; }
+    .theme-desc { font-size: 13px; color: #647174; }
+
+    .font-pill {
+      flex: 0 0 auto;
+      padding: 5px 9px;
+      border: 1px solid var(--soft-border);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .body {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .swatches {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .swatch {
+      min-height: 72px;
+      overflow: hidden;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .swatch-color { height: 30px; background: var(--color); }
+    .swatch-info { padding: 7px; font-size: 11px; line-height: 1.35; }
+    .swatch-info strong { display: block; margin-bottom: 2px; }
+
+    .mock {
+      border: 1px solid #9ca3af;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .mock-nav {
+      display: flex;
+      gap: 4px;
+      padding: 6px;
+      border-bottom: 1px solid #cbd5e1;
+    }
+
+    .tab {
+      min-height: 32px;
+      border: 0;
+      border-radius: 6px;
+      padding: 0 12px;
+      background: transparent;
+      color: #647174;
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .tab.active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .mock-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .panel {
+      min-height: 180px;
+      padding: 12px;
+      border: 1px solid #9ca3af;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .panel h3 {
+      margin: 0 0 10px;
+      font-size: 15px;
+    }
+
+    .record {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+      padding: 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 7px;
+      background: #f8fafc;
+    }
+
+    .record.hover {
+      border-color: var(--soft-border);
+      background: var(--soft);
+      box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 18%, transparent);
+    }
+
+    .record-title {
+      margin: 0 0 3px;
+      font-size: 13px;
+      font-weight: 850;
+    }
+
+    .record-meta {
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    button {
+      min-height: 36px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      padding: 0 13px;
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .primary { border-color: var(--primary); background: var(--primary); color: #fff; }
+    .primary.hover { border-color: var(--primary-hover); background: var(--primary-hover); }
+    .neutral { border-color: #cbd5e1; background: #fff; color: #334155; }
+    .neutral.hover { border-color: var(--soft-border); background: var(--soft); color: var(--primary); }
+    .danger { border-color: #ef4444; background: #ef4444; color: #fff; }
+    .icon { width: 36px; padding: 0; }
+
+    .type-demo {
+      display: grid;
+      gap: 6px;
+      padding: 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .type-title {
+      font-size: 19px;
+      font-weight: 850;
+      line-height: 1.25;
+    }
+
+    .type-body {
+      font-size: 13px;
+      line-height: 1.55;
+      color: #475569;
+    }
+
+    .recommend {
+      margin-top: 2px;
+      color: #647174;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .theme-a { --primary: #0d9488; --primary-hover: #0f766e; --soft: #f0fdfa; --soft-border: #5eead4; --accent: #f97316; --font: Inter, ui-sans-serif, system-ui, sans-serif; }
+    .theme-b { --primary: #2563eb; --primary-hover: #1d4ed8; --soft: #eff6ff; --soft-border: #93c5fd; --accent: #0f766e; --font: "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif; }
+    .theme-c { --primary: #047857; --primary-hover: #065f46; --soft: #ecfdf5; --soft-border: #6ee7b7; --accent: #eab308; --font: "IBM Plex Sans", "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif; }
+    .theme-d { --primary: #4f46e5; --primary-hover: #4338ca; --soft: #eef2ff; --soft-border: #a5b4fc; --accent: #0d9488; --font: "Aptos", "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif; }
+    .theme-e { --primary: #0f6f63; --primary-hover: #0b5d53; --soft: #eefcf8; --soft-border: #79dec9; --accent: #db2777; --font: "Nunito Sans", Inter, ui-sans-serif, system-ui, sans-serif; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>5 phương án màu chủ đạo và font chữ</h1>
+      <p>
+        Mỗi phương án mô phỏng menu, panel, record hover, button primary/neutral và mẫu chữ.
+        Font đều ưu tiên stack có sẵn trên máy hoặc fallback hệ thống để không cần tải ngoài.
+      </p>
+    </header>
+
+    <section class="grid">
+      <article class="theme theme-a">
+        <div class="theme-head">
+          <div>
+            <h2>1. Teal Productive</h2>
+            <p class="theme-desc">Sáng hơn màu hiện tại, vẫn giữ nhận diện xanh của project.</p>
+          </div>
+          <span class="font-pill">Inter</span>
+        </div>
+        <div class="body">
+          <div class="swatches">
+            <div class="swatch"><div class="swatch-color" style="--color: var(--primary)"></div><div class="swatch-info"><strong>Primary</strong>#0d9488</div></div>
+            <div class="swatch"><div class="swatch-color" style="--color: var(--primary-hover)"></div><div class="swatch-info"><strong>Hover</strong>#0f766e</div></div>
+            <div class="swatch"><div class="swatch-color" style="--color: var(--soft)"></div><div class="swatch-info"><strong>Soft</strong>#f0fdfa</div></div>
+            <div class="swatch"><div class="swatch-color" style="--color: var(--soft-border)"></div><div class="swatch-info"><strong>Border</strong>#5eead4</div></div>
+            <div class="swatch"><div class="swatch-color" style="--color: var(--accent)"></div><div class="swatch-info"><strong>Accent</strong>#f97316</div></div>
+          </div>
+          <div class="mock">
+            <div class="mock-nav"><button class="tab active">Project</button><button class="tab">Báo cáo</button><button class="tab">MindMap</button></div>
+            <div class="mock-content">
+              <div class="panel"><h3>Task hôm nay</h3><div class="record hover"><div><div class="record-title">Rà soát backlog</div><div class="record-meta">PIC Dev13 · 70%</div></div><button class="danger icon">×</button></div><div class="actions"><button class="primary">Lưu</button><button class="primary hover">Hover</button><button class="neutral hover">Export</button><button class="primary icon">&lt;</button><button class="primary icon">&gt;</button></div></div>
+              <div class="panel"><div class="type-demo"><div class="type-title">Font Inter: gọn, hiện đại, dễ đọc</div><div class="type-body">Phù hợp nhất với tool quản lý công việc, mật độ thông tin cao và nhiều số liệu.</div></div></div>
+            </div>
+          </div>
+          <p class="recommend">Gợi ý: lựa chọn an toàn nhất nếu muốn giảm độ đậm nhưng không đổi tính cách app quá nhiều.</p>
+        </div>
+      </article>
+
+      <article class="theme theme-b">
+        <div class="theme-head">
+          <div>
+            <h2>2. Blue Operations</h2>
+            <p class="theme-desc">Xanh blue rõ ràng, cảm giác dashboard vận hành chuyên nghiệp.</p>
+          </div>
+          <span class="font-pill">Segoe UI</span>
+        </div>
+        <div class="body">
+          <div class="swatches">
+            <div class="swatch"><div class="swatch-color" style="--color: var(--primary)"></div><div class="swatch-info"><strong>Primary</strong>#2563eb</div></div>
+            <div class="swatch"><div class="swatch-color" style="--color: var(--primary-hover)"></div><div class="swatch-info"><strong>Hover</strong>#1d4ed8</div></div>
+            <div class="swatch"><div class="swatch-color" style="--color: var(--soft)"></div><div class="swatch-info"><strong>Soft</strong>#eff6ff</div></div>
+            <div class="swatch"><div class="swatch-color" style="--color: var(--soft-border)"></div><div class="swatch-info"><strong>Border</strong>#93c5fd</div></div>
+            <div class="swatch"><div class="swatch-color" style="--color: var(--accent)"></div><div class="swatch-info"><strong>Accent</strong>#0f766e</div></div>
+          </div>
+          <div class="mock">
+            <div class="mock-nav"><button class="tab active">Project</button><button class="tab">Báo cáo</button><button class="tab">MindMap</button></div>
+            <div class="mock-content">
+              <div class="panel"><h3>Task hôm nay</h3><div class="record hover"><div><div class="record-title">Rà soát backlog</div><div class="record-meta">PIC Dev13 · 70%</div></div><button class="danger icon">×</button></div><div class="actions"><button class="primary">Lưu</button><button class="primary hover">Hover</button><button class="neutral hover">Export</button><button class="primary icon">&lt;</button><button class="primary icon">&gt;</button></div></div>
+              <div class="panel"><div class="type-demo"><div class="type-title">Segoe UI: quen thuộc, rõ và sạch</div><div class="type-body">Hợp với ứng dụng Windows/desktop, nhìn rất native và ít gây mỏi mắt.</div></div></div>
+            </div>
+          </div>
+          <p class="recommend">Gợi ý: hợp nếu muốn project nhìn giống công cụ vận hành chuẩn doanh nghiệp hơn.</p>
+        </div>
+      </article>
+
+      <article class="theme theme-c">
+        <div class="theme-head">
+          <div>
+            <h2>3. Emerald Workbench</h2>
+            <p class="theme-desc">Xanh lá trầm, gần cảm giác hoàn thành/task/productivity.</p>
+          </div>
+          <span class="font-pill">IBM Plex Sans</span>
+        </div>
+        <div class="body">
+          <div class="swatches">
+            <div class="swatch"><div class="swatch-color" style="--color: var(--primary)"></div><div class="swatch-info"><strong>Primary</strong>#047857</div></div>
+            <div class="swatch"><div class="swatch-color" style="--color: var(--primary-hover)"></div><div class="swatch-info"><strong>Hover</strong>#065f46</div></div>
+            <div class="swatch"><div class="swatch-color" style="--color: var(--soft)"></div><div class="swatch-info"><strong>Soft</strong>#ecfdf5</div></div>
+            <div class="swatch"><div class="swatch-color" style="--color: var(--soft-border)"></div><div class="swatch-info"><strong>Border</strong>#6ee7b7</div></div>
+            <div class="swatch"><div class="swatch-color" style="--color: var(--accent)"></div><div class="swatch-info"><strong>Accent</strong>#eab308</div></div>
+          </div>
+          <div class="mock">
+            <div class="mock-nav"><button class="tab active">Project</button><button class="tab">Báo cáo</button><button class="tab">MindMap</button></div>
+            <div class="mock-content">
+              <div class="panel"><h3>Task hôm nay</h3><div class="record hover"><div><div class="record-title">Rà soát backlog</div><div class="record-meta">PIC Dev13 · 70%</div></div><button class="danger icon">×</button></div><div class="actions"><button class="primary">Lưu</button><button class="primary hover">Hover</button><button class="neutral hover">Export</button><button class="primary icon">&lt;</button><button class="primary icon">&gt;</button></div></div>
+              <div class="panel"><div class="type-demo"><div class="type-title">IBM Plex Sans: kỹ thuật nhưng thân thiện</div><div class="type-body">Nếu máy không có IBM Plex Sans, fallback sang Segoe UI/Inter vẫn ổn.</div></div></div>
+            </div>
+          </div>
+          <p class="recommend">Gợi ý: hợp nếu muốn cảm giác công việc, tiến độ, hoàn thành rõ hơn.</p>
+        </div>
+      </article>
+
+      <article class="theme theme-d">
+        <div class="theme-head">
+          <div>
+            <h2>4. Indigo Focus</h2>
+            <p class="theme-desc">Tím xanh hiện đại, nổi bật hơn nhưng xa màu project hiện tại.</p>
+          </div>
+          <span class="font-pill">Aptos</span>
+        </div>
+        <div class="body">
+          <div class="swatches">
+            <div class="swatch"><div class="swatch-color" style="--color: var(--primary)"></div><div class="swatch-info"><strong>Primary</strong>#4f46e5</div></div>
+            <div class="swatch"><div class="swatch-color" style="--color: var(--primary-hover)"></div><div class="swatch-info"><strong>Hover</strong>#4338ca</div></div>
+            <div class="swatch"><div class="swatch-color" style="--color: var(--soft)"></div><div class="swatch-info"><strong>Soft</strong>#eef2ff</div></div>
+            <div class="swatch"><div class="swatch-color" style="--color: var(--soft-border)"></div><div class="swatch-info"><strong>Border</strong>#a5b4fc</div></div>
+            <div class="swatch"><div class="swatch-color" style="--color: var(--accent)"></div><div class="swatch-info"><strong>Accent</strong>#0d9488</div></div>
+          </div>
+          <div class="mock">
+            <div class="mock-nav"><button class="tab active">Project</button><button class="tab">Báo cáo</button><button class="tab">MindMap</button></div>
+            <div class="mock-content">
+              <div class="panel"><h3>Task hôm nay</h3><div class="record hover"><div><div class="record-title">Rà soát backlog</div><div class="record-meta">PIC Dev13 · 70%</div></div><button class="danger icon">×</button></div><div class="actions"><button class="primary">Lưu</button><button class="primary hover">Hover</button><button class="neutral hover">Export</button><button class="primary icon">&lt;</button><button class="primary icon">&gt;</button></div></div>
+              <div class="panel"><div class="type-demo"><div class="type-title">Aptos: mềm, mới, văn phòng</div><div class="type-body">Hợp với Windows/Office mới. Nếu máy thiếu Aptos sẽ fallback sang Segoe UI.</div></div></div>
+            </div>
+          </div>
+          <p class="recommend">Gợi ý: hợp nếu muốn làm mới nhận diện mạnh, nhưng cần cân nhắc vì khác tinh thần xanh hiện tại.</p>
+        </div>
+      </article>
+
+      <article class="theme theme-e">
+        <div class="theme-head">
+          <div>
+            <h2>5. Soft Teal Personal</h2>
+            <p class="theme-desc">Teal mềm, riêng hơn, ít gắt và vẫn giữ chất personal tool.</p>
+          </div>
+          <span class="font-pill">Nunito Sans</span>
+        </div>
+        <div class="body">
+          <div class="swatches">
+            <div class="swatch"><div class="swatch-color" style="--color: var(--primary)"></div><div class="swatch-info"><strong>Primary</strong>#0f6f63</div></div>
+            <div class="swatch"><div class="swatch-color" style="--color: var(--primary-hover)"></div><div class="swatch-info"><strong>Hover</strong>#0b5d53</div></div>
+            <div class="swatch"><div class="swatch-color" style="--color: var(--soft)"></div><div class="swatch-info"><strong>Soft</strong>#eefcf8</div></div>
+            <div class="swatch"><div class="swatch-color" style="--color: var(--soft-border)"></div><div class="swatch-info"><strong>Border</strong>#79dec9</div></div>
+            <div class="swatch"><div class="swatch-color" style="--color: var(--accent)"></div><div class="swatch-info"><strong>Accent</strong>#db2777</div></div>
+          </div>
+          <div class="mock">
+            <div class="mock-nav"><button class="tab active">Project</button><button class="tab">Báo cáo</button><button class="tab">MindMap</button></div>
+            <div class="mock-content">
+              <div class="panel"><h3>Task hôm nay</h3><div class="record hover"><div><div class="record-title">Rà soát backlog</div><div class="record-meta">PIC Dev13 · 70%</div></div><button class="danger icon">×</button></div><div class="actions"><button class="primary">Lưu</button><button class="primary hover">Hover</button><button class="neutral hover">Export</button><button class="primary icon">&lt;</button><button class="primary icon">&gt;</button></div></div>
+              <div class="panel"><div class="type-demo"><div class="type-title">Nunito Sans: mềm và dễ gần</div><div class="type-body">Hợp nếu muốn tool bớt khô, nhưng font này có thể cần cài hoặc dùng fallback.</div></div></div>
+            </div>
+          </div>
+          <p class="recommend">Gợi ý: hợp nhất nếu bạn muốn giảm độ nặng của UI và giữ cảm giác cá nhân.</p>
+        </div>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

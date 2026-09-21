@@ -1,0 +1,29 @@
+{
+  "agent": "codex",
+  "bodyMarkdown": "#### Reviewer\n\nTóm tắt ngắn: Đây là review tính tương đương của ba lần tách module, không phải phiên xem xét lại kiến trúc. Qua lượt kiểm tra độc lập đầu tiên, cấu trúc gọi DB và ranh giới Task cá nhân nhìn chung bám thiết kế đã chốt. Tuy nhiên, `src/main.tsx` hiện còn một nhóm lớn import cũ sau khi tách Task; đây là dấu hiệu triển khai chưa dọn sạch hoàn toàn và cần được xác minh, sửa ở lượt phát triển sau nếu đúng là không còn nơi sử dụng.\n\n**1. Cách tôi hiểu vấn đề**\n\n- Baseline của DB là `server/db.ts` ngay trước `cbf7fc1f`; cần chứng minh các câu lệnh SQL, migration, seed và thứ tự thực thi được bảo toàn, ngoại trừ việc chủ ý chuyển `emergency_release_batches` sang schema Release.\n- Baseline của Cài đặt là `src/main.tsx` trước `ace16561`; bốn màn phải được chuyển nguyên logic sang `settings.tsx` và `luyen-de-category.tsx`.\n- Baseline của Task cá nhân là `src/main.tsx` trước `7d00f32f`; cần đối chiếu việc chuyển state, effect, hàm và JSX sang `personal-task.tsx`, chỉ chấp nhận các thay đổi biên module đã thống nhất.\n- Tôi coi các bằng chứng `npm run check`, test và smoke test do đề bài cung cấp là hợp lệ. Việc review code vẫn phải phát hiện những sai lệch mà cấu hình TypeScript hoặc test hiện tại không bắt được.\n- Tôi không sửa source hay file exchange trong lượt này.\n\n**2. Giả định đang dùng**\n\n- Việc `refresh(date?)` không chuyển `date` cho `taiDuLieu` là hành vi bảo toàn có chủ ý. Lịch sử trước `7d00f32f` thực sự dùng `onTasksCreated={() => taiDuLieu().then(() => {})}`, nên comment trong `personal-task.tsx:171–185` có căn cứ, không phải lời biện hộ được thêm sau.\n- `ManHinhTaskCaNhan` phải luôn mount. Chỉ lưới ba cột nằm trong `{active && (...)}` tại `personal-task.tsx:194`; banner tải dữ liệu từ dòng 238 và các popup sau đó nằm ngoài điều kiện này, phù hợp hành vi cũ.\n- Việc có hai bản `supportsBrowserNotifications` là ngoại lệ đã chủ ý ghi rõ: shell dùng cho quyền và nút ở thanh điều hướng; module Task dùng cho effect thông báo.\n- Thứ tự bootstrap đang thể hiện đúng thiết kế tại `server/db.ts:42–58`: tám schema, rồi legacy migration, seed, cuối cùng versioned migration.\n- `emergency_release_batches` hiện nằm tại `server/schema/release.ts:65`, không xuất hiện như câu lệnh tạo bảng trong `db-migrations.ts`.\n- Test đã đổi import `CotDinhKy` sang `src/screens/personal-task`, đúng vị trí export mới.\n\n**3. Chỗ chưa rõ và rủi ro bước đầu**\n\n- Phát hiện cụ thể cần theo dõi: `src/main.tsx:16–57` còn nhiều import có vẻ chỉ phục vụ code đã chuyển đi, gồm `InfoTip`, phần lớn icon Lucide, `mondayOfWeek`, nhiều hàm từ `task-utils`, `TaskLinkIcon`, `ApiError`, các hàm ngày Release và nhiều type nghiệp vụ. Tìm kiếm trong file hiện chỉ thấy các tên này tại câu lệnh import. Nếu cấu hình không bật `noUnusedLocals`, `tsc` và toàn bộ cổng kiểm tra vẫn có thể xanh. Đây chưa phải lỗi hành vi, nhưng trái yêu cầu “không còn import thừa” và làm `main.tsx` chưa hoàn toàn là app-shell sạch.\n- Cần hoàn tất đối chiếu nguyên văn SQL theo từng khối, không chỉ dựa vào diff di chuyển file. Điểm nhạy cảm nhất là bảo đảm `archiveAndDropAutomationSchema()` cùng các thao tác trước/sau nó giữ nguyên thứ tự và cùng `context`.\n- Cần tiếp tục đối chiếu toàn văn phần Task bằng từng vùng chức năng để loại trừ trường hợp một callback, popup hoặc nhánh JSX nhỏ bị chuyển thiếu; kích thước diff lớn khiến chỉ nhìn thống kê và các điểm neo chính chưa đủ để ký.\n- Cần kiểm tra imports ở `settings.tsx` và `luyen-de-category.tsx` theo cùng tiêu chí sử dụng thực tế. Lượt đầu chưa thấy dấu hiệu thiếu dependency gây lỗi runtime, nhưng chưa coi đó là xác nhận cuối.\n- Chưa có câu hỏi cần người dùng quyết định và chưa có lý do mở lại bất kỳ quyết định kiến trúc nào của run `022dd1e5`.\n\n```yaml\nturn_result:\n  agent: \"codex\"\n  round: 1\n  blocking_objections: 0\n  new_decisions: 0\n  questions_for_user: 0\n  permission_requests: 0\n  converged: false\n  note: \"Lượt khám phá xác nhận các điểm neo chính của thiết kế đã được triển khai đúng, đồng thời phát hiện src/main.tsx còn nhiều import cũ có vẻ không được sử dụng; cần hoàn tất đối chiếu nguyên văn SQL, migration và toàn bộ logic Task trước khi ký kết luận.\"\n  rules_version_seen: \"RULES-2026-09-04-a\"\n  session_id: \"fb40d675-5cf5-4967-a321-568da5f2bb87\"\n```\n",
+  "createdAt": "2026-09-12T06:26:45.600Z",
+  "questionCards": [],
+  "recordId": "fb40d675-5cf5-4967-a321-568da5f2bb87-agent_turn-0",
+  "recordType": "agent_turn",
+  "roles": [
+    "Reviewer",
+    "QA",
+    "Infra"
+  ],
+  "round": 1,
+  "rulesVersion": "RULES-2026-09-04-a",
+  "schemaVersion": 1,
+  "sessionId": "fb40d675-5cf5-4967-a321-568da5f2bb87",
+  "turnResult": {
+    "agent": "codex",
+    "blocking_objections": 0,
+    "converged": false,
+    "new_decisions": 0,
+    "note": "Lượt khám phá xác nhận các điểm neo chính của thiết kế đã được triển khai đúng, đồng thời phát hiện src/main.tsx còn nhiều import cũ có vẻ không được sử dụng; cần hoàn tất đối chiếu nguyên văn SQL, migration và toàn bộ logic Task trước khi ký kết luận.",
+    "permission_requests": 0,
+    "questions_for_user": 0,
+    "round": 1,
+    "rules_version_seen": "RULES-2026-09-04-a",
+    "session_id": "fb40d675-5cf5-4967-a321-568da5f2bb87"
+  }
+}

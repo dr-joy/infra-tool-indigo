@@ -1,0 +1,27 @@
+node_modules/
+dist/
+dist-mcp/
+.env
+*.db
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
+data/
+_backup_recovery/
+build/
+# Thư mục build SEA ở GỐC repo. Phải neo bằng "/" đầu: mẫu "release/" không neo sẽ khớp MỌI thư mục tên
+# `release` ở mọi cấp — từng nuốt mất docs/ai-prompts/release/ (toàn bộ prompt AI) khỏi git.
+/release/
+
+# Quyền + đường dẫn máy cá nhân của Claude Code. Máy này đang được chặn bởi gitignore TOÀN CỤC của user,
+# nhưng máy khác thì không — neo lại ở repo để không lọt commit (Codex review 2026-08-07).
+.claude/settings.local.json
+
+# Output tạm của script quiz (chunk dịch, raw đề) — không commit
+/chunk_*.json
+/*_raw.json
+
+# Agent Council - trang thai tam, khong dua vao git (them boi `council init`).
+.relay-state/
+.relay-*.tmp

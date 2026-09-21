@@ -1,0 +1,29 @@
+{
+  "agent": "codex",
+  "bodyMarkdown": "#### Reviewer\n\nTóm tắt ngắn: Tôi đồng ý với thứ tự Leader đã chốt và cách hiểu rằng chỉ xóa automation của task định kỳ, còn cơ chế AI của Announcement được tách ra để giữ. Tuy nhiên, tôi chưa thể ký bản đồng thuận kỹ thuật vì phân loại DB hiện tại sẽ làm hỏng chính Announcement cần giữ, và cách ghi trạng thái backlog chưa đúng vòng đời canonical.\n\n**Phản đối chặn 1 — chưa có thiết kế thay thế cho trạng thái và nhật ký Announcement**\n\nBản vòng 3 nói các cột `automation_status`, `automation_preview`, `automation_reasons`, `automation_error`, `automation_updated_at`, `automation_occurrence_key` và bảng `automation_events` “gắn với task định kỳ, có thể bỏ”. Điều này chưa đúng với code hiện tại:\n\n- `announcement-activation.ts` dùng `automation_status` để chặn kích hoạt khi task Announcement còn đang xử lý.\n- Dispatcher Announcement trong `routes/automation.ts` dùng `automation_status`, `automation_reasons` và `automation_occurrence_key` cho các trạng thái duyệt, đang chạy, kết quả không chắc chắn, kiểm tra lại và cho phép thử lại.\n- `automation_events` giữ chỗ trước khi gọi Claude, chống thực thi trùng, xác định lượt đang treo và lưu bằng chứng kết quả cho cả luồng Announcement.\n- `schedules.ts` kiểm tra `automation_status` của task mang contract Announcement trước khi sửa batch.\n\nVì vậy không được ghi “có thể bỏ” các trường/bảng này nếu chưa chỉ rõ chúng được thay bằng gì. Cách sửa:\n\n- Tạo persistence riêng cho Announcement, ví dụ bảng `announcement_runs` và `announcement_events`, hoặc các cột mang tên Announcement trên task.\n- Lập bảng ánh xạ từng trường/event cũ sang trường/event mới.\n- Chuyển dữ liệu của task `regular_release`/`emergency_release` sang nơi mới trong cùng transaction.\n- Chạy kiểm thử đối chiếu và kiểm tra số lượng/hash trước khi xóa schema cũ.\n- Chỉ archive rồi xóa phần lịch sử thuộc task định kỳ cá nhân; lịch sử Announcement đang phục vụ chống trùng và điều tra sự cố phải tiếp tục tồn tại trong DB hoạt động.\n\n**Phản đối chặn 2 — trạng thái backlog “Picked nhưng tạm dừng” không có trong quy trình**\n\nBacklog canonical chỉ có `Inbox`, `Ready`, `Picked`, `Blocked`, `Done`, `Dropped`; mặc định chỉ một thay đổi lớn được `Picked`. Giữ cả `BL-20260822-001` và `BL-20260823-001` ở `Picked` rồi thêm chữ “tạm dừng” vẫn khiến ba thay đổi lớn cùng mang trạng thái thực thi.\n\nCách sửa:\n\n- Chuyển `BL-20260822-001` và `BL-20260823-001` sang `Blocked`.\n- Ghi blocker cụ thể: chờ item tái cấu trúc hoàn tất và kiểm thử đối chiếu đạt.\n- Tạo item tái cấu trúc ở trạng thái `Picked`, Đường C, làm WIP lớn duy nhất.\n- Khi item mới hoàn tất, đưa `BL-20260823-001` trở lại `Picked`; chỉ sau khi item đó xong mới tiếp tục `BL-20260822-001`.\n\n**Phản đối chặn 3 — chưa đạt yêu cầu “danh sách đầy đủ, chính xác” và kế hoạch đủ cho dev thực hiện**\n\nBản vòng 3 mới dẫn lại “danh sách sơ bộ” của vòng 1 và nói cần Codex xác nhận “danh sách file cuối”, nhưng chưa cung cấp artifact cuối cùng gồm:\n\n- Từng file xóa hoàn toàn.\n- Từng file giữ và phần nào phải chuyển.\n- Endpoint cũ nào mất, endpoint Announcement nào đổi tên hoặc giữ tương thích.\n- Từng khóa `app_settings` xóa, đổi tên hoặc migrate.\n- Từng bảng/cột/index được giữ, chuyển dữ liệu, archive rồi drop.\n- Test nào giữ, test nào chuyển tên, test nào xóa và test mới cần thêm.\n- Thay đổi ở `check.mjs`, `check-claude-env.mjs`, `check-tz.mjs`, `backup-db.mjs`, `build-sea.mjs`, tài liệu vận hành và backlog automation cũ.\n- Các lát triển khai có checkpoint quay lui trước khi chạm schema và trước khi xóa route cũ.\n\nCách sửa là bổ sung một ma trận canonical theo đơn vị file/schema/API/config/test/docs với bốn cột: hiện trạng, đích đến, thao tác, bằng chứng nghiệm thu. Đây phải là nội dung của backlog item/Change Spec, không để dev tự suy ra trong lúc code.\n\n**Phạm vi tôi đã soi**\n\nTôi đã đối chiếu bản vòng 3 với `AGENTS.md`, backlog và các call-site thật trong `announcement-activation.ts`, `routes/automation.ts`, `routes/schedules.ts`. Tôi không phản đối quyết định thứ tự của Leader, ranh giới module `release/{regular,emergency,announcement}`, yêu cầu Đường C + `security-gate` + `docs-sync`, hay nguyên tắc kiểm thử trước/sau. Ba phản đối trên chỉ chặn việc tuyên bố đã hội tụ kỹ thuật và gói kế hoạch hiện tại thành backlog item “đủ để dev thực hiện”.\n\n```yaml\nturn_result:\n  agent: \"codex\"\n  round: 3\n  blocking_objections: 3\n  new_decisions: 0\n  questions_for_user: 0\n  permission_requests: 0\n  converged: false\n  note: \"Chưa thể ký vì trạng thái và nhật ký hiện được Announcement dùng trực tiếp nhưng chưa có thiết kế thay thế, hai việc tạm dừng cần chuyển sang Blocked, và kế hoạch chưa có ma trận file, dữ liệu, API, cấu hình, test và tài liệu đủ chi tiết để triển khai an toàn.\"\n  rules_version_seen: \"RULES-2026-09-04-a\"\n  session_id: \"f18ab0fe-b546-4237-8d0f-e9879bc5aa18\"\n```\n",
+  "createdAt": "2026-09-12T01:13:50.364Z",
+  "questionCards": [],
+  "recordId": "f18ab0fe-b546-4237-8d0f-e9879bc5aa18-agent_turn-6",
+  "recordType": "agent_turn",
+  "roles": [
+    "Reviewer",
+    "QA",
+    "Infra"
+  ],
+  "round": 3,
+  "rulesVersion": "RULES-2026-09-04-a",
+  "schemaVersion": 1,
+  "sessionId": "f18ab0fe-b546-4237-8d0f-e9879bc5aa18",
+  "turnResult": {
+    "agent": "codex",
+    "blocking_objections": 3,
+    "converged": false,
+    "new_decisions": 0,
+    "note": "Chưa thể ký vì trạng thái và nhật ký hiện được Announcement dùng trực tiếp nhưng chưa có thiết kế thay thế, hai việc tạm dừng cần chuyển sang Blocked, và kế hoạch chưa có ma trận file, dữ liệu, API, cấu hình, test và tài liệu đủ chi tiết để triển khai an toàn.",
+    "permission_requests": 0,
+    "questions_for_user": 0,
+    "round": 3,
+    "rules_version_seen": "RULES-2026-09-04-a",
+    "session_id": "f18ab0fe-b546-4237-8d0f-e9879bc5aa18"
+  }
+}

@@ -1,0 +1,18 @@
+#!/bin/sh
+# Git hook: chặn `git push` nếu cổng chất lượng chưa đạt.
+# Cài bằng: npm run hooks:install   (copy file này vào .git/hooks/)
+#
+# Vì sao pre-push chứ không phải pre-commit: commit nên rẻ (commit vặt, commit dở giữa chừng
+# là chuyện bình thường). Push mới là lúc code rời khỏi máy — đó là ranh giới đáng chặn.
+#
+# Bỏ qua khi thật sự cần:  git push --no-verify
+# (Bỏ qua được là CỐ Ý — hook là phanh tay, không phải khóa. Nhưng đã bỏ qua thì phải biết
+#  mình đang bỏ qua cái gì, đừng thành thói quen.)
+
+echo "▶ pre-push: chạy npm run check ..."
+npm run check || {
+  echo ""
+  echo "✖ pre-push CHẶN: cổng chất lượng chưa đạt."
+  echo "  Sửa cho xanh rồi push lại, hoặc \`git push --no-verify\` nếu có lý do và ghi lại lý do đó."
+  exit 1
+}
