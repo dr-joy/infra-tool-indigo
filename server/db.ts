@@ -10,6 +10,7 @@ import { applyWeeklyReportSchema } from './schema/weekly-report.js';
 import { applyLuyenDeSchema } from './schema/luyen-de.js';
 import { applyMindmapSchema } from './schema/mindmap.js';
 import { applyAppSettingsSchema } from './schema/app-settings.js';
+import { applyAuthSchema } from './schema/auth.js';
 import { runLegacyMigrations, runVersionedMigrations } from './db-migrations.js';
 import { runSeed } from './db-seed.js';
 
@@ -47,6 +48,7 @@ applyWeeklyReportSchema(db);
 applyLuyenDeSchema(db);
 applyMindmapSchema(db);
 applyAppSettingsSchema(db);
+applyAuthSchema(db);
 
 // ── Migration lịch sử + seed + migration theo PRAGMA user_version, tách theo TRỤC LOẠI (không
 // theo tính năng) vì có ràng buộc thứ tự thực thi xuyên nhiều bảng — xem comment trong

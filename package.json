@@ -27,6 +27,7 @@
     "cors": "^2.8.5",
     "exceljs": "^4.4.0",
     "express": "^5.2.1",
+    "jose": "^6.2.12",
     "lucide-react": "^0.561.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",

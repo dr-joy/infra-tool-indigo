@@ -19,6 +19,9 @@ import picsRouter from './routes/pics.js';
 import deThiRouter from './routes/de-thi.js';
 import redmineRouter from './routes/redmine.js';
 import mindmapsRouter from './routes/mindmaps.js';
+import authRouter from './routes/auth.js';
+import onboardingRouter from './routes/onboarding.js';
+import notificationsRouter from './routes/notifications.js';
 
 export const app = express();
 
@@ -66,6 +69,9 @@ app.use('/api', picsRouter);
 app.use('/api', deThiRouter);
 app.use('/api', redmineRouter);
 app.use('/api', mindmapsRouter);
+app.use('/api', authRouter);
+app.use('/api', onboardingRouter);
+app.use('/api', notificationsRouter);
 
 // Phục vụ giao diện đã build (chế độ chạy app 1 tiến trình).
 // Chỉ bật khi đã có thư mục dist (đã chạy `npm run build`).

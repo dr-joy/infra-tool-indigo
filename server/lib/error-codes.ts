@@ -34,5 +34,37 @@ export const ERROR_CODE_REGISTRY: Record<string, ErrorCodeEntry> = {
   REPORT_EXISTS: {
     status: 409,
     note: 'Báo cáo tuần (weekStart + kind + mode) đã tồn tại, chưa xác nhận ghi đè'
+  },
+  SESSION_REQUIRED: {
+    status: 401,
+    note: 'Chưa đăng nhập hoặc cookie phiên đã hết hạn/bị thu hồi (CR-20260913 FR-4, lớp 1 của authorize)'
+  },
+  ACCOUNT_DISABLED: {
+    status: 403,
+    note: 'Tài khoản bị Admin vô hiệu hoá — FE hiện popup yêu cầu xác nhận lại (CR-20260913 FR-4a, lớp 1.5)'
+  },
+  ACCOUNT_PENDING: {
+    status: 403,
+    note: 'Tài khoản chưa được Admin duyệt team/vai trò — chỉ được gọi route onboarding (CR-20260913 FR-2/FR-3a)'
+  },
+  FORBIDDEN_ADMIN_ONLY: {
+    status: 403,
+    note: 'Route chỉ dành cho system_role=admin (guard viết tay tạm thế cho authorize(), xem CR-20260913 §10 Lát 2)'
+  },
+  LOGIN_NONCE_INVALID: {
+    status: 400,
+    note: 'Cookie login_nonce thiếu/hết hạn lúc /auth/callback — vá lỗ hổng login-CSRF thật (CR-20260913 FR-1)'
+  },
+  JOIN_REQUEST_PENDING_EXISTS: {
+    status: 409,
+    note: 'User đã có 1 đơn xin tham gia team đang chờ duyệt (unique index (user_id) WHERE status=pending)'
+  },
+  JOIN_REQUEST_STALE: {
+    status: 409,
+    note: 'Đơn xin tham gia team đã được xử lý hoặc bị người khác duyệt/từ chối trước (row_version lệch)'
+  },
+  TEAM_ALREADY_HAS_LEADER: {
+    status: 409,
+    note: 'Duyệt đơn với role=leader nhưng team đó đã có Leader — tối đa 1 Leader/team (CR-20260913 FR-6)'
   }
 };
