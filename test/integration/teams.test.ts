@@ -194,6 +194,34 @@ test('POST /admin/teams/:id/leader: chỉ định người CHƯA thuộc team ->
   assert.equal(res.status, 400);
 });
 
+test('POST /admin/teams/:id/leader: THIẾU rowVersion -> 409, KHÔNG được tự khớp version hiện tại (Council review run e8d20dc3)', async () => {
+  const adminSession = await loginAsAdmin();
+  const teamId = await makeTeam(adminSession, 'Team Leader Thiếu Version');
+  const { userId } = await joinAndApprove('missing-version@drjoy.jp', 'Thiếu rowVersion', teamId, 'member', adminSession);
+  const res = await fetch(`${base}/api/admin/teams/${teamId}/leader`, {
+    method: 'POST', headers: H(adminSession), body: JSON.stringify({ userId })
+  });
+  assert.equal(res.status, 409);
+  const member = db.prepare('SELECT role FROM team_members WHERE team_id = ? AND user_id = ?').get(teamId, userId) as { role: string };
+  assert.equal(member.role, 'member', 'không được đổi Leader khi thiếu rowVersion');
+});
+
+test('POST /admin/teams/:id/leader: 2 Admin đổi Leader đồng thời cùng rowVersion cũ -> đúng 1 thành công, 1 bị 409', async () => {
+  const adminSession = await loginAsAdmin();
+  const teamId = await makeTeam(adminSession, 'Team Leader Race');
+  const { userId: candidateA } = await joinAndApprove('leader-race-a@drjoy.jp', 'Ứng viên A', teamId, 'member', adminSession);
+  const { userId: candidateB } = await joinAndApprove('leader-race-b@drjoy.jp', 'Ứng viên B', teamId, 'member', adminSession);
+  const team = db.prepare('SELECT row_version FROM teams WHERE id = ?').get(teamId) as { row_version: number };
+
+  const [r1, r2] = await Promise.all([
+    fetch(`${base}/api/admin/teams/${teamId}/leader`, { method: 'POST', headers: H(adminSession), body: JSON.stringify({ userId: candidateA, rowVersion: team.row_version }) }),
+    fetch(`${base}/api/admin/teams/${teamId}/leader`, { method: 'POST', headers: H(adminSession), body: JSON.stringify({ userId: candidateB, rowVersion: team.row_version }) })
+  ]);
+  assert.deepEqual([r1.status, r2.status].sort(), [200, 409]);
+  const leaders = db.prepare("SELECT user_id FROM team_members WHERE team_id = ? AND role = 'leader'").all(teamId) as { user_id: number }[];
+  assert.equal(leaders.length, 1, 'chỉ đúng 1 Leader sau cùng, không có 2 lần gán cùng thành công');
+});
+
 test('GET /me/teams: trả đúng team + role của actor', async () => {
   const adminSession = await loginAsAdmin();
   const teamId = await makeTeam(adminSession, 'Team Me');

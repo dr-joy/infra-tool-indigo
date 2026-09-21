@@ -30,7 +30,13 @@ function decodeCursor(cursor: string): [string, number] | null {
 }
 
 router.get('/audit', requireSession, requireActiveAccount, (req, res) => {
-  const teamIdParam = req.query.teamId !== undefined ? Number(req.query.teamId) : undefined;
+  let teamIdParam: number | undefined;
+  if (req.query.teamId !== undefined) {
+    // Validate TRƯỚC khi đưa vào authorize()/query — chuỗi không phải số ra NaN, bind NaN vào SQLite
+    // gây lỗi khó hiểu (500) thay vì 400 rõ ràng (Council review run e8d20dc3).
+    teamIdParam = Number(req.query.teamId);
+    if (!Number.isInteger(teamIdParam)) return res.status(400).json({ message: 'teamId không hợp lệ' });
+  }
   const decision = authorize({
     actor: actorFromRequest(req),
     policyKind: 'audit',

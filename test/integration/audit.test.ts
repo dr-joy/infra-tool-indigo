@@ -195,3 +195,9 @@ test('GET /api/audit: cascade FR-7a (tắt project tự tắt weekly_report) ghi
   assert.ok(actions.includes('feature_visibility.update'));
   assert.ok(actions.includes('feature_visibility.cascade_off'));
 });
+
+test('GET /api/audit: teamId không phải số hợp lệ -> 400 rõ ràng, không phải 500 (Council review run e8d20dc3)', async () => {
+  const adminSession = await loginAsAdmin();
+  const res = await fetch(`${base}/api/audit?teamId=khong-phai-so`, { headers: H(adminSession) });
+  assert.equal(res.status, 400);
+});

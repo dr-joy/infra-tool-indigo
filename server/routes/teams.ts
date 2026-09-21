@@ -81,20 +81,22 @@ router.patch('/admin/teams/:id', requireSession, requireActiveAccount, (req, res
   const body = req.body as { name?: string; description?: string; rowVersion?: number };
   if (!Number.isInteger(id)) return res.status(400).json({ message: 'id không hợp lệ' });
 
-  try {
-    const fields: string[] = [];
-    const values: (string | null)[] = [];
-    if (body.name !== undefined) { fields.push('name = ?'); values.push(body.name.trim()); }
-    if (body.description !== undefined) { fields.push('description = ?'); values.push(body.description); }
-    if (fields.length === 0) return res.status(400).json({ message: 'Không có gì để sửa' });
-    fields.push('row_version = row_version + 1');
+  const fields: string[] = [];
+  const values: (string | null)[] = [];
+  if (body.name !== undefined) { fields.push('name = ?'); values.push(body.name.trim()); }
+  if (body.description !== undefined) { fields.push('description = ?'); values.push(body.description); }
+  if (fields.length === 0) return res.status(400).json({ message: 'Không có gì để sửa' });
+  fields.push('row_version = row_version + 1');
 
-    const result = db.prepare(`UPDATE teams SET ${fields.join(', ')} WHERE id = ? AND row_version = ?`)
-      .run(...values, id, body.rowVersion ?? -1);
-    if (result.changes === 0) {
-      return res.status(409).json({ message: 'Có người vừa sửa team này, vui lòng tải lại', code: 'VERSION_CONFLICT' });
-    }
-    writeAudit(req.user!.id, id, 'team.update', `team:${id}`, { name: body.name, description: body.description });
+  try {
+    withTransaction(() => {
+      const result = db.prepare(`UPDATE teams SET ${fields.join(', ')} WHERE id = ? AND row_version = ?`)
+        .run(...values, id, body.rowVersion ?? -1);
+      if (result.changes === 0) {
+        throw new HttpError(409, 'Có người vừa sửa team này, vui lòng tải lại', 'VERSION_CONFLICT');
+      }
+      writeAudit(req.user!.id, id, 'team.update', `team:${id}`, { name: body.name, description: body.description });
+    });
     res.json({ ok: true });
   } catch (error) {
     if (error instanceof Error && /UNIQUE/.test(error.message)) {
@@ -120,8 +122,11 @@ router.post('/admin/teams/:id/leader', requireSession, requireActiveAccount, (re
       const membership = db.prepare('SELECT 1 FROM team_members WHERE team_id = ? AND user_id = ?').get(id, newLeaderId);
       if (!membership) throw new HttpError(400, 'Người được chỉ định phải đang là thành viên của team này');
 
+      // KHÔNG fallback về team.row_version vừa đọc (tự khớp mọi lần, vô hiệu hoá optimistic
+      // concurrency khi client quên gửi rowVersion) — dùng -1 giống mọi route row_version khác, ép
+      // client phải gửi đúng giá trị (Council review run e8d20dc3, phát hiện độc lập cả 2 agent).
       const updated = db.prepare('UPDATE teams SET row_version = row_version + 1 WHERE id = ? AND row_version = ?')
-        .run(id, body.rowVersion ?? team.row_version);
+        .run(id, body.rowVersion ?? -1);
       if (updated.changes === 0) throw new HttpError(409, 'Có người vừa thay đổi team này, vui lòng tải lại', 'VERSION_CONFLICT');
 
       db.prepare("UPDATE team_members SET role = 'member' WHERE team_id = ? AND role = 'leader'").run(id);
@@ -171,8 +176,10 @@ router.post('/teams/:teamId/members', requireSession, requireActiveAccount, (req
   if (!user) return res.status(404).json({ message: 'Người này chưa từng đăng nhập vào hệ thống' });
 
   try {
-    db.prepare("INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, 'member')").run(teamId, userId);
-    writeAudit(req.user!.id, teamId, 'team_member.add', `user:${userId}`, { teamId, userId });
+    withTransaction(() => {
+      db.prepare("INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, 'member')").run(teamId, userId);
+      writeAudit(req.user!.id, teamId, 'team_member.add', `user:${userId}`, { teamId, userId });
+    });
     res.status(201).json({ ok: true });
   } catch (error) {
     if (error instanceof Error && /UNIQUE|PRIMARY KEY/.test(error.message)) {
@@ -188,10 +195,16 @@ router.delete('/teams/:teamId/members/:userId', requireSession, requireActiveAcc
   if (!Number.isInteger(teamId) || !Number.isInteger(userId)) return res.status(400).json({ message: 'Tham số không hợp lệ' });
   authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'team_member', action: 'delete', scope: { teamId } });
 
-  const result = db.prepare('DELETE FROM team_members WHERE team_id = ? AND user_id = ?').run(teamId, userId);
-  if (result.changes === 0) return res.status(404).json({ message: 'Người này không phải thành viên của team' });
-  writeAudit(req.user!.id, teamId, 'team_member.remove', `user:${userId}`, { teamId, userId });
-  res.json({ ok: true });
+  try {
+    withTransaction(() => {
+      const result = db.prepare('DELETE FROM team_members WHERE team_id = ? AND user_id = ?').run(teamId, userId);
+      if (result.changes === 0) throw new HttpError(404, 'Người này không phải thành viên của team');
+      writeAudit(req.user!.id, teamId, 'team_member.remove', `user:${userId}`, { teamId, userId });
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    sendRouteError(res, error, 'Không xoá được thành viên');
+  }
 });
 
 export default router;

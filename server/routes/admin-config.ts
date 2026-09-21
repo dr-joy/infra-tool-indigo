@@ -85,15 +85,21 @@ router.put('/admin/release-coordinator', requireSession, requireActiveAccount, (
     return res.status(404).json({ message: 'Không tìm thấy team' });
   }
 
-  const result = db.prepare(`
-    UPDATE app_config SET release_coordinator_team_id = ?, updated_at = ?, row_version = row_version + 1
-    WHERE id = 1 AND row_version = ?
-  `).run(teamId, new Date().toISOString(), body.rowVersion ?? -1);
-  if (result.changes === 0) {
-    return res.status(409).json({ message: 'Có người vừa đổi cấu hình này, vui lòng tải lại', code: 'VERSION_CONFLICT' });
+  try {
+    withTransaction(() => {
+      const result = db.prepare(`
+        UPDATE app_config SET release_coordinator_team_id = ?, updated_at = ?, row_version = row_version + 1
+        WHERE id = 1 AND row_version = ?
+      `).run(teamId, new Date().toISOString(), body.rowVersion ?? -1);
+      if (result.changes === 0) {
+        throw new HttpError(409, 'Có người vừa đổi cấu hình này, vui lòng tải lại', 'VERSION_CONFLICT');
+      }
+      writeAudit(req.user!.id, teamId, 'release_coordinator.change', `team:${teamId}`, { teamId });
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    sendRouteError(res, error, 'Không đổi được team điều phối');
   }
-  writeAudit(req.user!.id, teamId, 'release_coordinator.change', `team:${teamId}`, { teamId });
-  res.json({ ok: true });
 });
 
 export default router;

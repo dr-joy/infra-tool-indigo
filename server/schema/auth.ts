@@ -1,10 +1,13 @@
 import type { DatabaseSync } from 'node:sqlite';
 
 // Schema Lát 2+3 (CR-20260913) — danh tính, phiên đăng nhập, onboarding, thông báo (Lát 2, FR-1→FR-4a/
-// FR-34), nền phân quyền (Lát 3, FR-6→14/40-42). `teams`/`team_members` được Lát 2 kéo sớm tối thiểu,
-// Lát 3 MỞ RỘNG bằng ALTER TABLE (không tạo lại) — đúng khuôn idempotent hiện có, không tạo cơ chế
-// migration thứ hai. Thiết kế chốt qua Council `f04dfc02` (Lát 2) và `1aa7fe8b` + `f0a0e1bb` (Lát 3,
-// đối chiếu lại với code thật) — xem docs/exchanges/2026-09-19.md và 2026-09-21.md.
+// FR-34), nền phân quyền (Lát 3, FR-6→14/40-42). `teams`/`team_members` được Lát 2 kéo sớm ĐỦ DÙNG
+// cho cả Lát 3 (đã có `row_version`/partial unique index 1-Leader từ trước) — Lát 3 chỉ THÊM 3 bảng
+// mới (`team_feature_visibility`, `app_config`, `audit_log`), không cần `ALTER TABLE` lên 2 bảng đó lần
+// này (đối chiếu qua Council `f0a0e1bb`, review run `e8d20dc3` — sửa lại comment cho đúng thực tế, dự
+// định ban đầu có tính thêm cột `joined_at` nhưng không route nào cần nên đã bỏ). Thiết kế chốt qua
+// Council `f04dfc02` (Lát 2) và `1aa7fe8b` + `f0a0e1bb` (Lát 3) — xem docs/exchanges/2026-09-19.md và
+// 2026-09-21.md.
 export function applyAuthSchema(db: DatabaseSync): void {
   db.exec(`
     -- Danh tính: bind theo (issuer, subject) của JWT thật auth.drjoy.vn, KHÔNG bind theo email (email

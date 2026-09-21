@@ -135,12 +135,15 @@ router.post('/admin/join-requests/:id/approve', requireSession, requireActiveAcc
       }
 
       const now = new Date().toISOString();
+      // KHÔNG fallback về jr.row_version vừa đọc (tự khớp mọi lần, vô hiệu hoá optimistic concurrency
+      // khi client quên gửi rowVersion) — dùng -1 giống route reject, ép client phải gửi đúng giá trị
+      // (Council review run e8d20dc3, phát hiện độc lập cả 2 agent).
       const updated = db.prepare(`
         UPDATE join_requests
         SET status = 'approved', approved_team_id = ?, approved_role = ?, reviewed_by = ?, reviewed_at = ?,
             row_version = row_version + 1
         WHERE id = ? AND row_version = ?
-      `).run(approvedTeamId, approvedRole, req.user!.id, now, id, body.rowVersion ?? jr.row_version);
+      `).run(approvedTeamId, approvedRole, req.user!.id, now, id, body.rowVersion ?? -1);
       if (updated.changes === 0) throw new HttpError(409, 'Đơn này vừa được xử lý bởi người khác, vui lòng tải lại', 'JOIN_REQUEST_STALE');
 
       db.prepare("UPDATE users SET status = 'active', row_version = row_version + 1 WHERE id = ?").run(jr.user_id);
@@ -177,18 +180,24 @@ router.post('/admin/join-requests/:id/reject', requireSession, requireActiveAcco
     return res.status(409).json({ message: 'Đơn này đã được duyệt trước đó, không thể từ chối', code: 'JOIN_REQUEST_STALE' });
   }
 
-  const now = new Date().toISOString();
-  const result = db.prepare(`
-    UPDATE join_requests SET status = 'rejected', reviewed_by = ?, reviewed_at = ?, row_version = row_version + 1
-    WHERE id = ? AND status = 'pending' AND row_version = ?
-  `).run(req.user!.id, now, id, body.rowVersion ?? -1);
-  if (result.changes === 0) {
-    return res.status(409).json({ message: 'Đơn này vừa được xử lý bởi người khác, vui lòng tải lại', code: 'JOIN_REQUEST_STALE' });
+  try {
+    withTransaction(() => {
+      const now = new Date().toISOString();
+      const result = db.prepare(`
+        UPDATE join_requests SET status = 'rejected', reviewed_by = ?, reviewed_at = ?, row_version = row_version + 1
+        WHERE id = ? AND status = 'pending' AND row_version = ?
+      `).run(req.user!.id, now, id, body.rowVersion ?? -1);
+      if (result.changes === 0) {
+        throw new HttpError(409, 'Đơn này vừa được xử lý bởi người khác, vui lòng tải lại', 'JOIN_REQUEST_STALE');
+      }
+      writeAudit(req.user!.id, null, 'join_request.reject', `join_request:${id}`, {});
+    });
+    // FR-3a: không phải khoá vĩnh viễn — user.status vẫn là 'pending', lần đăng nhập kế tiếp tự quay
+    // lại đúng màn "Chọn team và vai trò" (không có đơn pending nào -> FE tự hiện lại màn chọn team).
+    res.json({ ok: true });
+  } catch (error) {
+    sendRouteError(res, error, 'Không từ chối được đơn xin tham gia team');
   }
-  writeAudit(req.user!.id, null, 'join_request.reject', `join_request:${id}`, {});
-  // FR-3a: không phải khoá vĩnh viễn — user.status vẫn là 'pending', lần đăng nhập kế tiếp tự quay
-  // lại đúng màn "Chọn team và vai trò" (không có đơn pending nào -> FE tự hiện lại màn chọn team).
-  res.json({ ok: true });
 });
 
 export default router;

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { randomBytes } from 'node:crypto';
 import { serialize as serializeCookie, parse as parseCookie } from 'cookie';
 import { db, withTransaction } from '../db.js';
-import { asyncHandler, HttpError } from '../lib/utils.js';
+import { asyncHandler, HttpError, sendRouteError } from '../lib/utils.js';
 import { maHoa } from '../lib/secret.js';
 import { verifyAuthJwt } from '../lib/jwks-client.js';
 import { createSession, revokeSession, revokeAllSessionsForUser } from '../lib/session.js';
@@ -235,18 +235,25 @@ function setUserStatus(status: 'active' | 'disabled') {
     const id = Number(req.params.id);
     const body = req.body as { rowVersion?: number };
     if (!Number.isInteger(id)) return res.status(400).json({ message: 'id không hợp lệ' });
-    const result = db.prepare(`
-      UPDATE users SET status = ?, row_version = row_version + 1 WHERE id = ? AND row_version = ?
-    `).run(status, id, body.rowVersion ?? -1);
-    if (result.changes === 0) {
-      return res.status(409).json({ message: 'Có người vừa thay đổi tài khoản này, vui lòng tải lại', code: 'VERSION_CONFLICT' });
+    try {
+      withTransaction(() => {
+        const result = db.prepare(`
+          UPDATE users SET status = ?, row_version = row_version + 1 WHERE id = ? AND row_version = ?
+        `).run(status, id, body.rowVersion ?? -1);
+        if (result.changes === 0) {
+          throw new HttpError(409, 'Có người vừa thay đổi tài khoản này, vui lòng tải lại', 'VERSION_CONFLICT');
+        }
+        // KHÔNG tự thu hồi phiên ở đây: middleware (requireSession) tra status từ DB mỗi request nên
+        // đã chặn ngay request kế tiếp (FR-4a). Nếu thu hồi phiên luôn, request kế tiếp của user rơi
+        // vào 401 SESSION_REQUIRED (chung, như "phiên hết hạn") thay vì đúng 403 ACCOUNT_DISABLED —
+        // làm mất đúng thông điệp rõ ràng FR-4a yêu cầu. Thu hồi phiên là hành động RIÊNG (route
+        // /revoke-sessions).
+        writeAudit(req.user!.id, null, `user_account.${status === 'disabled' ? 'disable' : 'enable'}`, `user:${id}`, {});
+      });
+      res.json({ ok: true });
+    } catch (error) {
+      sendRouteError(res, error, 'Không đổi được trạng thái tài khoản');
     }
-    // KHÔNG tự thu hồi phiên ở đây: middleware (requireSession) tra status từ DB mỗi request nên đã
-    // chặn ngay request kế tiếp (FR-4a). Nếu thu hồi phiên luôn, request kế tiếp của user rơi vào 401
-    // SESSION_REQUIRED (chung, như "phiên hết hạn") thay vì đúng 403 ACCOUNT_DISABLED — làm mất đúng
-    // thông điệp rõ ràng FR-4a yêu cầu. Thu hồi phiên là hành động RIÊNG (route /revoke-sessions).
-    writeAudit(req.user!.id, null, `user_account.${status === 'disabled' ? 'disable' : 'enable'}`, `user:${id}`, {});
-    res.json({ ok: true });
   };
 }
 
@@ -264,8 +271,10 @@ router.post('/admin/users/:id/revoke-sessions', requireSession, requireActiveAcc
   authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'user_account', action: 'revoke_sessions', scope: {} });
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ message: 'id không hợp lệ' });
-  revokeAllSessionsForUser(id);
-  writeAudit(req.user!.id, null, 'user_account.revoke_sessions', `user:${id}`, {});
+  withTransaction(() => {
+    revokeAllSessionsForUser(id);
+    writeAudit(req.user!.id, null, 'user_account.revoke_sessions', `user:${id}`, {});
+  });
   res.json({ ok: true });
 });
 
