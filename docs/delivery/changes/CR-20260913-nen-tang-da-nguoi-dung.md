@@ -9,7 +9,7 @@
 | Backlog item | `BL-20260913-001` (trạng thái `Picked`) |
 | Trạng thái | ⬜ Draft ✅ **Đã review** ⬜ Đã duyệt ⬜ Đã triển khai ⬜ Đã nghiệm thu |
 | Spec liên quan | [01](../../specs/01-product-requirement-spec.md) · [02](../../specs/02-screen-design-user-flow.md) · [03](../../specs/03-api-business-logic-spec.md) · [04](../../specs/04-database-design.md) · [05](../../specs/05-test-acceptance-criteria.md) · [rules 06–09](../../rules/) · [security-standard](../../standards/security-standard.md) |
-| Nguồn quyết định | [exchange 2026-09-13](../../exchanges/2026-09-13.md) — mục 1-8 (quyết định BA + lý do), bảng Q1-Q11 (quyết định bổ sung của Leader), Council thật `0caf00ab` (khám phá độc lập), `38c458f1` (kiến trúc backend, **converged**), `4dd7a70c` (bảo mật + hiệu năng, **converged**, `open_material_decisions = 0`), `1a86deaf` (rà soát vòng 2 sau khi Claude sửa CR — **converged**, xử lý dứt điểm Q7 + FR-30 + gap FR↔AC + phân bổ Nhóm F/3 cổng DoR) · [exchange 2026-09-12](../../exchanges/2026-09-12.md) (bức tranh lớn) · [exchange 2026-09-19](../../exchanges/2026-09-19.md) — Leader tự rà lại mô hình phân quyền, Council thật `e1e76a1e` (hội tụ 3 vòng, đơn giản hoá tầng 2 + mở rộng FR-28a); cùng ngày, sau khi mở nhánh `feature/da-nguoi-dung`, Council thật `1aa7fe8b` (thiết kế kỹ thuật chi tiết Lát 3 — schema, `authorize()`, route inventory) `76e03307` (thiết kế kỹ thuật chi tiết Lát 4 — di trú dữ liệu/PIC→User, đọc trực tiếp DB Dev13 thật), `74715c65` (thiết kế kỹ thuật chi tiết Lát 5 — cấu hình báo cáo/Risk/mindmap attachment/Redmine SSRF/gỡ MCP), và `84473697` (thiết kế kỹ thuật chi tiết Lát 6 — Release nhiều team, dừng ở bước hỏi Leader vì lỗi hành văn); sau đó Leader tự mô tả lại trực tiếp cách team điều phối vận hành thật, lộ ra 4 chỗ Council hiểu sai, chốt lại toàn bộ qua 6 câu hỏi coaching trực tiếp với Leader (không qua Council) |
+| Nguồn quyết định | [exchange 2026-09-13](../../exchanges/2026-09-13.md) — mục 1-8 (quyết định BA + lý do), bảng Q1-Q11 (quyết định bổ sung của Leader), Council thật `0caf00ab` (khám phá độc lập), `38c458f1` (kiến trúc backend, **converged**), `4dd7a70c` (bảo mật + hiệu năng, **converged**, `open_material_decisions = 0`), `1a86deaf` (rà soát vòng 2 sau khi Claude sửa CR — **converged**, xử lý dứt điểm Q7 + FR-30 + gap FR↔AC + phân bổ Nhóm F/3 cổng DoR) · [exchange 2026-09-12](../../exchanges/2026-09-12.md) (bức tranh lớn) · [exchange 2026-09-19](../../exchanges/2026-09-19.md) — Leader tự rà lại mô hình phân quyền, Council thật `e1e76a1e` (hội tụ 3 vòng, đơn giản hoá tầng 2 + mở rộng FR-28a); cùng ngày, sau khi mở nhánh `feature/da-nguoi-dung`, Council thật `1aa7fe8b` (thiết kế kỹ thuật chi tiết Lát 3 — schema, `authorize()`, route inventory) `76e03307` (thiết kế kỹ thuật chi tiết Lát 4 — di trú dữ liệu/PIC→User, đọc trực tiếp DB Dev13 thật), `74715c65` (thiết kế kỹ thuật chi tiết Lát 5 — cấu hình báo cáo/Risk/mindmap attachment/Redmine SSRF/gỡ MCP), và `84473697` (thiết kế kỹ thuật chi tiết Lát 6 — Release nhiều team, dừng ở bước hỏi Leader vì lỗi hành văn); sau đó Leader tự mô tả lại trực tiếp cách team điều phối vận hành thật, lộ ra 4 chỗ Council hiểu sai, chốt lại toàn bộ qua 6 câu hỏi coaching trực tiếp với Leader (không qua Council) · [exchange 2026-09-21](../../exchanges/2026-09-21.md) — Cổng A đạt đầy đủ qua 5 đợt hỏi hạ tầng + đọc trực tiếp code thật `dr-joy/infra-tool-auth`, phát hiện + tự vá 1 lỗ hổng login-CSRF thật, chốt xong giao thức đăng nhập thật cho Lát 2, Lát 1 đã code xong (commit `5b1a8f4`) |
 
 > **Trạng thái thật sau 3 phiên review:** ba phiên Council (Claude + Codex) đã hội tụ về hướng kiến trúc
 > backend (xác thực, phân quyền, giới hạn tài nguyên), cách chuyển giờ VN→JST an toàn, cách phủ AC cho
@@ -17,6 +17,19 @@
 > buộc trước Cổng C (§10): (1) **route inventory** đầy đủ 11 trường cho từng route production, sinh/kiểm
 > trực tiếp từ router đã đăng ký; (2) **benchmark** trên dữ liệu Dev13 sau di trú. Không mô tả hai thứ
 > này như đã hoàn thành ở bất kỳ đâu trong file này.
+>
+> **Cập nhật 21/09 — Cổng A ĐẠT ĐẦY ĐỦ, Lát 1 ĐÃ XONG (commit `5b1a8f4`):** qua 5 đợt hỏi hạ tầng + đọc
+> trực tiếp code thật `dr-joy/infra-tool-auth` (xem [exchange 2026-09-21](../../exchanges/2026-09-21.md)
+> cho toàn bộ quá trình), toàn bộ 6 nhóm câu hỏi Cổng A đã có câu trả lời: ổ lưu trữ bền (có, không giới
+> hạn), domain (`indigo.drjoy.vn:7749`), TLS (Nginx Proxy Manager terminate), sao lưu (Leader chấp nhận
+> rủi ro — cùng ổ đĩa, không đẩy ra ngoài), cách truyền secret (mount vào container), hợp đồng proxy (1
+> lớp NPM, header/hop chuẩn). **Giao thức đăng nhập thật khác cách CR mô tả ban đầu** — không phải app tự
+> làm OIDC client với 1 IdP chung, mà qua dịch vụ `auth.drjoy.vn` (đứng giữa app và Google) — đã viết lại
+> đầy đủ ở FR-1/FR-1a, kèm 1 lỗ hổng login-CSRF thật tự phát hiện + tự vá (không cần đổi phía
+> `auth.drjoy.vn`). Lát 1 (đóng gói container, env config, health check, xoá MCP theo FR-38) đã code xong,
+> `npm run check` xanh, đã `npm run package` + smoke thật. **Sẵn sàng bắt đầu Lát 2** (xác thực) — chỉ còn
+> đúng 1 việc triển khai chưa làm (không phải câu hỏi thiết kế): khai báo Proxy Host `indigo.drjoy.vn`
+> trong Nginx Proxy Manager (Leader tự xin lúc gần deploy, không chặn code).
 >
 > **Một lỗi thật đang tồn tại trong code đã được xác nhận qua Council `1a86deaf` (không phải giả thuyết):**
 > `src/screens/release.tsx:322` cộng cứng 120 phút để hiển thị giờ Nhật, dựa trên `Date` theo giờ máy và
@@ -333,18 +346,57 @@ team đang xem*; *được gán làm người phụ trách không tự sinh ra q
 
 ### Nhóm A — Danh tính và phiên đăng nhập
 
-- **FR-1:** Đăng nhập qua **OIDC của công ty** bằng luồng **Authorization Code + `state` + `nonce` +
-  PKCE**; backend là **confidential client**, tự giữ phiên. Trình duyệt **không bao giờ thấy** access/id/
-  refresh token của OIDC — chỉ nhận cookie phiên riêng của app. `state`/`nonce`/PKCE verifier dùng
-  **một lần**, TTL ngắn; callback kiểm issuer, audience, chữ ký, thời gian và khớp đúng redirect URI đã
-  đăng ký — không nhận URL quay lại tuỳ ý (chống open redirect). Không tự dựng cơ chế mật khẩu riêng.
-  **Không có tài khoản dự phòng** — hệ xác thực sập thì không ai đăng nhập được.
-- **FR-1a — Bootstrap Admin đầu tiên (Q2):** email của Admin đầu tiên được **cấu hình trước khi triển
-  khai** (biến môi trường). Lần đăng nhập đầu tiên có email khớp cấu hình sẽ được **bind với danh tính ổn
-  định của OIDC — cặp `(issuer, subject)`**, không phải email (email có thể đổi). Lần bind thứ hai hoặc
-  xung đột (một `(issuer, subject)` khác cũng có email khớp) phải **fail-closed** và ghi nhật ký; ràng
-  buộc unique + transaction phải đảm bảo hai callback đồng thời không tạo ra hai Admin hoặc bind một danh
-  tính vào hai user.
+- **FR-1 (SỬA 21/09 — thay giả định "OIDC chuẩn công ty" bằng giao thức thật của `auth.drjoy.vn`, đã xác
+  nhận Cổng A đầy đủ qua 5 đợt hỏi hạ tầng + đọc trực tiếp code thật `dr-joy/infra-tool-auth`, xem
+  [exchange 2026-09-21](../../exchanges/2026-09-21.md)):** Đăng nhập qua **dịch vụ auth dùng chung của
+  công ty** `auth.drjoy.vn` (đứng giữa app và Google, KHÔNG phải app tự làm OIDC client với 1 IdP chung
+  như bản thiết kế ban đầu) — vẫn giữ đúng tinh thần gốc (Authorization Code, backend tự trao đổi code lấy
+  token, trình duyệt không bao giờ thấy token OIDC/access token thật, app tự set cookie phiên riêng), chỉ
+  đổi đúng 3 endpoint thật:
+  1. App tự dựng URL và redirect browser: `GET https://auth.drjoy.vn/auth/google/login?client=indigo&redirect_uri=<callback của app>`.
+     `auth.drjoy.vn` tự làm việc với Google (state/PKCE nội bộ của chính nó, app **không truyền vào,
+     không nhận lại, không quản** — khác hẳn giả định cũ là app tự giữ `state`/`nonce`/PKCE verifier).
+  2. `auth.drjoy.vn` redirect về đúng `redirect_uri` kèm `?code=<mã>` (dùng **một lần**, sống **120 giây**).
+  3. Backend app `POST https://auth.drjoy.vn/auth/token/exchange {code}` (server-to-server, **không cần
+     secret** — chỉ cần đúng `code` hợp lệ) → nhận `{access_token, refresh_token}`.
+
+  `access_token` là **JWT RS256, tự verify chữ ký tại chỗ** qua JWKS `GET https://auth.drjoy.vn/.well-known/jwks.json`
+  (không cần gọi lại `auth.drjoy.vn` mỗi lần dùng token). Claim JWT **chỉ có** `sub`/`email`/`iss`/`aud`/
+  `iat`/`exp` — **không có tên/avatar** (khác giả định đợt hỏi trước) — muốn lấy tên+avatar phải gọi thêm
+  `GET /users/me` (Bearer `access_token`) trả `{user_id, email, name, avatar, provider}`. TTL
+  `access_token` **86400 giây (24h)**, `refresh_token` **2592000 giây (30 ngày)**; refresh qua
+  `POST /auth/refresh` (có rotation — refresh token cũ bị revoke ngay sau khi dùng).
+
+  **Vá lỗ hổng login-CSRF thật (phát hiện khi đọc `AuthController.h`, app tự vá được, không cần đổi gì
+  phía `auth.drjoy.vn`):** vì `state`/PKCE verifier do chính `auth.drjoy.vn` tự giữ nội bộ, app không có
+  cách nào tự đối chiếu "mã `code` này có đúng của phiên trình duyệt đang gọi `/auth/callback` hay không"
+  bằng `state` như thiết kế OIDC chuẩn cũ giả định — nếu bỏ trống, kẻ tấn công tự đăng nhập lấy `code` của
+  chính hắn rồi gửi URL callback đó cho nạn nhân trong 120 giây là đăng nhập được nạn nhân vào tài khoản
+  của hắn (login CSRF kinh điển). **Bắt buộc**: trước khi redirect sang bước 1, app tự đặt cookie riêng
+  (`HttpOnly`, `SameSite=Lax`, giá trị ngẫu nhiên, TTL vài phút, tên tuỳ ý vd `login_nonce`); `/auth/callback`
+  **bắt buộc cookie đó phải có mặt và còn hạn** mới cho exchange code — không có thì từ chối thẳng, coi
+  như tấn công.
+
+  Sau khi có `access_token` hợp lệ + gọi `/users/me`, app tự set **cookie phiên riêng của mình** (khác hẳn
+  token của `auth.drjoy.vn`) — trình duyệt không bao giờ thấy access/refresh token thật. Không tự dựng cơ
+  chế mật khẩu riêng. **Không có tài khoản dự phòng** — hệ xác thực sập thì không ai đăng nhập được.
+
+  **SSO liên domain `*.drjoy.vn` (mới, quyết định 21/09 — Leader chọn bật ngay, không để v2):**
+  `auth.drjoy.vn` có cookie `drjoy_sso` (domain cha `.drjoy.vn`) — nếu user đã đăng nhập ở 1 tool
+  `*.drjoy.vn` khác rồi, app gọi `GET /auth/session` (kèm cookie đó) mint được token mới ngay, không cần
+  bounce qua Google lại.
+
+  **Lưu trữ liên quan (mới, quyết định 21/09):** thêm cột `avatar` vào `users` (lấy từ `/users/me`, hiện
+  trong UI). **Giữ lại `refresh_token` của `auth.drjoy.vn`** để định kỳ đồng bộ lại tên/avatar khi người
+  dùng đổi (không chỉ chụp 1 lần lúc đăng nhập) — đây là **secret của bên thứ ba, bắt buộc mã hoá khi lưu
+  DB** (cùng cơ chế mã hoá đã dùng cho khoá Redmine cá nhân, FR-32a/`user_redmine_config`).
+- **FR-1a — Bootstrap Admin đầu tiên (Q2, không đổi bản chất sau 21/09):** email của Admin đầu tiên được
+  **cấu hình trước khi triển khai** (biến môi trường). Lần đăng nhập đầu tiên có email khớp cấu hình sẽ
+  được **bind với danh tính ổn định — cặp `(issuer, subject)`**, với `issuer` là claim `iss` và `subject`
+  là claim `sub` trong JWT thật của `auth.drjoy.vn` (không phải email, vì email có thể đổi). Lần bind thứ
+  hai hoặc xung đột (một `(issuer, subject)` khác cũng có email khớp) phải **fail-closed** và ghi nhật ký;
+  ràng buộc unique + transaction phải đảm bảo hai callback đồng thời không tạo ra hai Admin hoặc bind một
+  danh tính vào hai user.
 - **FR-2:** Người đăng nhập lần đầu (không phải Admin) được **tạo tài khoản tự động** ở trạng thái
   **`pending`** từ thông tin OIDC (email + tên hiển thị), rồi **chọn team và vai trò mong muốn** (Member /
   Leader) từ danh sách team **đã có sẵn** — không tự tạo team mới. **Đây chỉ là gửi yêu cầu tham gia,
@@ -477,8 +529,14 @@ team đang xem*; *được gán làm người phụ trách không tự sinh ra q
   action/payload/actor — để Leader/Member **cả hai team** đều thấy đúng trong nhật ký của team mình, không
   phải chỉ team của người thực hiện hành động.
 - **FR-12 (SỬA 19/09 lần 15 — mở rộng thông báo mất Leader từ riêng team điều phối sang MỌI team, tránh
-  hiểu nhầm khi rà lại phân quyền):** **Leader tự quản thành viên team mình**: thêm và bớt được. Chỉ thêm
-  được **người đã từng đăng nhập ít nhất một lần**. Việc tạo team và chỉ định Leader vẫn thuộc Admin; team
+  hiểu nhầm khi rà lại phân quyền; giữ nguyên giới hạn Q13 sau khi cân nhắc lại 21/09):** **Leader tự quản
+  thành viên team mình**: thêm và bớt được. Chỉ thêm được **người đã từng đăng nhập ít nhất một lần**.
+  **Đã cân nhắc lại giới hạn này (21/09) khi phát hiện `auth.drjoy.vn` có sẵn API tra danh bạ công ty
+  (`GET /auth/v1/users?q=...`, đọc trực tiếp code thật `dr-joy/infra-tool-auth`) có thể cho Leader tìm và
+  thêm trước cả người chưa từng đăng nhập — nhưng Leader xác nhận HOÃN**: phía `auth.drjoy.vn` chưa hoàn
+  thiện xong phần OAuth cho API đó, nên **giữ nguyên giới hạn gốc** cho tới khi có API danh bạ thật dùng
+  được (xem [exchange 2026-09-21](../../exchanges/2026-09-21.md)). Việc tạo team và chỉ định Leader vẫn
+  thuộc Admin; team
   mất Leader thì **Admin chỉ định người mới**. **Bất kỳ team nào mất Leader hiệu lực đều tự động báo
   Admin ngay** (Leader xác nhận trực tiếp: không riêng team điều phối) — dùng đúng cơ chế đã tả ở FR-9a
   (hai cách mất hiệu lực: rời team, hoặc tài khoản bị `disabled`), qua kênh FR-34, nêu rõ **team nào** và
@@ -1318,7 +1376,8 @@ route inventory thật phải đối chiếu lại với router đã đăng ký,
 
 | Bảng | Nội dung chính |
 |---|---|
-| `users` | `id`, `issuer`, `subject` (định danh OIDC ổn định — unique cùng `issuer`), `email` (không unique, chỉ hiển thị/bootstrap), `display_name`, `status` (`pending`\|`active`\|`disabled`), **`system_role` (`user`\|`admin`, thêm 19/09 — bản trước không có cách biểu diễn Admin)**, **`row_version`** (kéo sớm từ FR-46), `created_at`, `last_login_at` |
+| `users` | `id`, `issuer`, `subject` (định danh OIDC ổn định — unique cùng `issuer`; với `auth.drjoy.vn` là claim `iss`/`sub` trong JWT thật, chốt 21/09), `email` (không unique, chỉ hiển thị/bootstrap), `display_name`, **`avatar`** (nullable, mới 21/09 — lấy từ `GET /users/me`, Leader xác nhận thêm vào UI), `status` (`pending`\|`active`\|`disabled`), **`system_role` (`user`\|`admin`, thêm 19/09 — bản trước không có cách biểu diễn Admin)**, **`row_version`** (kéo sớm từ FR-46), `created_at`, `last_login_at` |
+| `user_identity_tokens` (mới, 21/09 — lưu `refresh_token` của `auth.drjoy.vn`) | `user_id` (FK `users.id`, PK), `refresh_token_ciphertext` (secret bên thứ ba, **bắt buộc mã hoá khi lưu**, cùng cơ chế với `user_redmine_config`), `updated_at`. Chốt 21/09: Leader xác nhận **giữ lại** refresh token này để định kỳ đồng bộ lại tên/avatar (không chỉ chụp 1 lần lúc đăng nhập) — bảng tách riêng khỏi `users` vì đây là secret nhạy cảm của bên thứ ba, không phải thông tin hiển thị |
 | `join_requests` | `user_id`, `requested_team_id`, `requested_role` (giữ nguyên làm lịch sử yêu cầu gốc), **`approved_team_id`, `approved_role`** (nullable, thêm 19/09 — Admin có thể sửa team/vai trò khi duyệt theo FR-3, tách khỏi yêu cầu gốc), `status` (`pending`\|`approved`\|`rejected`), `reviewed_by`, `reviewed_at`, **`row_version`**, unique index `(user_id)` `WHERE status='pending'` — một user chỉ có đúng 1 đơn đang chờ |
 | `teams` | `id`, `name` (unique), `description`, `created_at`, **`row_version`** |
 | `team_members` | `team_id`, `user_id`, `role` (`leader` \| `member`) — khoá chính ghép; **partial unique index `(team_id) WHERE role='leader'`** thi hành "tối đa một Leader/team" (FR-6) — SQLite `CHECK` không kiểm được số dòng khác trong bảng nên không dùng CHECK |
@@ -1774,11 +1833,13 @@ vụ tiếp ở trạng thái hỏng, kể cả khi đĩa đầy hoặc bị kil
 mắc phải: benchmark cần dữ liệu di trú thật, nên không thể vừa là điều kiện "trước khi bắt đầu mọi việc"
 vừa đợi tới lát 4 mới có dữ liệu để đo).**
 
-**Cổng A — trước khi bắt đầu lát 1:** phải có câu trả lời của đội hạ tầng cho 6 câu chặn (ổ lưu trữ bền,
-tên miền, HTTPS, thông tin OIDC, sao lưu, cách truyền secret) **cộng** hợp đồng proxy tối thiểu ở §5 (số
-hop tin cậy, cách nhận IP client, nơi TLS kết thúc, timeout tầng proxy). Không thiết kế chi tiết tầng xác
-thực khi chưa biết loại OIDC client. **Không cần** route inventory hay benchmark ở cổng này — lát 1 không
-đụng route nghiệp vụ nào.
+**Cổng A — trước khi bắt đầu lát 1 — ĐẠT ĐẦY ĐỦ 21/09 (xem [exchange 2026-09-21](../../exchanges/2026-09-21.md)):**
+đã có câu trả lời của đội hạ tầng cho cả 6 câu chặn (ổ lưu trữ bền: có, không giới hạn; tên miền:
+`indigo.drjoy.vn:7749`; HTTPS: Nginx Proxy Manager terminate; giao thức đăng nhập thật: qua `auth.drjoy.vn`,
+xem FR-1; sao lưu: Leader chấp nhận rủi ro cùng ổ; cách truyền secret: mount vào container) **cộng** hợp
+đồng proxy tối thiểu (1 lớp NPM, `X-Forwarded-For`/`X-Forwarded-Proto` chuẩn). **Lát 1 đã code xong**
+(commit `5b1a8f4`), **Lát 2 đã đủ điều kiện thiết kế chi tiết/code** — không còn câu hỏi thiết kế nào mở,
+chỉ còn 1 việc triển khai (khai báo Proxy Host trong NPM, Leader tự xin lúc gần deploy).
 
 **Cổng B — trước khi coi MỘT lát bất kỳ (từ lát 2 trở đi) là xong:** mọi route được thêm/sửa **trong
 chính lát đó** phải có đủ 11 trường inventory (FR-41) và đi qua `authorize()` (FR-40) — CI thất bại nếu
@@ -1798,8 +1859,8 @@ cách Council chốt "không tách lát bảo mật riêng":**
 
 | Lát | Nội dung | FR chính |
 |---|---|---|
-| 1 | Đóng gói container + cấu hình qua env + ổ lưu trữ bền + sao lưu + health check; **chưa đổi tính năng**, chưa cần Nhóm F vì chưa có route nghiệp vụ | 35–37, 39 |
-| 2 | Danh tính: OIDC, phiên, onboarding chọn team, thông báo Admin, cảnh báo đăng nhập lạ. Route auth/onboarding **đã phải qua inventory** vì đây là route thật đầu tiên | 1–5, 34 |
+| 1 | Đóng gói container + cấu hình qua env + ổ lưu trữ bền + sao lưu + health check; **chưa đổi tính năng**, chưa cần Nhóm F vì chưa có route nghiệp vụ. **XONG (commit `5b1a8f4`, 21/09)** — xem cập nhật đầu file | 35–37, 39 |
+| 2 | Danh tính: đăng nhập qua `auth.drjoy.vn` (FR-1, SỬA 21/09 — không còn "cảnh báo đăng nhập lạ", FR-5 đã bỏ hẳn từ 13/09), phiên, onboarding chọn team, thông báo Admin. Route auth/onboarding **đã phải qua inventory** vì đây là route thật đầu tiên. **Sẵn đủ điều kiện thiết kế chi tiết/code (21/09) — không còn câu hỏi mở** | 1–5, 34 |
 | 3 | Nền phân quyền: `users`/`teams`/`team_members`/bảng hiển thị, 6 lớp gác (kể cả lớp 1.5), khu quản trị, bộ chọn team. **Route inventory + `authorize()` (FR-40/FR-41) mở chính thức từ đây**, cùng phần còn lại của Nhóm F áp được ngay (rate limit, body limit, validation — FR-42). **Sửa 19/09:** `audit_log` + ghi log tối thiểu (đổi thành viên, tầng 2, tầng 4 — một phần FR-19) và `row_version` cho 5 bảng nền tảng (một phần FR-46) kéo sớm vào lát này — xem chi tiết đầy đủ ở [exchange 2026-09-19](../../exchanges/2026-09-19.md). Khu "Vai đặc biệt" ở lát này **chỉ** có phần chọn team điều phối release; bảng bật/tắt "Checklist cá nhân" của FR-28a dời hẳn sang Lát 6 (đúng chủ FR 23-30) | 6–14, 19 (một phần), 40–42, 46 (một phần) |
 | 4 | Di trú dữ liệu + PIC→User + nhiều người phụ trách + chống sửa trùng + nhật ký nghiệp vụ (mở rộng danh mục hành động `audit_log` đã tạo ở Lát 3, không tạo bảng mới). Optimistic concurrency (FR-46, phần còn lại cho các bảng nghiệp vụ) và audit (FR-48) đi cùng lát này vì gắn trực tiếp với các bảng vừa di trú | 15–20, 46, 48 |
 | 5 | Điều chỉnh theo chức năng: Báo cáo tuần, Task cá nhân, Mind Map (kèm FR-43 upload/attachment), Redmine (kèm FR-44 chống SSRF), gỡ MCP | 21–22, 31–33, 38, 43–44 |
