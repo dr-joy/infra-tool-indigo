@@ -25,5 +25,9 @@ export const appBaseDir = isSea
 // người dùng (Windows: %APPDATA%\TaskManager\data). Nằm NGOÀI thư mục build nên
 // rebuild/đóng gói lại không bao giờ đụng vào -> không còn cảnh "mất data sau build".
 // Giữ chung 1 đường dẫn để dev và app luôn đọc/ghi đúng một DB.
+//
+// CR-20260913 FR-36 (bản container): DATA_DIR trỏ vào ổ lưu trữ bền gắn ngoài do đội hạ tầng
+// cấp — override toàn bộ suy luận theo hồ sơ người dùng. Desktop không set biến này nên hành
+// vi cũ giữ nguyên y hệt.
 const userBaseDir = process.env.APPDATA || process.env.XDG_DATA_HOME || os.homedir();
-export const dataDir = path.join(userBaseDir, 'TaskManager', 'data');
+export const dataDir = process.env.DATA_DIR || path.join(userBaseDir, 'TaskManager', 'data');

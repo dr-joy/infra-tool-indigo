@@ -139,7 +139,7 @@ Tick mọi lớp bị đụng và ghi rõ ảnh hưởng:
 - [ ] **Automation / MCP** — đụng `action_type`/`ai_note`/`related_ids`/luồng preview-approve-execute? Quyền ghi? (mọi hành động ghi ra ngoài phải có người duyệt).
 - [ ] **i18n** — chuỗi hiển thị mới (`src/i18n.ts`)?
 - [ ] **Shared types** — đổi enum/interface dùng chung? Sửa ở `server/types.ts` (nguồn), client re-export tự theo.
-- [ ] **Đóng gói** — ảnh hưởng SEA (`scripts/build-sea.mjs`) hay MCP (`server/mcp.ts`)?
+- [ ] **Đóng gói** — ảnh hưởng SEA desktop (`scripts/build-sea.mjs`) hay container (`Dockerfile`)?
 - [ ] **Bảo mật / dữ liệu nhạy cảm** — secret, API key, path traversal, kích thước body?
 - [ ] **NFR** — hiệu năng (bundle, query), tính local/1-người-dùng, backup DB?
 - [ ] **Chức năng đang chạy** — thay đổi có phá vỡ luồng nào đang dùng? Test hồi quy nào cần thêm?

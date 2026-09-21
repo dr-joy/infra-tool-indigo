@@ -4,8 +4,12 @@ import { spawn, exec } from 'node:child_process';
 import { isSea } from './paths.js';
 import { app } from './app.js';
 import { runMindmapGc } from './lib/mindmap-gc.js';
+import { shutdownState } from './lib/shutdown-state.js';
 
 const PORT = Number(process.env.PORT || 4000);
+// Desktop giữ 127.0.0.1 (an toàn mặc định). Container phải set HOST=0.0.0.0 để reverse proxy
+// bên ngoài gọi vào được (CR-20260913 FR-35).
+const HOST = process.env.HOST || '127.0.0.1';
 
 function openBrowser(url: string): Promise<void> {
   const chromePaths = [
@@ -56,7 +60,7 @@ process.on('unhandledRejection', (reason) => {
   console.error('[unhandledRejection]', reason);
 });
 
-const server = app.listen(PORT, '127.0.0.1', () => {
+const server = app.listen(PORT, HOST, () => {
   console.log(`App running at http://localhost:${PORT}`);
   // GC file đính kèm mindmap: chỉ chạy 1 lần lúc khởi động (không định kỳ) — gọi ở đây (không ở
   // app.ts) để test tích hợp import app.ts không bị ảnh hưởng.
@@ -70,10 +74,15 @@ const server = app.listen(PORT, '127.0.0.1', () => {
 });
 
 for (const sig of ['SIGINT', 'SIGTERM'] as const) {
-  process.on(sig, () => { server.close(() => process.exit(0)); });
+  // Đặt cờ TRƯỚC khi đóng server: /health/ready trả 503 ngay lập tức (readiness false ngay,
+  // SEC-PERF-013), hạ tầng ngừng gửi traffic mới trong lúc đang drain kết nối cũ.
+  process.on(sig, () => {
+    shutdownState.shuttingDown = true;
+    server.close(() => process.exit(0));
+  });
 }
 
-// Cổng đã bị chiếm = app đã chạy sẵn (mở lần 2, hoặc một tiến trình MCP vừa bật trùng).
+// Cổng đã bị chiếm = app đã chạy sẵn (mở lần 2).
 // PHẢI THOÁT: giữ tiến trình sống mà không listen được thì nó thành tiến trình rác — không phục vụ
 // gì, không có scheduler, nhưng vẫn hiện trong Task Manager và làm người dùng tưởng app bị mở trùng
 // (BUG-006: đã tồn đọng nhiều tiến trình như vậy). Vẫn mở lại browser: nếu cửa sổ/profile bị lạc,

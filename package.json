@@ -15,7 +15,6 @@
     "start": "node --import tsx server/index.ts",
     "package": "node scripts/build-sea.mjs",
     "backup-db": "node scripts/backup-db.mjs",
-    "build:mcp": "node scripts/build-mcp.mjs",
     "quiz:html-to-json": "node scripts/html-quiz-to-json.mjs",
     "test": "npm run test:server && npm run test:client",
     "test:server": "node --import tsx --test \"test/unit/**/*.test.ts\" \"test/integration/**/*.test.ts\"",
@@ -23,7 +22,6 @@
     "test:client:watch": "vitest"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
     "@vitejs/plugin-react": "^5.1.1",
     "concurrently": "^9.2.1",
     "cors": "^2.8.5",

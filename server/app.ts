@@ -6,9 +6,10 @@ import cors from 'cors';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import path from 'node:path';
 import fs from 'node:fs';
-import { appBaseDir } from './paths.js';
+import { appBaseDir, dataDir } from './paths.js';
 import { sendRouteError } from './lib/utils.js';
-import './db.js';
+import { shutdownState } from './lib/shutdown-state.js';
+import { db } from './db.js';
 import tasksRouter from './routes/tasks.js';
 import projectsRouter from './routes/projects.js';
 import releaseRouter from './routes/release.js';
@@ -31,6 +32,25 @@ app.use((_req: Request, res: Response, next: NextFunction) => {
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'no-referrer');
   next();
+});
+
+// Health check (CR-20260913 FR-39) — đặt TRƯỚC mọi middleware khác, không phụ thuộc CORS/body-parser,
+// để hạ tầng probe được ngay cả khi các lớp sau có vấn đề. Không cần auth (đọc §12 an toàn: không lộ
+// thông tin nhạy cảm, chỉ true/false).
+app.get('/health/live', (_req: Request, res: Response) => {
+  res.status(200).json({ status: 'ok' });
+});
+app.get('/health/ready', (_req: Request, res: Response) => {
+  if (shutdownState.shuttingDown) {
+    return res.status(503).json({ status: 'not_ready', reason: 'shutting_down' });
+  }
+  try {
+    db.prepare('SELECT 1').get();
+    fs.accessSync(dataDir, fs.constants.W_OK);
+    res.status(200).json({ status: 'ready' });
+  } catch (err) {
+    res.status(503).json({ status: 'not_ready', reason: err instanceof Error ? err.message : 'unknown' });
+  }
 });
 
 app.use(cors({ origin: /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/ }));

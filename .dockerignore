@@ -1,0 +1,14 @@
+node_modules
+dist
+build
+release
+data
+_backup_recovery
+.git
+.claude
+.vscode
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
+.env

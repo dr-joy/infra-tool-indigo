@@ -87,73 +87,33 @@ Cách dùng:
 
 Đóng cửa sổ console = tắt app. Muốn giữ dữ liệu cũ thì copy kèm thư mục `data/`.
 
-## Claude Desktop / MCP task-manager
+## Chạy bằng container (bản server dùng chung nhiều team)
 
-Repo này có MCP server để Claude Desktop đọc và thao tác với Task Manager qua API local.
-Mục tiêu: khi Claude Desktop được cấu hình MCP, Claude có thể gọi các tool như:
-
-- `get_today_tasks` — đọc danh sách task theo ngày.
-- `list_projects` — liệt kê dự án.
-- `get_project_tasks` — đọc task của một dự án.
-- `get_week_goals` — đọc mục tiêu tuần.
-- `search_history` — tìm lịch sử task.
-- `create_task` — tạo task mới.
-- `set_task_status` — đổi trạng thái task.
-
-### Build MCP
-
-Sau khi pull repo về máy local:
+`BL-20260913-001`/`CR-20260913` — lát 1: đóng gói container chuẩn, cấu hình qua biến môi trường, chưa đổi
+tính năng. Chi tiết đầy đủ ở [CR-20260913 §10](docs/delivery/changes/CR-20260913-nen-tang-da-nguoi-dung.md).
 
 ```bash
-npm install
-npm run build:mcp
+docker build -t task-manager .
+docker run -d --name task-manager \
+  -p 4000:4000 \
+  -v task-manager-data:/data \
+  task-manager
 ```
 
-Nếu PowerShell chặn `npm`, dùng:
+Image đã đặt sẵn default cho container (`HOST=0.0.0.0`, `DATA_DIR=/data`) — chỉ cần mount volume vào
+`/data`. Biến môi trường có thể override khi cần:
 
-```powershell
-npm.cmd install
-npm.cmd run build:mcp
-```
+- `PORT` — cổng lắng nghe (default `4000`).
+- `HOST` — địa chỉ bind (default `0.0.0.0` trong container; script chạy trực tiếp `npm start` ngoài
+  container mặc định `127.0.0.1`, an toàn cho desktop).
+- `DATA_DIR` — thư mục chứa DB SQLite + file đính kèm (default `/data` trong container). **Phải là ổ lưu
+  trữ bền gắn ngoài** — deploy/restart container không được làm mất dữ liệu.
 
-Kết quả build nằm ở:
+Health check (dùng cho readiness/liveness probe hoặc `docker healthcheck`):
 
-```text
-dist-mcp/mcp.mjs
-```
+- `GET /health/live` — tiến trình còn sống, không chạm DB. Luôn `200` trừ khi process treo thật.
+- `GET /health/ready` — DB đọc/ghi được, `DATA_DIR` còn ghi được, không đang trong quá trình tắt. `200`
+  khi sẵn sàng nhận traffic, `503` khi thiếu bất kỳ điều kiện nào.
 
-`dist-mcp/` là file build local, không commit vào Git.
-
-### Cấu hình Claude Desktop
-
-Mỗi máy phải tự cấu hình Claude Desktop một lần vì đường dẫn repo khác nhau theo từng local.
-Thêm MCP server trỏ tới file `dist-mcp/mcp.mjs`, ví dụ:
-
-```json
-{
-  "mcpServers": {
-    "task-manager": {
-      "command": "node",
-      "args": [
-        "<ĐƯỜNG_DẪN_REPO>/dist-mcp/mcp.mjs"
-      ]
-    }
-  }
-}
-```
-
-Đổi đường dẫn trong `args` theo vị trí repo trên máy đang dùng, rồi restart Claude Desktop.
-
-Khi Claude Desktop kết nối MCP:
-
-1. MCP server kiểm tra Task Manager API ở `http://127.0.0.1:4000`.
-2. Nếu app chưa chạy, MCP sẽ tự bật backend bằng `node --import tsx server/index.ts`.
-3. Sau khi backend sẵn sàng, Claude Desktop có thể gọi các tool task-manager.
-
-### Ghi chú cho AI/lần sau
-
-- Không commit file cấu hình local của Claude Desktop như `.claude/settings.local.json` hoặc `claude_desktop_config.json` nếu file đó chứa đường dẫn/permission riêng của máy.
-- Nếu người dùng hỏi "pull về có dùng được ngay không?", câu trả lời là: code MCP có sẵn, nhưng mỗi máy vẫn cần chạy `npm install`, `npm run build:mcp`, rồi cấu hình Claude Desktop trỏ tới `dist-mcp/mcp.mjs`.
-- Khi thêm tool MCP mới, sửa `server/mcp.ts`, chạy `npm run build:mcp`, rồi kiểm tra `npm run build`.
-- Mọi tool MCP ghi dữ liệu (`create_task`, `set_task_status`) chạy trực tiếp không qua bước duyệt nào —
-  cẩn trọng khi thêm tool ghi mới, không giả định có lớp xác nhận phía người dùng.
+**Vận hành: chỉ chạy đúng 1 container tại một thời điểm, không bật autoscaling** — dữ liệu là 1 file
+SQLite, chạy nhiều bản song song sẽ hỏng dữ liệu (xem `CR-20260913` FR-35).

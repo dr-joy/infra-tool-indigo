@@ -1,7 +1,7 @@
 # Security Baseline Standard — Task Manager
 
 > Chuẩn **bảo mật bắt buộc** khi phát triển. Mỗi thay đổi phải không phá vỡ baseline dưới đây + qua checklist mục 9.
-> Nguồn: `server/app.ts`, `server/lib/secret.ts`, `server/lib/utils.ts`, `server/mcp.ts`, `server/routes/*`, `scripts/build-sea.mjs`.
+> Nguồn: `server/app.ts`, `server/lib/secret.ts`, `server/lib/utils.ts`, `server/routes/*`, `scripts/build-sea.mjs`, `Dockerfile`.
 > Liên quan: [../09-non-functional-requirements.md §2](../rules/09-non-functional-requirements.md) (mục tiêu) · [docs-standard.md](docs-standard.md).
 
 ---
