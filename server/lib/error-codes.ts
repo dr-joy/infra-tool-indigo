@@ -47,10 +47,6 @@ export const ERROR_CODE_REGISTRY: Record<string, ErrorCodeEntry> = {
     status: 403,
     note: 'Tài khoản chưa được Admin duyệt team/vai trò — chỉ được gọi route onboarding (CR-20260913 FR-2/FR-3a)'
   },
-  FORBIDDEN_ADMIN_ONLY: {
-    status: 403,
-    note: 'Route chỉ dành cho system_role=admin (guard viết tay tạm thế cho authorize(), xem CR-20260913 §10 Lát 2)'
-  },
   LOGIN_NONCE_INVALID: {
     status: 400,
     note: 'Cookie login_nonce thiếu/hết hạn lúc /auth/callback — vá lỗ hổng login-CSRF thật (CR-20260913 FR-1)'
@@ -66,5 +62,25 @@ export const ERROR_CODE_REGISTRY: Record<string, ErrorCodeEntry> = {
   TEAM_ALREADY_HAS_LEADER: {
     status: 409,
     note: 'Duyệt đơn với role=leader nhưng team đó đã có Leader — tối đa 1 Leader/team (CR-20260913 FR-6)'
+  },
+  FEATURE_DISABLED: {
+    status: 403,
+    note: 'authorize() policyKind=team_feature: team_feature_visibility(teamId, feature) đang off (CR-20260913 FR-7/§6.2 tầng 2)'
+  },
+  NOT_TEAM_MEMBER: {
+    status: 403,
+    note: 'authorize() policyKind=team_feature: actor không phải thành viên team đích (CR-20260913 §6.2 tầng 2)'
+  },
+  ROLE_FORBIDDEN: {
+    status: 403,
+    note: 'authorize(): vai trò (team leader/member, hoặc system_role cho route toàn cục) không nằm trong AUTHORIZATION_POLICY[resource][action] (CR-20260913 FR-8/§6.2 tầng 3)'
+  },
+  NOT_RELEASE_COORDINATOR: {
+    status: 403,
+    note: 'authorize() resource=release_coordinator: actor không phải Leader hiệu lực của team đang là app_config.release_coordinator_team_id (CR-20260913 FR-9/§6.2 tầng 4) — dành riêng cho Lát 6, chưa có route Lát 3 nào gọi'
+  },
+  VERSION_CONFLICT: {
+    status: 409,
+    note: 'Optimistic concurrency chung cho bảng nền Lát 3 (teams/users/join_requests/team_feature_visibility/app_config): UPDATE ... WHERE row_version=? không khớp dòng nào'
   }
 };

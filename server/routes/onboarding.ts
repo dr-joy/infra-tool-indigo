@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { db, withTransaction } from '../db.js';
 import { HttpError, sendRouteError } from '../lib/utils.js';
-import { requireSession, requireAdmin } from '../lib/auth-middleware.js';
+import { requireSession, requireActiveAccount, actorFromRequest } from '../lib/auth-middleware.js';
+import { authorize } from '../lib/authorize.js';
+import { writeAudit } from '../lib/audit.js';
 
 // FR-2/FR-3/FR-3a — chọn team lúc đăng nhập lần đầu, Admin duyệt/từ chối, không cấp quyền nghiệp vụ
 // nào cho tới khi được duyệt (users.status chuyển active). `teams`/`team_members` ở đây là bản kéo
@@ -65,8 +67,10 @@ router.post('/onboarding/join-request', requireSession, (req, res) => {
 });
 
 // CR §6.2: 2 route duyệt/từ chối thuộc access class `admin`, không phải `onboarding` (chủ thể gọi là
-// Admin, không phải user đang onboarding) — giữ đúng tiền tố /api/admin/... như CR đã liệt kê.
-router.get('/admin/join-requests', requireSession, requireAdmin, (_req, res) => {
+// Admin, không phải user đang onboarding) — giữ đúng tiền tố /api/admin/... như CR đã liệt kê. Đi qua
+// authorize() (Lát 3, policyKind 'team_feature' với scope.teamId bỏ trống -> xét system_role).
+router.get('/admin/join-requests', requireSession, requireActiveAccount, (req, res) => {
+  authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'join_request', action: 'list', scope: {} });
   const rows = db.prepare(`
     SELECT jr.id, jr.user_id, u.email, u.display_name, jr.requested_team_id, jr.requested_role,
            jr.row_version, jr.created_at
@@ -79,24 +83,44 @@ router.get('/admin/join-requests', requireSession, requireAdmin, (_req, res) => 
 
 interface ReviewBody {
   rowVersion?: number;
-  teamId?: number;
-  role?: string;
+  approvedTeamId?: number;
+  approvedRole?: string;
 }
 
-router.post('/admin/join-requests/:id/approve', requireSession, requireAdmin, (req, res) => {
+interface JoinRequestRow {
+  id: number;
+  user_id: number;
+  requested_team_id: number;
+  requested_role: string;
+  approved_team_id: number | null;
+  approved_role: string | null;
+  status: string;
+  row_version: number;
+}
+
+router.post('/admin/join-requests/:id/approve', requireSession, requireActiveAccount, (req, res) => {
+  authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'join_request', action: 'approve', scope: {} });
   const id = Number(req.params.id);
   const body = req.body as ReviewBody;
   if (!Number.isInteger(id)) return res.status(400).json({ message: 'id không hợp lệ' });
 
   try {
-    withTransaction(() => {
-      const jr = db.prepare('SELECT * FROM join_requests WHERE id = ? AND status = ?').get(id, 'pending') as
-        { id: number; user_id: number; requested_team_id: number; requested_role: string; row_version: number } | undefined;
-      if (!jr) throw new HttpError(404, 'Không tìm thấy đơn đang chờ duyệt (có thể đã được xử lý)');
+    const result = withTransaction(() => {
+      const jr = db.prepare('SELECT * FROM join_requests WHERE id = ?').get(id) as JoinRequestRow | undefined;
+      if (!jr) throw new HttpError(404, 'Không tìm thấy đơn xin tham gia team');
+
+      // Semantic-idempotent (chốt qua Council f0a0e1bb): đơn ĐÃ approved gọi lại approve lần 2 trả
+      // đúng trạng thái hiện tại, không lỗi — vd double-click hoặc client retry sau timeout mạng.
+      if (jr.status === 'approved') {
+        return { approvedTeamId: jr.approved_team_id, approvedRole: jr.approved_role };
+      }
+      if (jr.status !== 'pending') {
+        throw new HttpError(409, 'Đơn này đã bị từ chối trước đó, không thể duyệt', 'JOIN_REQUEST_STALE');
+      }
 
       // Admin có thể sửa team/vai trò ngay lúc duyệt (FR-3) — mặc định giữ đúng yêu cầu gốc.
-      const approvedTeamId = Number.isInteger(body.teamId) ? Number(body.teamId) : jr.requested_team_id;
-      const approvedRole = body.role === 'leader' || body.role === 'member' ? body.role : jr.requested_role;
+      const approvedTeamId = Number.isInteger(body.approvedTeamId) ? Number(body.approvedTeamId) : jr.requested_team_id;
+      const approvedRole = body.approvedRole === 'leader' || body.approvedRole === 'member' ? body.approvedRole : jr.requested_role;
 
       // teamId do Admin tự sửa tay lúc duyệt (không phải teamId gốc đã được kiểm ở lúc tạo đơn) —
       // phải xác nhận tồn tại trước khi ghi, không để lỗi khoá ngoại rơi thành 500 (Codex phát hiện).
@@ -127,17 +151,31 @@ router.post('/admin/join-requests/:id/approve', requireSession, requireAdmin, (r
       db.prepare(`
         INSERT INTO notifications (user_id, kind, payload, created_at) VALUES (?, 'join_request_approved', ?, ?)
       `).run(jr.user_id, JSON.stringify({ teamId: approvedTeamId, role: approvedRole }), now);
+
+      writeAudit(req.user!.id, approvedTeamId, 'join_request.approve', `join_request:${id}`, {
+        userId: jr.user_id, approvedTeamId, approvedRole
+      });
+      return { approvedTeamId, approvedRole };
     });
-    res.json({ ok: true });
+    res.json({ ok: true, ...result });
   } catch (error) {
     sendRouteError(res, error, 'Không duyệt được đơn xin tham gia team');
   }
 });
 
-router.post('/admin/join-requests/:id/reject', requireSession, requireAdmin, (req, res) => {
+router.post('/admin/join-requests/:id/reject', requireSession, requireActiveAccount, (req, res) => {
+  authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'join_request', action: 'reject', scope: {} });
   const id = Number(req.params.id);
   const body = req.body as { rowVersion?: number };
   if (!Number.isInteger(id)) return res.status(400).json({ message: 'id không hợp lệ' });
+
+  // Semantic-idempotent: đơn đã rejected gọi lại trả cùng kết quả, không lỗi.
+  const existing = db.prepare('SELECT status FROM join_requests WHERE id = ?').get(id) as { status: string } | undefined;
+  if (!existing) return res.status(404).json({ message: 'Không tìm thấy đơn xin tham gia team' });
+  if (existing.status === 'rejected') return res.json({ ok: true });
+  if (existing.status === 'approved') {
+    return res.status(409).json({ message: 'Đơn này đã được duyệt trước đó, không thể từ chối', code: 'JOIN_REQUEST_STALE' });
+  }
 
   const now = new Date().toISOString();
   const result = db.prepare(`
@@ -147,6 +185,7 @@ router.post('/admin/join-requests/:id/reject', requireSession, requireAdmin, (re
   if (result.changes === 0) {
     return res.status(409).json({ message: 'Đơn này vừa được xử lý bởi người khác, vui lòng tải lại', code: 'JOIN_REQUEST_STALE' });
   }
+  writeAudit(req.user!.id, null, 'join_request.reject', `join_request:${id}`, {});
   // FR-3a: không phải khoá vĩnh viễn — user.status vẫn là 'pending', lần đăng nhập kế tiếp tự quay
   // lại đúng màn "Chọn team và vai trò" (không có đơn pending nào -> FE tự hiện lại màn chọn team).
   res.json({ ok: true });

@@ -323,7 +323,7 @@ test('duyệt với teamId Admin tự sửa nhưng KHÔNG tồn tại -> 404 rõ
 
   const approve = await fetch(`${base}/api/admin/join-requests/${jr.id}/approve`, {
     method: 'POST', headers: { ...cookieHeader(adminSession), 'Content-Type': 'application/json' },
-    body: JSON.stringify({ rowVersion: jr.row_version, teamId: 999999 })
+    body: JSON.stringify({ rowVersion: jr.row_version, approvedTeamId: 999999 })
   });
   assert.equal(approve.status, 404);
 

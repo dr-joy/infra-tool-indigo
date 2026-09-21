@@ -1,11 +1,10 @@
 import type { DatabaseSync } from 'node:sqlite';
 
-// Schema Lát 2 (CR-20260913, FR-1→FR-4a, FR-34) — danh tính, phiên đăng nhập, onboarding, thông báo.
-// Thiết kế chốt qua Council run f04dfc02 (xem docs/exchanges/2026-09-21.md).
-//
-// `teams`/`team_members` ở đây là bản KÉO SỚM tối thiểu (chỉ đủ để chọn/liệt kê team khi onboarding) —
-// Lát 3 (Council 1aa7fe8b) sẽ MỞ RỘNG đúng 2 bảng này (thêm cột hiển thị/vai đặc biệt), không tạo lại.
-// `team_feature_visibility`/`app_config` KHÔNG kéo sớm vì Lát 2 không cần đọc chúng.
+// Schema Lát 2+3 (CR-20260913) — danh tính, phiên đăng nhập, onboarding, thông báo (Lát 2, FR-1→FR-4a/
+// FR-34), nền phân quyền (Lát 3, FR-6→14/40-42). `teams`/`team_members` được Lát 2 kéo sớm tối thiểu,
+// Lát 3 MỞ RỘNG bằng ALTER TABLE (không tạo lại) — đúng khuôn idempotent hiện có, không tạo cơ chế
+// migration thứ hai. Thiết kế chốt qua Council `f04dfc02` (Lát 2) và `1aa7fe8b` + `f0a0e1bb` (Lát 3,
+// đối chiếu lại với code thật) — xem docs/exchanges/2026-09-19.md và 2026-09-21.md.
 export function applyAuthSchema(db: DatabaseSync): void {
   db.exec(`
     -- Danh tính: bind theo (issuer, subject) của JWT thật auth.drjoy.vn, KHÔNG bind theo email (email
@@ -96,5 +95,59 @@ export function applyAuthSchema(db: DatabaseSync): void {
       read_at TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id, created_at);
+
+    -- Lát 3 (FR-7/FR-7a) — tầng 2 "hiển thị", đúng 2 mức off/on (bản 13/09 có 4 mức đã bị thay hoàn
+    -- toàn, không tái tạo ngầm). Seed đủ 5 dòng off khi tạo team (fail-closed) — xem seedTeamFeatureVisibility.
+    CREATE TABLE IF NOT EXISTS team_feature_visibility (
+      team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      feature TEXT NOT NULL CHECK (feature IN ('personal_task', 'project', 'weekly_report', 'release', 'mind_map')),
+      level TEXT NOT NULL DEFAULT 'off' CHECK (level IN ('off', 'on')),
+      updated_at TEXT NOT NULL,
+      updated_by INTEGER REFERENCES users(id),
+      row_version INTEGER NOT NULL DEFAULT 1,
+      PRIMARY KEY (team_id, feature)
+    );
+
+    -- Lát 3 — singleton cấu hình hệ thống. CHỈ 1 cột nghiệp vụ (release_coordinator_team_id, cần FK
+    -- thật tới teams.id) — KHÔNG đặt redmine_base_url (giữ ở app_settings key-value đang chạy thật) và
+    -- KHÔNG đặt admin_bootstrap_email (biến môi trường, đúng FR-1a) để tránh 2 nguồn có thể lệch nhau.
+    CREATE TABLE IF NOT EXISTS app_config (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      release_coordinator_team_id INTEGER REFERENCES teams(id),
+      updated_at TEXT NOT NULL,
+      row_version INTEGER NOT NULL DEFAULT 1
+    );
+
+    -- Lát 3 (FR-11a/FR-19, kéo sớm từ Lát 4) — payload LUÔN đầy đủ, lọc field cho projection Admin/
+    -- Leader làm ở tầng đọc (2 hàm projection), không tách 2 bảng. Hành động chạm 2 team ghi 2 dòng
+    -- khác team_id, không thêm cột secondary_team_id.
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      actor_user_id INTEGER NOT NULL REFERENCES users(id),
+      team_id INTEGER REFERENCES teams(id),
+      action TEXT NOT NULL,
+      target TEXT NOT NULL,
+      payload TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_audit_log_team_created ON audit_log(team_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at);
   `);
+
+  // Seed singleton app_config (id=1) — code không bao giờ phải xử lý "chưa có config".
+  const now = new Date().toISOString();
+  db.prepare('INSERT OR IGNORE INTO app_config (id, release_coordinator_team_id, updated_at) VALUES (1, NULL, ?)').run(now);
+
+  // Backfill team_feature_visibility cho team đã tồn tại trước khi bảng này có mặt (an toàn chạy lại
+  // nhiều lần — INSERT OR IGNORE). Team tạo MỚI sau khi có bảng này được seed ngay trong route tạo team
+  // (cùng transaction), không đi qua đường backfill này.
+  const teamIds = db.prepare('SELECT id FROM teams').all() as { id: number }[];
+  const insertVisibility = db.prepare(`
+    INSERT OR IGNORE INTO team_feature_visibility (team_id, feature, level, updated_at) VALUES (?, ?, 'off', ?)
+  `);
+  for (const team of teamIds) {
+    for (const feature of ['personal_task', 'project', 'weekly_report', 'release', 'mind_map']) {
+      insertVisibility.run(team.id, feature, now);
+    }
+  }
 }

@@ -15,7 +15,9 @@ import {
   USERS_ME_TIMEOUT_MS,
   TOKEN_EXCHANGE_TIMEOUT_MS
 } from '../lib/auth-config.js';
-import { requireSession, requireAdmin } from '../lib/auth-middleware.js';
+import { requireSession, requireActiveAccount, actorFromRequest } from '../lib/auth-middleware.js';
+import { authorize } from '../lib/authorize.js';
+import { writeAudit } from '../lib/audit.js';
 
 const router = Router();
 
@@ -215,9 +217,10 @@ router.post('/auth/logout', requireSession, (req, res) => {
   res.json({ ok: true });
 });
 
-// ── Quản lý tài khoản của Admin (FR-4/FR-4a, nhóm A) — guard viết tay thay authorize() (xem
-// server/lib/auth-middleware.ts).
-router.get('/admin/users', requireSession, requireAdmin, (_req, res) => {
+// ── Quản lý tài khoản của Admin (FR-4/FR-4a, nhóm A) — đi qua authorize() (Lát 3, policyKind
+// 'team_feature' với scope.teamId bỏ trống -> vai trò xét theo system_role, xem server/lib/authorize.ts).
+router.get('/admin/users', requireSession, requireActiveAccount, (req, res) => {
+  authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'user_account', action: 'list', scope: {} });
   const rows = db.prepare(`
     SELECT id, email, display_name, avatar, status, system_role, row_version, created_at, last_login_at
     FROM users ORDER BY created_at DESC
@@ -225,31 +228,44 @@ router.get('/admin/users', requireSession, requireAdmin, (_req, res) => {
   res.json({ users: rows });
 });
 
-router.patch('/admin/users/:id/status', requireSession, requireAdmin, (req, res) => {
-  const id = Number(req.params.id);
-  const body = req.body as { status?: string; rowVersion?: number };
-  if (!Number.isInteger(id)) return res.status(400).json({ message: 'id không hợp lệ' });
-  if (body.status !== 'active' && body.status !== 'disabled') {
-    return res.status(400).json({ message: 'status phải là active hoặc disabled' });
-  }
-  const result = db.prepare(`
-    UPDATE users SET status = ?, row_version = row_version + 1 WHERE id = ? AND row_version = ?
-  `).run(body.status, id, body.rowVersion ?? -1);
-  if (result.changes === 0) {
-    return res.status(409).json({ message: 'Có người vừa thay đổi tài khoản này, vui lòng tải lại' });
-  }
-  // KHÔNG tự thu hồi phiên ở đây: middleware (requireSession) tra status từ DB mỗi request nên đã
-  // chặn ngay request kế tiếp (FR-4a). Nếu thu hồi phiên luôn, request kế tiếp của user rơi vào 401
-  // SESSION_REQUIRED (chung, như "phiên hết hạn") thay vì đúng 403 ACCOUNT_DISABLED — làm mất đúng
-  // thông điệp rõ ràng FR-4a yêu cầu. Thu hồi phiên là hành động RIÊNG, chỉ khi Admin bấm nút
-  // "Thu hồi phiên" (route /revoke-sessions bên dưới).
-  res.json({ ok: true });
+// disable/enable tách 2 route riêng (không gộp PATCH .../status) — khớp CR §6.2 đã chốt: đây là 2
+// resource.action riêng trong AUTHORIZATION_POLICY, có thể sau này cấp quyền khác nhau (Council f0a0e1bb).
+function setUserStatus(status: 'active' | 'disabled') {
+  return (req: import('express').Request, res: import('express').Response) => {
+    const id = Number(req.params.id);
+    const body = req.body as { rowVersion?: number };
+    if (!Number.isInteger(id)) return res.status(400).json({ message: 'id không hợp lệ' });
+    const result = db.prepare(`
+      UPDATE users SET status = ?, row_version = row_version + 1 WHERE id = ? AND row_version = ?
+    `).run(status, id, body.rowVersion ?? -1);
+    if (result.changes === 0) {
+      return res.status(409).json({ message: 'Có người vừa thay đổi tài khoản này, vui lòng tải lại', code: 'VERSION_CONFLICT' });
+    }
+    // KHÔNG tự thu hồi phiên ở đây: middleware (requireSession) tra status từ DB mỗi request nên đã
+    // chặn ngay request kế tiếp (FR-4a). Nếu thu hồi phiên luôn, request kế tiếp của user rơi vào 401
+    // SESSION_REQUIRED (chung, như "phiên hết hạn") thay vì đúng 403 ACCOUNT_DISABLED — làm mất đúng
+    // thông điệp rõ ràng FR-4a yêu cầu. Thu hồi phiên là hành động RIÊNG (route /revoke-sessions).
+    writeAudit(req.user!.id, null, `user_account.${status === 'disabled' ? 'disable' : 'enable'}`, `user:${id}`, {});
+    res.json({ ok: true });
+  };
+}
+
+router.post('/admin/users/:id/disable', requireSession, requireActiveAccount, (req, res) => {
+  authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'user_account', action: 'disable', scope: {} });
+  setUserStatus('disabled')(req, res);
 });
 
-router.post('/admin/users/:id/revoke-sessions', requireSession, requireAdmin, (req, res) => {
+router.post('/admin/users/:id/enable', requireSession, requireActiveAccount, (req, res) => {
+  authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'user_account', action: 'enable', scope: {} });
+  setUserStatus('active')(req, res);
+});
+
+router.post('/admin/users/:id/revoke-sessions', requireSession, requireActiveAccount, (req, res) => {
+  authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'user_account', action: 'revoke_sessions', scope: {} });
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ message: 'id không hợp lệ' });
   revokeAllSessionsForUser(id);
+  writeAudit(req.user!.id, null, 'user_account.revoke_sessions', `user:${id}`, {});
   res.json({ ok: true });
 });
 
