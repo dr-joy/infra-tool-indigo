@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { serialize as serializeCookie, parse as parseCookie } from 'cookie';
 import { db, withTransaction } from '../db.js';
 import { asyncHandler, HttpError } from '../lib/utils.js';
-import { maHoa, giaiMa } from '../lib/secret.js';
+import { maHoa } from '../lib/secret.js';
 import { verifyAuthJwt } from '../lib/jwks-client.js';
 import { createSession, revokeSession, revokeAllSessionsForUser } from '../lib/session.js';
 import {
@@ -12,7 +12,8 @@ import {
   LOGIN_NONCE_COOKIE_NAME,
   LOGIN_NONCE_TTL_MS,
   SESSION_TTL_MS,
-  USERS_ME_TIMEOUT_MS
+  USERS_ME_TIMEOUT_MS,
+  TOKEN_EXCHANGE_TIMEOUT_MS
 } from '../lib/auth-config.js';
 import { requireSession, requireAdmin } from '../lib/auth-middleware.js';
 
@@ -100,16 +101,34 @@ router.get('/auth/callback', asyncHandler(async (req, res) => {
   const code = String(req.query.code || '');
   if (!code) throw new HttpError(400, 'Thiếu mã đăng nhập (code) từ auth.drjoy.vn');
 
-  const exchangeRes = await fetch(`${authConfig.baseUrl}/auth/token/exchange`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code })
-  });
+  const exchangeController = new AbortController();
+  const exchangeTimer = setTimeout(() => exchangeController.abort(), TOKEN_EXCHANGE_TIMEOUT_MS);
+  let exchangeRes: Response;
+  try {
+    exchangeRes = await fetch(`${authConfig.baseUrl}/auth/token/exchange`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+      signal: exchangeController.signal
+    });
+  } catch {
+    // Timeout hoặc lỗi mạng — KHÁC /users/me: không có dữ liệu cũ để dùng tạm, phải báo lỗi rõ.
+    throw new HttpError(502, 'Không kết nối được tới auth.drjoy.vn để đổi mã đăng nhập, vui lòng thử lại');
+  } finally {
+    clearTimeout(exchangeTimer);
+  }
   if (!exchangeRes.ok) throw new HttpError(502, 'Không đổi được mã đăng nhập lấy token từ auth.drjoy.vn');
-  const tokens = (await exchangeRes.json()) as TokenPair;
+  const tokens = (await exchangeRes.json()) as Partial<TokenPair>;
+  // auth.drjoy.vn là hệ thống ngoài — không tin response luôn đúng hình dạng dù status 200 (Codex
+  // phát hiện: ép kiểu thẳng sang TokenPair mà không kiểm có thể lưu refresh_token rỗng/undefined
+  // hoặc verifyAuthJwt nhận access_token không phải string, lỗi ra không rõ nghĩa).
+  if (typeof tokens.access_token !== 'string' || !tokens.access_token || typeof tokens.refresh_token !== 'string' || !tokens.refresh_token) {
+    throw new HttpError(502, 'auth.drjoy.vn trả về dữ liệu token không hợp lệ');
+  }
+  const { access_token: accessToken, refresh_token: refreshToken } = tokens as TokenPair;
 
-  const claims = await verifyAuthJwt(tokens.access_token);
-  const usersMe = await fetchUsersMe(tokens.access_token);
+  const claims = await verifyAuthJwt(accessToken);
+  const usersMe = await fetchUsersMe(accessToken);
   const email = (usersMe?.email || claims.email).trim();
   const now = new Date().toISOString();
 
@@ -132,9 +151,15 @@ router.get('/auth/callback', asyncHandler(async (req, res) => {
     // ra 2 Admin (kiểm tra + ghi atomically).
     const alreadyHasAdmin = (db.prepare("SELECT COUNT(*) as n FROM users WHERE system_role = 'admin'")
       .get() as { n: number }).n > 0;
-    const isBootstrapAdmin = !alreadyHasAdmin
-      && authConfig.adminBootstrapEmail.length > 0
+    const emailMatchesBootstrap = authConfig.adminBootstrapEmail.length > 0
       && email.toLowerCase() === authConfig.adminBootstrapEmail;
+    const isBootstrapAdmin = emailMatchesBootstrap && !alreadyHasAdmin;
+    // FR-1a: "Lần bind thứ hai hoặc xung đột... phải fail-closed VÀ GHI NHẬT KÝ" — audit_log thật
+    // thuộc Lát 4 (chưa tồn tại), console.warn là mức ghi nhận tối thiểu ngay bây giờ, cùng quy ước
+    // console.error/warn đã dùng ở server/routes/redmine.ts, server/lib/mindmap-gc.ts.
+    if (emailMatchesBootstrap && alreadyHasAdmin) {
+      console.warn(`[auth] Danh tính mới (issuer=${claims.iss}, subject=${claims.sub}) khớp email bootstrap Admin nhưng đã có Admin khác -> fail-closed, tạo tài khoản user/pending thay vì admin`);
+    }
 
     const displayName = usersMe?.name || email;
     const avatar = usersMe?.avatar ?? null;
@@ -159,7 +184,7 @@ router.get('/auth/callback', asyncHandler(async (req, res) => {
   db.prepare(`
     INSERT INTO user_identity_tokens (user_id, refresh_token_ciphertext, updated_at) VALUES (?, ?, ?)
     ON CONFLICT(user_id) DO UPDATE SET refresh_token_ciphertext = excluded.refresh_token_ciphertext, updated_at = excluded.updated_at
-  `).run(user.id, maHoa(tokens.refresh_token), now);
+  `).run(user.id, maHoa(refreshToken), now);
 
   const session = createSession(user.id);
   res.setHeader('Set-Cookie', serializeCookie(SESSION_COOKIE_NAME, session.token, {

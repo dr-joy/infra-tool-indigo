@@ -21,7 +21,9 @@ const jwksBody = { keys: [jwk] };
 
 interface FakeUsersMe { email: string; name: string; avatar: string }
 const pendingCodes = new Map<string, { accessToken: string; refreshToken: string }>();
+const malformedCodes = new Set<string>(); // exchange trả 200 nhưng thiếu access_token/refresh_token
 const usersMeByToken = new Map<string, FakeUsersMe>();
+const slowMeTokens = new Set<string>(); // /users/me KHÔNG BAO GIỜ trả lời -> buộc client tự timeout
 
 const authServer: Server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', 'http://internal');
@@ -34,6 +36,12 @@ const authServer: Server = http.createServer(async (req, res) => {
     const chunks: Buffer[] = [];
     for await (const c of req) chunks.push(c as Buffer);
     const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') as { code?: string };
+    if (body.code && malformedCodes.has(body.code)) {
+      malformedCodes.delete(body.code);
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ access_token: '' })); // thiếu refresh_token, access_token rỗng
+      return;
+    }
     const entry = body.code ? pendingCodes.get(body.code) : undefined;
     if (!entry) {
       res.statusCode = 400;
@@ -48,6 +56,7 @@ const authServer: Server = http.createServer(async (req, res) => {
   if (url.pathname === '/users/me' && req.method === 'GET') {
     const authz = req.headers.authorization || '';
     const token = authz.startsWith('Bearer ') ? authz.slice(7) : '';
+    if (slowMeTokens.has(token)) return; // không res.end() -> client tự abort khi hết timeout
     const info = usersMeByToken.get(token);
     if (!info) {
       res.statusCode = 401;
@@ -139,20 +148,42 @@ async function loginAs(email: string, name: string, subOverride?: string): Promi
   return { sessionCookie, status: res.status };
 }
 
-const ADMIN_SUB = 'admin-fixed-sub'; // đăng nhập LẠI đúng 1 danh tính Admin thật xuyên suốt file test.
-const loginAsAdmin = () => loginAs(ADMIN_EMAIL, 'Admin Thật', ADMIN_SUB);
+// Danh tính (issuer, subject) của Admin thật trong DB — được xác định ở test đầu tiên (race lúc DB
+// còn sạch), rồi TÁI DÙNG cho mọi test sau cần đăng nhập lại đúng người này (không dùng 1 sub cứng cố
+// định như trước — sub cứng giả định luôn thắng race, nhưng bản chất chỉ có 1 trong N người thắng, và
+// race PHẢI được kiểm khi DB thật sự chưa có Admin nào, không phải sau khi đã có 1 Admin từ test khác).
+let adminSub = '';
+const loginAsAdmin = () => loginAs(ADMIN_EMAIL, 'Admin Thật', adminSub);
 
 // ── Test ───────────────────────────────────────────────────────────────────────────
 
-test('FR-1a: đăng nhập lần đầu bằng email khớp ADMIN_BOOTSTRAP_EMAIL -> active + system_role admin', async () => {
-  const { sessionCookie, status } = await loginAsAdmin();
-  assert.equal(status, 302);
-  assert.ok(sessionCookie);
-  const me = await fetch(`${base}/api/auth/me`, { headers: { Cookie: `__Host-tm_session=${sessionCookie}` } });
-  assert.equal(me.status, 200);
-  const body = await me.json();
-  assert.equal(body.user.status, 'active');
-  assert.equal(body.user.systemRole, 'admin');
+test('FR-1a: DB CHƯA có Admin nào, 2 danh tính MỚI khác nhau cùng khớp email bootstrap đăng nhập gần như đồng thời -> đúng 1 thành Admin', async () => {
+  const subA = 'race-first-admin-A';
+  const subB = 'race-first-admin-B';
+  const nonceA = await startLogin();
+  const codeA = await issueAuthCode(ADMIN_EMAIL, 'Ứng viên Admin A', '', subA);
+  const nonceB = await startLogin();
+  const codeB = await issueAuthCode(ADMIN_EMAIL, 'Ứng viên Admin B', '', subB);
+
+  const [resA, resB] = await Promise.all([
+    fetch(`${base}/api/auth/callback?code=${codeA}`, { redirect: 'manual', headers: { Cookie: `login_nonce=${nonceA}` } }),
+    fetch(`${base}/api/auth/callback?code=${codeB}`, { redirect: 'manual', headers: { Cookie: `login_nonce=${nonceB}` } })
+  ]);
+  assert.equal(resA.status, 302);
+  assert.equal(resB.status, 302);
+
+  const cookieA = parseCookie(resA.headers.get('set-cookie') || '')['__Host-tm_session'];
+  const cookieB = parseCookie(resB.headers.get('set-cookie') || '')['__Host-tm_session'];
+  const meA = await (await fetch(`${base}/api/auth/me`, { headers: { Cookie: `__Host-tm_session=${cookieA}` } })).json();
+  const meB = await (await fetch(`${base}/api/auth/me`, { headers: { Cookie: `__Host-tm_session=${cookieB}` } })).json();
+
+  const winners = [meA, meB].filter((m) => m.user.systemRole === 'admin');
+  assert.equal(winners.length, 1, 'đúng 1 trong 2 danh tính cạnh tranh phải thành Admin, không phải 0 hay 2');
+  assert.equal(winners[0].user.status, 'active');
+  adminSub = meA.user.systemRole === 'admin' ? subA : subB;
+
+  const totalAdmins = db.prepare("SELECT COUNT(*) as n FROM users WHERE system_role = 'admin'").get() as { n: number };
+  assert.equal(totalAdmins.n, 1);
 });
 
 test('FR-2: đăng nhập lần đầu email KHÔNG khớp bootstrap -> pending + system_role user', async () => {
@@ -203,11 +234,11 @@ test('POST /auth/logout huỷ đúng phiên -> session cũ không dùng lại đ
   assert.equal(meAfter.status, 401);
 });
 
-test('FR-1a: bootstrap Admin fail-closed khi 2 danh tính khác nhau cùng khớp email bootstrap đăng nhập gần như đồng thời -> chỉ đúng 1 người thành admin', async () => {
+test('FR-1a: đã có Admin từ trước -> 2 danh tính MỚI khác nhau cùng khớp email bootstrap đăng nhập đồng thời -> KHÔNG ai thành Admin thêm', async () => {
   const nonceA = await startLogin();
-  const codeA = await issueAuthCode(ADMIN_EMAIL, 'Admin A (danh tính khác)');
+  const codeA = await issueAuthCode(ADMIN_EMAIL, 'Admin C (danh tính khác, tới sau)', '', 'race-second-admin-A');
   const nonceB = await startLogin();
-  const codeB = await issueAuthCode(ADMIN_EMAIL, 'Admin B (danh tính khác)');
+  const codeB = await issueAuthCode(ADMIN_EMAIL, 'Admin D (danh tính khác, tới sau)', '', 'race-second-admin-B');
 
   const [resA, resB] = await Promise.all([
     fetch(`${base}/api/auth/callback?code=${codeA}`, { redirect: 'manual', headers: { Cookie: `login_nonce=${nonceA}` } }),
@@ -219,8 +250,8 @@ test('FR-1a: bootstrap Admin fail-closed khi 2 danh tính khác nhau cùng khớ
   const admins = db.prepare(
     "SELECT COUNT(*) as n FROM users WHERE email = ? AND system_role = 'admin'"
   ).get(ADMIN_EMAIL) as { n: number };
-  // Test trước đó ("đăng nhập lần đầu bằng email khớp bootstrap") đã tạo đúng 1 Admin — bằng chứng
-  // fail-closed thật sự nằm ở việc con số này KHÔNG tăng thêm dù có 2 danh tính mới cùng cạnh tranh.
+  // Test trước đó (race lúc DB sạch) đã tạo đúng 1 Admin — bằng chứng fail-closed thật sự nằm ở việc
+  // con số này KHÔNG tăng thêm dù có 2 danh tính MỚI khác nhau cùng cạnh tranh sau đó.
   assert.equal(admins.n, 1);
 });
 
@@ -254,4 +285,50 @@ test('requireAdmin: user thường gọi /admin/users -> 403 FORBIDDEN_ADMIN_ONL
   assert.equal(res.status, 403);
   const body = await res.json();
   assert.equal(body.code, 'FORBIDDEN_ADMIN_ONLY');
+});
+
+test('POST /admin/users/:id/revoke-sessions: phiên cũ của user đó bị từ chối ngay sau khi Admin thu hồi', async () => {
+  const { sessionCookie: adminCookie } = await loginAsAdmin();
+  const { sessionCookie: userCookie } = await loginAs('revoke-target@drjoy.jp', 'Bị thu hồi phiên');
+  const me = await (await fetch(`${base}/api/auth/me`, { headers: { Cookie: `__Host-tm_session=${userCookie}` } })).json();
+
+  const revoke = await fetch(`${base}/api/admin/users/${me.user.id}/revoke-sessions`, {
+    method: 'POST',
+    headers: { Cookie: `__Host-tm_session=${adminCookie}` }
+  });
+  assert.equal(revoke.status, 200);
+
+  const meAfter = await fetch(`${base}/api/auth/me`, { headers: { Cookie: `__Host-tm_session=${userCookie}` } });
+  assert.equal(meAfter.status, 401);
+});
+
+test('FR-1: /auth/token/exchange trả response thiếu access_token/refresh_token -> 502 rõ ràng, không 500/lưu rác', async () => {
+  const nonce = await startLogin();
+  const code = await issueAuthCode('malformed-exchange@drjoy.jp', 'Response hỏng');
+  malformedCodes.add(code);
+  const res = await fetch(`${base}/api/auth/callback?code=${code}`, {
+    redirect: 'manual',
+    headers: { Cookie: `login_nonce=${nonce}` }
+  });
+  assert.equal(res.status, 502);
+  const row = db.prepare('SELECT 1 FROM users WHERE email = ?').get('malformed-exchange@drjoy.jp');
+  assert.equal(row, undefined, 'không được tạo user khi response exchange không hợp lệ');
+});
+
+test('FR-1: /users/me timeout -> vẫn đăng nhập được, dùng tạm email/tên từ JWT (không chặn đăng nhập)', async () => {
+  const nonce = await startLogin();
+  const email = 'slow-users-me@drjoy.jp';
+  const code = await issueAuthCode(email, 'Tên thật (không lấy được vì timeout)');
+  const entry = pendingCodes.get(code);
+  assert.ok(entry, 'phải còn pending trước khi gọi callback');
+  slowMeTokens.add(entry!.accessToken);
+
+  const res = await fetch(`${base}/api/auth/callback?code=${code}`, {
+    redirect: 'manual',
+    headers: { Cookie: `login_nonce=${nonce}` }
+  });
+  assert.equal(res.status, 302, 'timeout /users/me không được chặn đăng nhập (FR-1)');
+  const sessionCookie = parseCookie(res.headers.get('set-cookie') || '')['__Host-tm_session'];
+  const me = await (await fetch(`${base}/api/auth/me`, { headers: { Cookie: `__Host-tm_session=${sessionCookie}` } })).json();
+  assert.equal(me.user.email, email, 'email fallback lấy từ claim JWT khi /users/me không trả lời được');
 });

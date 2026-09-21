@@ -5,7 +5,8 @@ import { requireSession, requireAdmin } from '../lib/auth-middleware.js';
 
 // FR-2/FR-3/FR-3a — chọn team lúc đăng nhập lần đầu, Admin duyệt/từ chối, không cấp quyền nghiệp vụ
 // nào cho tới khi được duyệt (users.status chuyển active). `teams`/`team_members` ở đây là bản kéo
-// sớm tối thiểu từ Lát 3 (xem server/schema/auth.ts).
+// sớm tối thiểu từ Lát 3 (xem server/schema/auth.ts). URL: /api/onboarding/* (chủ thể là user đang
+// onboarding) và /api/admin/join-requests* (chủ thể là Admin) — đúng access class tách riêng ở CR §6.2.
 const router = Router();
 
 router.get('/teams', requireSession, (_req, res) => {
@@ -19,6 +20,12 @@ interface JoinRequestBody {
 }
 
 router.post('/onboarding/join-request', requireSession, (req, res) => {
+  // FR-2 mô tả join-request là bước onboarding của "người đăng nhập lần đầu" — chỉ tài khoản
+  // pending mới được gửi. User đã active muốn tham gia thêm team khác là nhu cầu Lát 3 (ngữ cảnh
+  // team/authorize()), chưa có route riêng ở Lát 2 — từ chối rõ ràng thay vì âm thầm cho qua.
+  if (req.user!.status !== 'pending') {
+    return res.status(409).json({ message: 'Chỉ tài khoản đang chờ duyệt mới gửi được đơn xin tham gia team' });
+  }
   const body = req.body as JoinRequestBody;
   const teamId = Number(body.teamId);
   const role = body.role;
@@ -29,21 +36,25 @@ router.post('/onboarding/join-request', requireSession, (req, res) => {
   if (!team) return res.status(404).json({ message: 'Không tìm thấy team' });
 
   try {
-    const now = new Date().toISOString();
-    const result = db.prepare(`
-      INSERT INTO join_requests (user_id, requested_team_id, requested_role, status, created_at)
-      VALUES (?, ?, ?, 'pending', ?)
-    `).run(req.user!.id, teamId, role, now);
+    const joinRequestId = withTransaction(() => {
+      const now = new Date().toISOString();
+      const result = db.prepare(`
+        INSERT INTO join_requests (user_id, requested_team_id, requested_role, status, created_at)
+        VALUES (?, ?, ?, 'pending', ?)
+      `).run(req.user!.id, teamId, role, now);
 
-    // FR-3: Admin nhận thông báo trong app ngay khi có yêu cầu tham gia mới.
-    const admins = db.prepare("SELECT id FROM users WHERE system_role = 'admin'").all() as { id: number }[];
-    const insertNotif = db.prepare(`
-      INSERT INTO notifications (user_id, kind, payload, created_at) VALUES (?, 'join_request_created', ?, ?)
-    `);
-    const payload = JSON.stringify({ joinRequestId: result.lastInsertRowid, userId: req.user!.id, teamId, role });
-    for (const admin of admins) insertNotif.run(admin.id, payload, now);
-
-    res.status(201).json({ id: Number(result.lastInsertRowid) });
+      // FR-3: Admin nhận thông báo trong app ngay khi có yêu cầu tham gia mới — cùng transaction với
+      // INSERT đơn, để không xảy ra "đơn đã tạo nhưng Admin không được báo" nếu 1 trong N lần ghi
+      // thông báo lỗi giữa đường (Codex phát hiện lúc review — trước đó 2 việc này tách rời).
+      const admins = db.prepare("SELECT id FROM users WHERE system_role = 'admin'").all() as { id: number }[];
+      const insertNotif = db.prepare(`
+        INSERT INTO notifications (user_id, kind, payload, created_at) VALUES (?, 'join_request_created', ?, ?)
+      `);
+      const payload = JSON.stringify({ joinRequestId: result.lastInsertRowid, userId: req.user!.id, teamId, role });
+      for (const admin of admins) insertNotif.run(admin.id, payload, now);
+      return result.lastInsertRowid;
+    });
+    res.status(201).json({ id: Number(joinRequestId) });
   } catch (error) {
     // Unique index (user_id) WHERE status='pending' -> đã có đơn đang chờ.
     if (error instanceof Error && /UNIQUE/.test(error.message)) {
@@ -53,7 +64,9 @@ router.post('/onboarding/join-request', requireSession, (req, res) => {
   }
 });
 
-router.get('/onboarding/join-requests', requireSession, requireAdmin, (_req, res) => {
+// CR §6.2: 2 route duyệt/từ chối thuộc access class `admin`, không phải `onboarding` (chủ thể gọi là
+// Admin, không phải user đang onboarding) — giữ đúng tiền tố /api/admin/... như CR đã liệt kê.
+router.get('/admin/join-requests', requireSession, requireAdmin, (_req, res) => {
   const rows = db.prepare(`
     SELECT jr.id, jr.user_id, u.email, u.display_name, jr.requested_team_id, jr.requested_role,
            jr.row_version, jr.created_at
@@ -70,7 +83,7 @@ interface ReviewBody {
   role?: string;
 }
 
-router.post('/onboarding/join-requests/:id/approve', requireSession, requireAdmin, (req, res) => {
+router.post('/admin/join-requests/:id/approve', requireSession, requireAdmin, (req, res) => {
   const id = Number(req.params.id);
   const body = req.body as ReviewBody;
   if (!Number.isInteger(id)) return res.status(400).json({ message: 'id không hợp lệ' });
@@ -84,6 +97,12 @@ router.post('/onboarding/join-requests/:id/approve', requireSession, requireAdmi
       // Admin có thể sửa team/vai trò ngay lúc duyệt (FR-3) — mặc định giữ đúng yêu cầu gốc.
       const approvedTeamId = Number.isInteger(body.teamId) ? Number(body.teamId) : jr.requested_team_id;
       const approvedRole = body.role === 'leader' || body.role === 'member' ? body.role : jr.requested_role;
+
+      // teamId do Admin tự sửa tay lúc duyệt (không phải teamId gốc đã được kiểm ở lúc tạo đơn) —
+      // phải xác nhận tồn tại trước khi ghi, không để lỗi khoá ngoại rơi thành 500 (Codex phát hiện).
+      if (!db.prepare('SELECT 1 FROM teams WHERE id = ?').get(approvedTeamId)) {
+        throw new HttpError(404, 'Team được chọn để duyệt không tồn tại');
+      }
 
       if (approvedRole === 'leader') {
         const hasLeader = db.prepare("SELECT 1 FROM team_members WHERE team_id = ? AND role = 'leader'")
@@ -115,7 +134,7 @@ router.post('/onboarding/join-requests/:id/approve', requireSession, requireAdmi
   }
 });
 
-router.post('/onboarding/join-requests/:id/reject', requireSession, requireAdmin, (req, res) => {
+router.post('/admin/join-requests/:id/reject', requireSession, requireAdmin, (req, res) => {
   const id = Number(req.params.id);
   const body = req.body as { rowVersion?: number };
   if (!Number.isInteger(id)) return res.status(400).json({ message: 'id không hợp lệ' });

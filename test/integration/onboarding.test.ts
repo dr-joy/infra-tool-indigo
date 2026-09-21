@@ -158,11 +158,11 @@ test('FR-2/FR-3: gửi join-request -> Admin nhận thông báo -> duyệt -> us
   const notif = notifs.notifications.find((n: { kind: string }) => n.kind === 'join_request_created');
   assert.ok(notif, 'Admin phải nhận thông báo có yêu cầu tham gia mới');
 
-  const list = await (await fetch(`${base}/api/onboarding/join-requests`, { headers: cookieHeader(adminSession) })).json();
+  const list = await (await fetch(`${base}/api/admin/join-requests`, { headers: cookieHeader(adminSession) })).json();
   const jr = list.joinRequests[0];
   assert.ok(jr);
 
-  const approve = await fetch(`${base}/api/onboarding/join-requests/${jr.id}/approve`, {
+  const approve = await fetch(`${base}/api/admin/join-requests/${jr.id}/approve`, {
     method: 'POST',
     headers: { ...cookieHeader(adminSession), 'Content-Type': 'application/json' },
     body: JSON.stringify({ rowVersion: jr.row_version })
@@ -190,10 +190,10 @@ test('FR-3a: đơn bị Admin từ chối -> KHÔNG khoá vĩnh viễn, user v�
     headers: { ...cookieHeader(userSession), 'Content-Type': 'application/json' },
     body: JSON.stringify({ teamId, role: 'member' })
   });
-  const list1 = await (await fetch(`${base}/api/onboarding/join-requests`, { headers: cookieHeader(adminSession) })).json();
+  const list1 = await (await fetch(`${base}/api/admin/join-requests`, { headers: cookieHeader(adminSession) })).json();
   const jr1 = list1.joinRequests[list1.joinRequests.length - 1];
 
-  const reject = await fetch(`${base}/api/onboarding/join-requests/${jr1.id}/reject`, {
+  const reject = await fetch(`${base}/api/admin/join-requests/${jr1.id}/reject`, {
     method: 'POST',
     headers: { ...cookieHeader(adminSession), 'Content-Type': 'application/json' },
     body: JSON.stringify({ rowVersion: jr1.row_version })
@@ -239,9 +239,9 @@ test('FR-6: duyệt role=leader cho team đã có Leader -> 409 TEAM_ALREADY_HAS
     method: 'POST', headers: { ...cookieHeader(leaderSession), 'Content-Type': 'application/json' },
     body: JSON.stringify({ teamId, role: 'leader' })
   });
-  const list1 = await (await fetch(`${base}/api/onboarding/join-requests`, { headers: cookieHeader(adminSession) })).json();
+  const list1 = await (await fetch(`${base}/api/admin/join-requests`, { headers: cookieHeader(adminSession) })).json();
   const jrLeader = list1.joinRequests.find((r: { requested_role: string; requested_team_id: number }) => r.requested_role === 'leader' && r.requested_team_id === teamId);
-  const approve1 = await fetch(`${base}/api/onboarding/join-requests/${jrLeader.id}/approve`, {
+  const approve1 = await fetch(`${base}/api/admin/join-requests/${jrLeader.id}/approve`, {
     method: 'POST', headers: { ...cookieHeader(adminSession), 'Content-Type': 'application/json' },
     body: JSON.stringify({ rowVersion: jrLeader.row_version })
   });
@@ -252,9 +252,9 @@ test('FR-6: duyệt role=leader cho team đã có Leader -> 409 TEAM_ALREADY_HAS
     method: 'POST', headers: { ...cookieHeader(secondLeaderSession), 'Content-Type': 'application/json' },
     body: JSON.stringify({ teamId, role: 'leader' })
   });
-  const list2 = await (await fetch(`${base}/api/onboarding/join-requests`, { headers: cookieHeader(adminSession) })).json();
+  const list2 = await (await fetch(`${base}/api/admin/join-requests`, { headers: cookieHeader(adminSession) })).json();
   const jrLeader2 = list2.joinRequests.find((r: { requested_role: string; requested_team_id: number }) => r.requested_role === 'leader' && r.requested_team_id === teamId);
-  const approve2 = await fetch(`${base}/api/onboarding/join-requests/${jrLeader2.id}/approve`, {
+  const approve2 = await fetch(`${base}/api/admin/join-requests/${jrLeader2.id}/approve`, {
     method: 'POST', headers: { ...cookieHeader(adminSession), 'Content-Type': 'application/json' },
     body: JSON.stringify({ rowVersion: jrLeader2.row_version })
   });
@@ -271,20 +271,65 @@ test('row_version lệch (đã duyệt trước bởi người khác) -> 409 JOI
     method: 'POST', headers: { ...cookieHeader(userSession), 'Content-Type': 'application/json' },
     body: JSON.stringify({ teamId, role: 'member' })
   });
-  const list = await (await fetch(`${base}/api/onboarding/join-requests`, { headers: cookieHeader(adminSession) })).json();
+  const list = await (await fetch(`${base}/api/admin/join-requests`, { headers: cookieHeader(adminSession) })).json();
   const jr = list.joinRequests[list.joinRequests.length - 1];
 
-  const staleApprove = await fetch(`${base}/api/onboarding/join-requests/${jr.id}/approve`, {
+  const staleApprove = await fetch(`${base}/api/admin/join-requests/${jr.id}/approve`, {
     method: 'POST', headers: { ...cookieHeader(adminSession), 'Content-Type': 'application/json' },
     body: JSON.stringify({ rowVersion: jr.row_version + 1 })
   });
   assert.equal(staleApprove.status, 409);
 });
 
-test('non-admin không gọi được /onboarding/join-requests (danh sách chờ duyệt) -> 403', async () => {
+test('non-admin không gọi được /admin/join-requests (danh sách chờ duyệt) -> 403', async () => {
   const userSession = await loginAs('not-admin-onboarding@drjoy.jp', 'Không phải Admin');
-  const res = await fetch(`${base}/api/onboarding/join-requests`, { headers: cookieHeader(userSession) });
+  const res = await fetch(`${base}/api/admin/join-requests`, { headers: cookieHeader(userSession) });
   assert.equal(res.status, 403);
+});
+
+test('user ĐÃ active không gọi được /onboarding/join-request nữa (FR-2 chỉ dành cho onboarding lần đầu)', async () => {
+  const teamId = seedTeam('Team G');
+  const adminSession = await loginAsAdmin();
+  const userSession = await loginAs('already-active@drjoy.jp', 'Đã active rồi');
+  await fetch(`${base}/api/onboarding/join-request`, {
+    method: 'POST', headers: { ...cookieHeader(userSession), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ teamId, role: 'member' })
+  });
+  const list = await (await fetch(`${base}/api/admin/join-requests`, { headers: cookieHeader(adminSession) })).json();
+  const jr = list.joinRequests[list.joinRequests.length - 1];
+  await fetch(`${base}/api/admin/join-requests/${jr.id}/approve`, {
+    method: 'POST', headers: { ...cookieHeader(adminSession), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rowVersion: jr.row_version })
+  });
+
+  const secondTeamId = seedTeam('Team H');
+  const retry = await fetch(`${base}/api/onboarding/join-request`, {
+    method: 'POST', headers: { ...cookieHeader(userSession), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ teamId: secondTeamId, role: 'member' })
+  });
+  assert.equal(retry.status, 409);
+});
+
+test('duyệt với teamId Admin tự sửa nhưng KHÔNG tồn tại -> 404 rõ ràng, không phải 500 do lỗi khoá ngoại', async () => {
+  const teamId = seedTeam('Team I');
+  const adminSession = await loginAsAdmin();
+  const userSession = await loginAs('approve-bad-team@drjoy.jp', 'Duyệt sai team');
+  await fetch(`${base}/api/onboarding/join-request`, {
+    method: 'POST', headers: { ...cookieHeader(userSession), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ teamId, role: 'member' })
+  });
+  const list = await (await fetch(`${base}/api/admin/join-requests`, { headers: cookieHeader(adminSession) })).json();
+  const jr = list.joinRequests[list.joinRequests.length - 1];
+
+  const approve = await fetch(`${base}/api/admin/join-requests/${jr.id}/approve`, {
+    method: 'POST', headers: { ...cookieHeader(adminSession), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rowVersion: jr.row_version, teamId: 999999 })
+  });
+  assert.equal(approve.status, 404);
+
+  // Đơn KHÔNG được đổi thành approved dù ghi team_members thất bại giữa đường -> transaction rollback đúng.
+  const stillPending = db.prepare("SELECT status FROM join_requests WHERE id = ?").get(jr.id) as { status: string };
+  assert.equal(stillPending.status, 'pending');
 });
 
 test('FR-34: đánh dấu đã đọc chỉ áp dụng cho đúng chủ thông báo, đọc lại vẫn còn trong danh sách với read_at', async () => {
