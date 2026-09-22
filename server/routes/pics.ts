@@ -22,12 +22,21 @@ function mapPic(row: Record<string, unknown>) {
 
 // Tập tên PIC đang gắn cho task CHƯA hoàn thành (tien_do < 100), gồm cả phân công theo giai đoạn.
 // assignee là chuỗi "A, B" nên phải tách phần tử để so khớp chính xác (tránh "An" khớp "Anh").
+//
+// CR-20260913 Lát 4 (§6.3): `project_task_assignments.pic` (chuỗi tự do) đã rebuild thành `user_id`
+// (User thật, không phải chuỗi PIC) + `legacy_pic_label` (nhãn cũ chỉ-đọc sau di trú, `user_id` NULL).
+// `pics` giờ chỉ còn là dữ liệu lịch sử chỉ-đọc (không còn là nguồn chọn người) — nên chỉ còn dòng
+// LEGACY (`legacy_pic_label`) mới có thể khớp tên PIC; dòng đã gán User thật không khớp theo tên nữa.
 function picsConTaskChuaXong(): Set<string> {
   const used = new Set<string>();
   const taskRows = db.prepare("SELECT assignee FROM project_tasks WHERE tien_do < 100 AND assignee IS NOT NULL AND assignee <> ''").all() as { assignee: string }[];
   for (const r of taskRows) r.assignee.split(',').map((s) => s.trim()).filter(Boolean).forEach((n) => used.add(n));
-  const assignRows = db.prepare('SELECT DISTINCT a.pic AS pic FROM project_task_assignments a JOIN project_tasks t ON t.id = a.project_task_id WHERE t.tien_do < 100').all() as { pic: string }[];
-  for (const r of assignRows) if (r.pic) used.add(r.pic.trim());
+  const assignRows = db.prepare(`
+    SELECT DISTINCT a.legacy_pic_label AS legacy_pic_label
+    FROM project_task_assignments a JOIN project_tasks t ON t.id = a.project_task_id
+    WHERE t.tien_do < 100 AND a.legacy_pic_label IS NOT NULL AND a.legacy_pic_label <> ''
+  `).all() as { legacy_pic_label: string }[];
+  for (const r of assignRows) if (r.legacy_pic_label) used.add(r.legacy_pic_label.trim());
   return used;
 }
 
