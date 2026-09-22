@@ -60,6 +60,13 @@ router.post('/admin/teams', requireSession, requireActiveAccount, (req, res) => 
         INSERT INTO team_feature_visibility (team_id, feature, level, updated_at) VALUES (?, ?, 'off', ?)
       `);
       for (const feature of FEATURES) insertVisibility.run(id, feature, now);
+      // CR-20260913 Lát 4 (§6.3): project hệ thống "Khác" giờ là 1 dòng MỖI team (trước Lát 4 là 1
+      // dòng toàn app) — tạo ngay trong cùng transaction, giống cách seed 5 dòng feature-visibility
+      // phía trên, để team mới có ngay chỗ chứa mục tiêu/việc lẻ ngoài project.
+      db.prepare(`
+        INSERT INTO projects (ten_project, pic, team_id, ngay_bat_dau, sort_order, is_system, created_at, updated_at)
+        VALUES ('Khác', '', ?, ?, 1, 1, ?, ?)
+      `).run(id, now.slice(0, 10), now, now);
       writeAudit(req.user!.id, id, 'team.create', `team:${id}`, { name, description: body.description || null });
       return id;
     });

@@ -413,6 +413,192 @@ export function runLegacyMigrations(db: DatabaseSync, context: DbMigrationContex
   archiveAndDropEmergencyBatchDaDang();
 }
 
+// ── Lát 4 (CR-20260913 §6.3, Council `76e03307`) — nâng cấp DB thật lên shape nhiều người dùng ──
+// Idempotent, bọc transaction theo rules/08. Chạy SAU applyXSchema (bảng đã tồn tại với shape MỚI
+// cho DB rỗng) và SAU runLegacyMigrations. Chỉ phần schema/cơ học ở đây — 4 hàm còn lại của hợp
+// đồng di trú 7 bước thật (backup, build DB server từ snapshot, gán Dev13/Leader, verify, smoke
+// boot) là một script vận hành riêng chạy TAY một lần khi migrate dữ liệu Dev13 thật, không phải
+// migration tự động mỗi lần boot — 2 lý do: (1) cần tham số thật (leaderUserId cụ thể) không suy
+// được tự động; (2) không được lặp lại ngoài ý muốn trên DB đang có nhiều team thật.
+
+// Helper ADD COLUMN idempotent dùng chung (bắt đầu áp dụng từ Lát 4 — BL-20260818-007, chưa
+// retrofit toàn bộ 18 khối cũ trong file này, xem backlog).
+function themCotNeuThieu(db: DatabaseSync, table: string, column: string, ddl: string): void {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (cols.length === 0) return; // bảng chưa tồn tại (DB rất mới, applyXSchema đã tạo đúng shape)
+  if (!cols.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+}
+
+// Rebuild vì `pic` đang NOT NULL — không sửa được chỉ bằng ADD COLUMN. Bản thân việc rebuild copy
+// nguyên văn `pic` cũ sang `legacy_pic_label` (user_id = NULL) — đúng luôn phần cơ học của bước 5
+// migrateLegacyPicLabels cho bảng này, không cần làm lại ở script vận hành riêng.
+function rebuildProjectTaskAssignmentsForSlice4(db: DatabaseSync, context: DbMigrationContext): void {
+  const cols = (db.prepare('PRAGMA table_info(project_task_assignments)').all() as { name: string }[]).map((c) => c.name);
+  if (cols.length === 0) return;
+  if (cols.includes('user_id')) return; // đã rebuild rồi (idempotent)
+
+  context.withTransaction(() => {
+    db.exec(`
+      CREATE TABLE project_task_assignments_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        project_task_id INTEGER NOT NULL REFERENCES project_tasks(id) ON DELETE CASCADE,
+        user_id INTEGER REFERENCES users(id),
+        legacy_pic_label TEXT,
+        start_date TEXT NOT NULL,
+        end_date TEXT NOT NULL,
+        estimate_hours REAL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        tien_do INTEGER NOT NULL DEFAULT 0,
+        row_version INTEGER NOT NULL DEFAULT 1,
+        CHECK (user_id IS NOT NULL OR (legacy_pic_label IS NOT NULL AND legacy_pic_label <> ''))
+      );
+      INSERT INTO project_task_assignments_new (
+        id, project_task_id, user_id, legacy_pic_label, start_date, end_date, estimate_hours, sort_order, tien_do, row_version
+      )
+      SELECT
+        id, project_task_id, NULL, COALESCE(NULLIF(TRIM(pic), ''), '(khong ro)'),
+        start_date, end_date, estimate_hours, sort_order, COALESCE(tien_do, 0), 1
+      FROM project_task_assignments;
+      DROP TABLE project_task_assignments;
+      ALTER TABLE project_task_assignments_new RENAME TO project_task_assignments;
+      CREATE INDEX IF NOT EXISTS idx_pta_task ON project_task_assignments(project_task_id);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_pta_task_user_unique
+        ON project_task_assignments(project_task_id, user_id) WHERE user_id IS NOT NULL;
+    `);
+  });
+  console.log('[db] Lat 4: da rebuild project_task_assignments (pic NOT NULL -> user_id nullable + legacy_pic_label)');
+}
+
+// Rebuild vì UNIQUE cũ (week_start,kind,mode) chặn cứng 2 team cùng có báo cáo cùng loại cùng tuần.
+function rebuildWeeklyReportHistoryForSlice4(db: DatabaseSync, context: DbMigrationContext): void {
+  const tableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'weekly_report_history'").get() as { sql: string } | undefined;
+  if (!tableInfo) return;
+  if (tableInfo.sql.includes('team_id')) return; // đã rebuild rồi (idempotent)
+
+  context.withTransaction(() => {
+    db.exec(`
+      CREATE TABLE weekly_report_history_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        week_start TEXT NOT NULL,
+        team_id INTEGER REFERENCES teams(id),
+        kind TEXT NOT NULL,
+        mode TEXT NOT NULL DEFAULT 'by_project',
+        content TEXT NOT NULL,
+        row_version INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE (team_id, week_start, kind, mode)
+      );
+      INSERT INTO weekly_report_history_new (
+        id, week_start, team_id, kind, mode, content, row_version, created_at, updated_at
+      )
+      SELECT id, week_start, NULL, kind, mode, content, 1, created_at, updated_at
+      FROM weekly_report_history;
+      DROP TABLE weekly_report_history;
+      ALTER TABLE weekly_report_history_new RENAME TO weekly_report_history;
+      CREATE INDEX IF NOT EXISTS idx_weekly_report_history_week ON weekly_report_history(week_start);
+    `);
+  });
+  console.log('[db] Lat 4: da rebuild weekly_report_history (UNIQUE them team_id)');
+}
+
+export function runSlice4Migrations(db: DatabaseSync, context: DbMigrationContext): void {
+  themCotNeuThieu(db, 'projects', 'team_id', 'team_id INTEGER REFERENCES teams(id)');
+  themCotNeuThieu(db, 'projects', 'responsible_user_id', 'responsible_user_id INTEGER REFERENCES users(id)');
+  themCotNeuThieu(db, 'projects', 'legacy_pic_label', 'legacy_pic_label TEXT');
+  themCotNeuThieu(db, 'projects', 'row_version', 'row_version INTEGER NOT NULL DEFAULT 1');
+
+  themCotNeuThieu(db, 'project_tasks', 'team_id', 'team_id INTEGER REFERENCES teams(id)');
+  themCotNeuThieu(db, 'project_tasks', 'legacy_pic_label', 'legacy_pic_label TEXT');
+  themCotNeuThieu(db, 'project_tasks', 'row_version', 'row_version INTEGER NOT NULL DEFAULT 1');
+
+  themCotNeuThieu(db, 'pics', 'team_id', 'team_id INTEGER REFERENCES teams(id)');
+
+  themCotNeuThieu(db, 'weekly_goals', 'team_id', 'team_id INTEGER REFERENCES teams(id)');
+  themCotNeuThieu(db, 'weekly_goals', 'legacy_pic_label', 'legacy_pic_label TEXT');
+  themCotNeuThieu(db, 'weekly_goals', 'row_version', 'row_version INTEGER NOT NULL DEFAULT 1');
+
+  themCotNeuThieu(db, 'weekly_task_evaluations', 'team_id', 'team_id INTEGER REFERENCES teams(id)');
+  themCotNeuThieu(db, 'weekly_task_evaluations', 'row_version', 'row_version INTEGER NOT NULL DEFAULT 1');
+
+  themCotNeuThieu(db, 'weekly_project_summaries', 'team_id', 'team_id INTEGER REFERENCES teams(id)');
+  themCotNeuThieu(db, 'weekly_project_summaries', 'row_version', 'row_version INTEGER NOT NULL DEFAULT 1');
+
+  themCotNeuThieu(db, 'tasks', 'owner_user_id', 'owner_user_id INTEGER REFERENCES users(id)');
+
+  themCotNeuThieu(db, 'mindmaps', 'owner_user_id', 'owner_user_id INTEGER REFERENCES users(id)');
+  themCotNeuThieu(db, 'mindmaps', 'visibility', "visibility TEXT NOT NULL DEFAULT 'private'");
+  themCotNeuThieu(db, 'mindmaps', 'shared_team_id', 'shared_team_id INTEGER REFERENCES teams(id)');
+
+  // Sao chép NGUYÊN VĂN nhãn PIC/assignee cũ sang legacy_pic_label — không tách chuỗi nhiều tên,
+  // không so khớp hoa/thường, không tra pics/users.display_name, không đoán tài khoản (CR §6.3
+  // bước 5 migrateLegacyPicLabels — phần cơ học không cần leaderUserId/dev13TeamId nên gộp vào
+  // đây, chạy tự động mỗi boot; idempotent vì chỉ điền chỗ còn NULL, không đè giá trị đã có).
+  db.exec("UPDATE projects SET legacy_pic_label = pic WHERE legacy_pic_label IS NULL AND pic IS NOT NULL AND TRIM(pic) <> ''");
+  db.exec("UPDATE project_tasks SET legacy_pic_label = assignee WHERE legacy_pic_label IS NULL AND assignee IS NOT NULL AND TRIM(assignee) <> ''");
+  db.exec("UPDATE weekly_goals SET legacy_pic_label = assignee WHERE legacy_pic_label IS NULL AND assignee IS NOT NULL AND TRIM(assignee) <> ''");
+
+  rebuildProjectTaskAssignmentsForSlice4(db, context);
+  rebuildWeeklyReportHistoryForSlice4(db, context);
+
+  // ── Index/trigger tham chiếu cột MỚI — đặt Ở ĐÂY, không phải schema/project.ts ────────────────
+  // Lý do (tự bắt được trước khi chạm DB Dev13 thật): applyProjectSchema() chạy TRƯỚC các ALTER
+  // COLUMN phía trên. Trên DB thật đã tồn tại (bảng cũ, CREATE TABLE IF NOT EXISTS chỉ no-op),
+  // bất kỳ INDEX/TRIGGER nào tạo cùng lúc mà tham chiếu team_id/user_id sẽ CRASH ngay lúc CREATE —
+  // SQLite validate cột tồn tại lúc tạo, không đợi lúc dùng. Đặt ở đây (sau khi mọi ADD COLUMN +
+  // rebuild phía trên đã chạy) đảm bảo cột luôn tồn tại trước khi các CREATE ... IF NOT EXISTS này
+  // chạy, đúng cho cả DB mới tinh lẫn DB thật đang nâng cấp.
+  db.exec(`
+    -- Đúng 1 project hệ thống "Khác" mỗi team (trước Lát 4 là 1 bản ghi toàn app).
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_projects_system_per_team ON projects(team_id) WHERE is_system = 1;
+
+    -- Mỗi User đúng 1 khoảng trên 1 task (không cấm nhiều User chồng lấn nhau trên cùng task) —
+    -- chỉ áp cho dòng đã có User thật, dòng nhãn cũ (user_id NULL) không giới hạn số lượng.
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_pta_task_user_unique
+      ON project_task_assignments(project_task_id, user_id) WHERE user_id IS NOT NULL;
+  `);
+
+  // Trigger 2 chiều (CR §6.3 Lát 4): authorize() của Lát 3 đọc team_id THẲNG trên resource — lệch
+  // team_id giữa project_tasks và projects cha là rò dữ liệu chéo team, không phải lỗi hiển thị
+  // thường, nên khoá cứng ở tầng DB, không chỉ trông chờ kỷ luật route.
+  db.exec(`
+    CREATE TRIGGER IF NOT EXISTS trg_project_tasks_team_match_insert
+    BEFORE INSERT ON project_tasks
+    FOR EACH ROW WHEN NEW.team_id IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'project_tasks.team_id phai khop projects.team_id cua project cha')
+      WHERE NOT EXISTS (
+        SELECT 1 FROM projects WHERE id = NEW.project_id AND team_id IS NEW.team_id
+      );
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS trg_project_tasks_team_match_update
+    BEFORE UPDATE OF project_id, team_id ON project_tasks
+    FOR EACH ROW WHEN NEW.team_id IS NOT NULL
+    BEGIN
+      SELECT RAISE(ABORT, 'project_tasks.team_id phai khop projects.team_id cua project cha')
+      WHERE NOT EXISTS (
+        SELECT 1 FROM projects WHERE id = NEW.project_id AND team_id IS NEW.team_id
+      );
+    END;
+
+    -- CHỈ chặn khi đã có task mang team_id THẬT SỰ KHÁC giá trị mới — task còn team_id NULL (chưa
+    -- backfill) không tính. Nếu chặn cả trường hợp NULL, chính bước di trú Lát 4 (set
+    -- projects.team_id = Dev13 LẦN ĐẦU cho project vốn đã có sẵn task ở DB thật) sẽ tự khoá chính
+    -- nó — dữ liệu Dev13 thật luôn có task trước khi có khái niệm team_id.
+    CREATE TRIGGER IF NOT EXISTS trg_projects_team_locked_once_has_tasks
+    BEFORE UPDATE OF team_id ON projects
+    FOR EACH ROW WHEN NEW.team_id IS NOT OLD.team_id
+    BEGIN
+      SELECT RAISE(ABORT, 'khong doi team_id: da co task voi team_id khac')
+      WHERE EXISTS (
+        SELECT 1 FROM project_tasks
+        WHERE project_id = OLD.id AND team_id IS NOT NULL AND team_id IS NOT NEW.team_id
+      );
+    END;
+  `);
+}
+
 // ── Sửa execution_order bị backfill sai ─────────────────────────────────────────
 // Bản cũ backfill execution_order = sort_order (theo từng nhóm anh em) nên giá trị
 // trùng lặp toàn cục: "con đầu" của mọi task cha đều = 1, "con thứ 2" đều = 2...

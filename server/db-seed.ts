@@ -172,12 +172,20 @@ Xin cảm ơn.`
   `);
 
   // Project hệ thống "Khác" (không thể xóa) — chứa các mục tiêu/việc lẻ ngoài project.
-  const demSystemProject = db.prepare('SELECT COUNT(*) AS total FROM projects WHERE is_system = 1').get() as { total: number };
-  if (demSystemProject.total === 0) {
+  // CR-20260913 Lát 4 (§6.3): đổi từ ĐÚNG 1 dòng toàn app sang ĐÚNG 1 dòng MỖI TEAM (unique partial
+  // index `idx_projects_system_per_team`, xem server/db-migrations.ts). Backfill cho team ĐÃ TỒN TẠI
+  // (an toàn chạy lại nhiều lần); team tạo MỚI sau khi có bảng `teams` được seed ngay trong route tạo
+  // team (server/routes/teams.ts, cùng transaction) — giống cách team_feature_visibility backfill ở
+  // schema/auth.ts. Dòng "Khác" TOÀN APP kiểu cũ (team_id NULL, còn sót lại từ trước Lát 4 trên DB thật
+  // chưa chạy script di trú) KHÔNG được đụng ở đây — đó là việc của backfillDev13Scope() (server/ops).
+  const teamIdsForSystemProject = db.prepare('SELECT id FROM teams').all() as { id: number }[];
+  for (const team of teamIdsForSystemProject) {
+    const demSystemProject = db.prepare('SELECT COUNT(*) AS total FROM projects WHERE is_system = 1 AND team_id = ?').get(team.id) as { total: number };
+    if (demSystemProject.total > 0) continue;
     const now = new Date().toISOString();
-    const next = (db.prepare('SELECT COALESCE(MAX(sort_order), 0) + 1 AS n FROM projects').get() as { n: number }).n;
-    db.prepare('INSERT INTO projects (ten_project, pic, ngay_bat_dau, sort_order, is_system, created_at, updated_at) VALUES (?, ?, ?, ?, 1, ?, ?)')
-      .run('Khác', '', now.slice(0, 10), next, now, now);
+    const next = (db.prepare('SELECT COALESCE(MAX(sort_order), 0) + 1 AS n FROM projects WHERE team_id = ?').get(team.id) as { n: number }).n;
+    db.prepare('INSERT INTO projects (ten_project, pic, team_id, ngay_bat_dau, sort_order, is_system, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 1, ?, ?)')
+      .run('Khác', '', team.id, now.slice(0, 10), next, now, now);
   }
 
   // Sửa tên project hệ thống nếu bị hỏng mã hoá (lần seed cũ lưu nhầm "Kh�c")

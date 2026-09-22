@@ -2,10 +2,14 @@ import type { DatabaseSync } from 'node:sqlite';
 
 // Schema của tính năng Task cá nhân. Tách khỏi server/db.ts (kế hoạch Council
 // run 022dd1e5, xem docs/exchanges/2026-09-12.md) — nội dung SQL giữ nguyên văn.
+// Lát 4 (CR-20260913 §6.3): thêm owner_user_id. KHÔNG thêm team_id (Task cá nhân theo đúng luật
+// hợp nhất FR-14 — 1 danh sách duy nhất, không đổi theo team đang chọn) và KHÔNG thêm row_version
+// (chỉ chính owner ghi, không có 2 người cùng sửa 1 task cá nhân của người khác).
 export function applyTasksSchema(db: DatabaseSync): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS tasks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      owner_user_id INTEGER REFERENCES users(id),
       ten_task TEXT NOT NULL,
       ghi_chu TEXT NOT NULL DEFAULT '',
       loai_task TEXT NOT NULL CHECK (loai_task IN ('don_le', 'dinh_ky')),
