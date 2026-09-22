@@ -31,18 +31,22 @@ export function mapTask(row: Record<string, unknown>) {
   };
 }
 
+// CR-20260913 Lát 4 (§6.3, FR-15): `pic` (chuỗi tự do) không còn là nguồn hiển thị — thay bằng
+// `responsibleUserId` (User thật) + `legacyPicLabel` (nhãn cũ chỉ-đọc, giữ lại làm tham khảo lịch sử
+// sau di trú). `teamId`/`rowVersion` phục vụ scope theo team (authorize()) + chống sửa trùng (FR-46).
 export function mapProject(row: Record<string, unknown>) {
-  const pic = String(row.pic || '');
   return {
     id: String(row.id),
     ten: String(row.ten_project),
-    pic,
+    teamId: row.team_id == null ? null : Number(row.team_id),
+    responsibleUserId: row.responsible_user_id == null ? null : Number(row.responsible_user_id),
+    legacyPicLabel: row.legacy_pic_label == null ? null : String(row.legacy_pic_label),
     ngayBatDau: String(row.ngay_bat_dau),
-    moTa: pic ? `PIC: ${pic}` : '',
     sortOrder: Number(row.sort_order || 0),
     closedAt: row.closed_at == null ? null : String(row.closed_at),
     pendingAt: row.pending_at == null ? null : String(row.pending_at),
-    isSystem: Number(row.is_system || 0) === 1
+    isSystem: Number(row.is_system || 0) === 1,
+    rowVersion: Number(row.row_version || 1)
   };
 }
 
@@ -51,6 +55,8 @@ export function mapProjectTask(row: Record<string, unknown>) {
     id: String(row.id),
     projectId: String(row.project_id),
     parentId: row.parent_id == null ? null : String(row.parent_id),
+    teamId: row.team_id == null ? null : Number(row.team_id),
+    legacyPicLabel: row.legacy_pic_label == null ? null : String(row.legacy_pic_label),
     level: Number(row.level),
     tieuDe: String(row.tieu_de),
     ghiChu: String(row.ghi_chu || ''),
@@ -58,10 +64,15 @@ export function mapProjectTask(row: Record<string, unknown>) {
     ngayKetThucDuKien: String(row.ngay_ket_thuc_du_kien),
     estimateHours: row.estimate_hours == null ? null : Number(row.estimate_hours),
     tienDo: Number(row.tien_do),
+    // CR-20260913 Lát 4: cột `assignee` không còn nhận input tự do từ client (route ngừng đọc
+    // `body.assignee`) — vẫn giữ làm CACHE hiển thị, server tự tính lại từ `assignments` thật mỗi lần
+    // lưu giai đoạn phân công (xem deriveLeafFromAssignments) để không phá luồng báo cáo tuần hiện có
+    // (server/lib/weekly-report.ts vẫn đọc cột này để nhóm theo người phụ trách).
     assignee: row.assignee == null ? '' : String(row.assignee),
     sortOrder: Number(row.sort_order || 0),
     executionOrder: Number(row.execution_order || row.sort_order || 0),
-    links: parseTaskLinks(row.task_links)
+    links: parseTaskLinks(row.task_links),
+    rowVersion: Number(row.row_version || 1)
   };
 }
 
@@ -140,14 +151,19 @@ export function recalculateProjectTaskRollups(projectId: number) {
     });
 }
 
+// CR-20260913 Lát 4 (§6.3): `pic` (chuỗi tự do) đổi thành `userId` (User thật, nullable) +
+// `legacyPicLabel` (dòng lịch sử di trú, `userId` NULL). Đúng một trong hai luôn khác NULL (CHECK ở
+// schema/project.ts).
 export function mapProjectTaskAssignment(row: Record<string, unknown>) {
   return {
     id: String(row.id),
-    pic: String(row.pic),
+    userId: row.user_id == null ? null : Number(row.user_id),
+    legacyPicLabel: row.legacy_pic_label == null ? null : String(row.legacy_pic_label),
     startDate: String(row.start_date),
     endDate: String(row.end_date),
     estimateHours: row.estimate_hours == null ? null : Number(row.estimate_hours),
-    sortOrder: Number(row.sort_order || 0)
+    sortOrder: Number(row.sort_order || 0),
+    rowVersion: Number(row.row_version || 1)
   };
 }
 
@@ -168,29 +184,40 @@ export function attachAssignments<T extends { id: string }>(tasks: T[]) {
   return tasks.map((t) => ({ ...t, assignments: byTask.get(Number(t.id)) || [] }));
 }
 
-// Suy ra ngày bắt đầu/kết thúc + estimate (tổng giờ) + assignee của task lá từ các giai đoạn.
-// KHÔNG suy ra % tiến độ — tiến độ task lá do người dùng nhập tay. Giai đoạn chỉ để biết
+// Suy ra ngày bắt đầu/kết thúc + estimate (tổng giờ) + assignee (chuỗi hiển thị) của task lá từ các
+// giai đoạn. KHÔNG suy ra % tiến độ — tiến độ task lá do người dùng nhập tay. Giai đoạn chỉ để biết
 // ai làm từ thời điểm nào tới thời điểm nào (+ giờ dự kiến để tính estimate task).
 // Trả null nếu task chưa có giai đoạn nào (giữ nguyên giá trị nhập tay).
+//
+// CR-20260913 Lát 4: `assignee` giờ suy từ `users.display_name` (dòng có `user_id` thật) hoặc
+// `legacy_pic_label` (dòng lịch sử di trú) — KHÔNG còn cột `pic` chuỗi tự do. Vẫn ghi lại cột
+// `project_tasks.assignee` như một CACHE hiển thị (không phải input client) để không phá luồng đọc
+// hiện có ở server/lib/weekly-report.ts (nhóm báo cáo tuần theo người phụ trách) — quyết định tự đưa
+// ra khi code, xem comment ở mapProjectTask().
 export function deriveLeafFromAssignments(taskId: number): { start: string; end: string; estimate: number | null; assignee: string } | null {
-  const rows = db.prepare(
-    'SELECT pic, start_date, end_date, estimate_hours FROM project_task_assignments WHERE project_task_id = ? ORDER BY sort_order ASC, id ASC'
-  ).all(taskId) as Record<string, unknown>[];
+  const rows = db.prepare(`
+    SELECT a.user_id AS user_id, a.legacy_pic_label AS legacy_pic_label, a.start_date, a.end_date, a.estimate_hours,
+           u.display_name AS user_display_name
+    FROM project_task_assignments a
+    LEFT JOIN users u ON u.id = a.user_id
+    WHERE a.project_task_id = ?
+    ORDER BY a.sort_order ASC, a.id ASC
+  `).all(taskId) as Record<string, unknown>[];
   if (rows.length === 0) return null;
   const starts = rows.map((r) => String(r.start_date)).sort();
   const ends = rows.map((r) => String(r.end_date)).sort();
   const totalHours = rows.reduce((sum, r) => sum + (r.estimate_hours == null ? 0 : Number(r.estimate_hours)), 0);
   const seen = new Set<string>();
-  const pics: string[] = [];
+  const names: string[] = [];
   for (const r of rows) {
-    const p = String(r.pic);
-    if (p && !seen.has(p)) { seen.add(p); pics.push(p); }
+    const name = r.user_id != null ? String(r.user_display_name || '') : String(r.legacy_pic_label || '');
+    if (name && !seen.has(name)) { seen.add(name); names.push(name); }
   }
   return {
     start: starts[0],
     end: ends[ends.length - 1],
     estimate: totalHours > 0 ? totalHours : null,
-    assignee: pics.join(', ')
+    assignee: names.join(', ')
   };
 }
 

@@ -1,0 +1,29 @@
+{
+  "agent": "claude",
+  "bodyMarkdown": "#### Dev\n\n**Cách tôi hiểu vấn đề**\n\nĐây là vòng review thứ 4 (đợt \"chốt thật sự\" trước merge) cho `feature/lat4-di-tru-du-lieu`. Bối cảnh: vòng 3 Codex tìm ra bug SQL thật trong `verifySlice4Migration()` (đọc thẳng `user_id`/`legacy_pic_label` từ DB nguồn schema Desktop cũ — bảng đó ở nguồn chỉ có cột `pic`, gây lỗi \"no such column\"). Lượt đó bị relay từ chối vì lỗi định dạng nhưng nội dung đúng, Claude đã tự verify độc lập và xác nhận. Commit `d55dbce9` đã sửa. Việc vòng này: (1) đối chiếu độc lập xem bản sửa `d55dbce9` có thật sự đúng không (đọc code, không tin báo cáo), (2) rà lại toàn bộ Lát 4 lần cuối tìm vấn đề còn sót trước khi coi xong dứt điểm.\n\nTôi đã tự đọc trực tiếp diff `d55dbce9` (`server/ops/slice4-migrate.ts` + `test/unit/slice4-migrate.test.ts`), đối chiếu với `rebuildProjectTaskAssignmentsForSlice4()` trong `server/db-migrations.ts`, chạy `npx tsc --noEmit` và tự chạy `node --test` trực tiếp trên `test/unit/slice4-migrate.test.ts` (không dựa vào con số 22 test trong commit message).\n\n**Giả định đang dùng**\n\n- HEAD hiện tại là `451a769a`, không có commit nào sau đó tôi chưa thấy (`git diff --stat d3428bef..HEAD` chỉ gồm đúng 2 commit `d55dbce9`+`451a769a`, không có gì lọt qua ngoài kỳ vọng của đề bài).\n- 3 việc non-blocking đã được Council/Leader chấp nhận ở các vòng trước (đường ghi `assignee` tự do sót ở `weekly.ts` wizard; 2 bảng `weekly_report_kinds`/`weekly_project_risks` schema-only vượt phạm vi Lát 4; `verifyMindmapAttachments()` chưa làm được \"hash khớp manifest\" vì Lát 4 chưa có bảng lưu hash) — coi là đã chốt, không xét lại trừ khi có bằng chứng mới.\n\n**Đã tự verify độc lập — bản sửa `d55dbce9` đúng thật**\n\n- Công thức `expectedLegacyPicLabel()` (`trim(pic) === '' ? '(khong ro)' : trimmed`) khớp **nguyên văn** SQL rebuild thật `COALESCE(NULLIF(TRIM(pic), ''), '(khong ro)')` ở `db-migrations.ts:459`.\n- `diffProjectTaskAssignments()` được gọi thêm đúng chỗ trong `verifySlice4Migration()` (dòng 770), và `diffCanonicalContent()` đã `continue` bỏ qua đúng bảng `project_task_assignments` khỏi vòng lặp generic — không còn đường nào SELECT thẳng `user_id`/`legacy_pic_label` từ `sourceDb` nữa (grep toàn bộ `sourceDb` trong file, không còn chỗ nào phạm).\n- So sánh label chỉ áp dụng ở dòng đích có `user_id IS NULL` — đúng ngữ nghĩa \"dòng đã gán User thật thì nhãn lịch sử không bắt buộc còn khớp pic gốc\" mà CR mô tả.\n- `computeProjectRollupSummaries()` (dùng trong `diffProjectRollups`) chỉ đọc `project_tasks`/`projects`, không đụng `project_task_assignments` — không dính bug tương tự.\n- Audit lại toàn bộ `CANONICAL_TABLE_CONFIG`: tự đối chiếu `rebuildWeeklyReportHistoryForSlice4()` — bảng này cũng bị rebuild (đổi UNIQUE) nhưng **không đổi tên cột** nào (`id/week_start/kind/mode/content/created_at/updated_at` giữ nguyên), nên xác nhận đúng như comment: `project_task_assignments` là bảng DUY NHẤT bị đổi tên cột, không có bảng nào khác lọt bug tương tự.\n- Tự chạy `npx tsc --noEmit`: sạch. Tự chạy `node --test --import tsx test/unit/slice4-migrate.test.ts`: **22/22 pass** thật (không chỉ tin số trong commit message), bao gồm đúng test tái hiện bug (`DB nguồn schema Desktop CŨ có project_task_assignments chỉ cột pic ... verify KHÔNG ném lỗi SQL, ok=true`).\n\n**Chưa rà lại toàn diện phần còn lại của Lát 4 trong lượt này**\n\nDo tập trung verify sâu bản sửa `d55dbce9` (đúng trọng tâm đề bài), tôi chưa lặp lại toàn bộ đối chiếu diff/CR §6.3 cho các phần đã được xác nhận ở vòng 1–3 (pics.ts, authorization-policy, trigger 2 chiều, engine báo cáo tuần...) — dựa trên kết luận đã có ở các vòng trước, không có tín hiệu gì mới khiến tôi nghi ngờ lại chúng, và diff không đổi gì ở các file đó kể từ `d3428bef`.\n\n**Chỗ chưa rõ / rủi ro còn lại (không mới, nhắc lại để đóng sổ dứt điểm)**\n\n- 3 việc non-blocking đã nêu ở trên (đường ghi `assignee` tự do ở `weekly.ts` apply; 2 bảng schema-only Lát 5; hash-manifest mindmap) — cần xác nhận rõ ràng đã vào backlog thật (không chỉ nằm trong file exchange) trước khi coi Lát 4 \"xong dứt điểm\", nếu chưa thì đây là việc cần làm trước khi đóng, không phải lý do chặn merge.\n- Chưa thấy lượt Codex nào trong vòng 4 này tại thời điểm tôi viết — đây đúng là vòng độc lập.\n\n```yaml\nturn_result:\n  agent: \"claude\"\n  round: 1\n  blocking_objections: 0\n  new_decisions: 0\n  questions_for_user: 0\n  permission_requests: 0\n  converged: false\n  note: \"Đã tự verify độc lập bản sửa d55dbce9 bằng cách đọc code và tự chạy lại toàn bộ 22 test (không chỉ tin báo cáo) — công thức và luồng dữ liệu khớp đúng, tsc sạch, không thấy vấn đề mới trong lượt này.\"\n  rules_version_seen: \"RULES-2026-09-04-a\"\n  session_id: \"90da2b3e-b12d-49f8-8598-aeeecc36b2de\"\n```\n",
+  "createdAt": "2026-09-22T08:18:47.358Z",
+  "questionCards": [],
+  "recordId": "90da2b3e-b12d-49f8-8598-aeeecc36b2de-agent_turn-0",
+  "recordType": "agent_turn",
+  "roles": [
+    "Dev",
+    "SA",
+    "BA"
+  ],
+  "round": 1,
+  "rulesVersion": "RULES-2026-09-04-a",
+  "schemaVersion": 1,
+  "sessionId": "90da2b3e-b12d-49f8-8598-aeeecc36b2de",
+  "turnResult": {
+    "agent": "claude",
+    "blocking_objections": 0,
+    "converged": false,
+    "new_decisions": 0,
+    "note": "Đã tự verify độc lập bản sửa d55dbce9 bằng cách đọc code và tự chạy lại toàn bộ 22 test (không chỉ tin báo cáo) — công thức và luồng dữ liệu khớp đúng, tsc sạch, không thấy vấn đề mới trong lượt này.",
+    "permission_requests": 0,
+    "questions_for_user": 0,
+    "round": 1,
+    "rules_version_seen": "RULES-2026-09-04-a",
+    "session_id": "90da2b3e-b12d-49f8-8598-aeeecc36b2de"
+  }
+}

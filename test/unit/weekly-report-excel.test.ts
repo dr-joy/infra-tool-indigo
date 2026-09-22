@@ -1,9 +1,24 @@
 // Test cho server/lib/weekly-report-excel.ts (CR-20260915-xuat-excel-bao-cao-dm).
-// buildDmReportRows() là hàm thuần (nhận WeekData, không đụng DB) -> test bằng fixture tay, không cần app/DB.
+// buildDmReportRows() là hàm thuần (nhận WeekData, không đụng DB) -> test bằng fixture tay.
+//
+// ⚠️ Vẫn PHẢI cô lập DATA_DIR trước import: `weekly-report-excel.js` import GIÁ TRỊ (không phải
+// type) từ `weekly-report.js`, module đó lại `import { db } from '../db.js'` — import cả module
+// là chạy hết code top-level của nó, kể cả khi hàm mình gọi (buildDmReportRows) không đụng DB.
+// Bài học thật (2026-09-22): thiếu dòng này khiến file này từng mở thẳng DB desktop THẬT của user
+// mỗi lần chạy test — vô hại tới lúc schema Lát 4 thêm INDEX/TRIGGER tham chiếu cột mới, lúc đó
+// crash thẳng vào DB thật (may mắn SQLite chặn kịp, không hỏng dữ liệu, nhưng lẽ ra không được
+// chạm vào DB thật ngay từ đầu).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildDmReportRows } from '../../server/lib/weekly-report-excel.js';
-import type { WeekData, GoalView } from '../../server/lib/weekly-report.js';
+import os from 'node:os';
+import path from 'node:path';
+import fs from 'node:fs';
+
+process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-weekly-excel-unit-'));
+
+const { buildDmReportRows } = await import('../../server/lib/weekly-report-excel.js');
+type WeekData = import('../../server/lib/weekly-report.js').WeekData;
+type GoalView = import('../../server/lib/weekly-report.js').GoalView;
 
 function goal(overrides: Partial<GoalView>): GoalView {
   return {

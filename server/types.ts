@@ -119,15 +119,21 @@ export interface EmergencyReleaseTaskDefinitionBody {
   replyToDefinitionId?: string | null;
 }
 
+// CR-20260913 Lát 4 (§6.3, FR-15): `pic` (chuỗi tự do) đã bỏ hẳn khỏi route — bắt buộc chọn
+// `responsibleUserId` (User thật). `teamId` bắt buộc khi tạo mới (route tự suy qua authorize(),
+// không tin client — xem server/routes/projects.ts).
 export interface ProjectBody {
   ten?: string;
-  pic?: string;
+  responsibleUserId?: number | string | null;
+  teamId?: number | string;
   ngayBatDau?: string;
+  rowVersion?: number;
 }
 
-// Một giai đoạn phân công của task lá: 1 PIC làm từ startDate → endDate.
+// Một giai đoạn phân công của task lá: 1 User thật làm từ startDate → endDate (CR §6.3 Lát 4 — đổi
+// từ `pic` chuỗi tự do sang `userId`).
 export interface ProjectTaskAssignmentInput {
-  pic?: string;
+  userId?: number | string;
   startDate?: string;
   endDate?: string;
   estimateHours?: number | string | null;
@@ -135,6 +141,9 @@ export interface ProjectTaskAssignmentInput {
 
 export interface ProjectTaskAssignmentsBody {
   assignments?: ProjectTaskAssignmentInput[];
+  // row_version của project_tasks đọc lúc mở popup (FR-16 vòng làm rõ 18 — khoá theo cả danh sách,
+  // không phải theo từng dòng phân công riêng lẻ).
+  rowVersion?: number;
 }
 
 export interface ProjectTaskBody {
@@ -146,11 +155,15 @@ export interface ProjectTaskBody {
   ngayKetThucDuKien?: string;
   estimateHours?: number | string | null;
   tienDo?: number;
+  // CR-20260913 Lát 4 (FR-15, vòng làm rõ 19/09 lần 20): route ngừng nhận `assignee` — ô chữ tự do đã
+  // bỏ hẳn, người phụ trách chỉ đi qua `assignments` (kể cả 1 người). Field giữ lại trong type CHỈ để
+  // không phá interface cũ đang được tham chiếu ở nơi khác — route KHÔNG đọc field này nữa.
   assignee?: string | null;
   // Xác nhận gỡ task khỏi mục tiêu tuần khi ngày dự kiến mới không còn thuộc tuần đó
   confirmRemoveGoal?: boolean;
   // Giai đoạn phân công (task lá). undefined = không đụng tới; [] = xóa hết giai đoạn.
   assignments?: ProjectTaskAssignmentInput[];
+  rowVersion?: number;
 }
 
 

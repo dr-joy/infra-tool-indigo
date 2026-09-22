@@ -69,7 +69,14 @@ app.use('/api', releaseRouter);
 app.use('/api', schedulesRouter);
 app.use('/api', weeklyRouter);
 app.use('/api', picsRouter);
-app.use('/api', deThiRouter);
+// CR-20260913 Lát 4 (§6.3, di trú bước 2/7 "buildServerDatabaseFromDesktopSnapshot"/
+// "smokeBootMigratedServer"): Luyện đề ở lại bản desktop, KHÔNG lên server — bản server (container
+// triển khai nhiều team) phải KHÔNG mount router này, để endpoint trả 404 thay vì lỡ SQL 500 nếu DB
+// server không mang theo bảng de_thi_*. Trước Lát 4 không có cách nào tắt được (Dockerfile chỉ chạy
+// `npm start` không phân biệt server/desktop) — thêm đúng 1 biến môi trường, mặc định BẬT (giữ nguyên
+// hành vi hiện tại cho desktop/dev), Dockerfile server đặt `false`.
+const enableLuyenDe = process.env.ENABLE_LUYEN_DE !== 'false';
+if (enableLuyenDe) app.use('/api', deThiRouter);
 app.use('/api', redmineRouter);
 app.use('/api', mindmapsRouter);
 app.use('/api', authRouter);
