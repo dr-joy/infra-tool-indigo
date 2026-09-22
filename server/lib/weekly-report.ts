@@ -85,11 +85,68 @@ interface TaskRow {
   project_id: number;
   tieu_de: string;
   tien_do: number;
-  assignee: string | null;
   ngay_ket_thuc_du_kien: string;
 }
 
 const OTHER_LABEL = 'Khác';
+
+// ── Người phụ trách thật (CR-20260913 Lát 4 §6.3) ────────────────────────────────
+// `project_tasks.assignee` đã đóng băng hoàn toàn (cột chết, không route/engine nào được đọc/ghi
+// nữa — giá trị cũ chỉ còn đọc qua `legacy_pic_label`). Người phụ trách hiển thị trong Báo cáo tuần
+// giờ suy trực tiếp từ `project_task_assignments` (User thật qua `user_id`, hoặc nhãn lịch sử qua
+// `legacy_pic_label` cho dòng chưa di trú), lọc đúng theo GIAI ĐOẠN CHỒNG LẤN với tuần đang render —
+// một task có nhiều người phụ trách chồng thời gian thì liệt kê đủ từng người, không gộp về 1 đại
+// diện (khác hẳn cache "tự tính lại" nửa vời trước đây, vốn không phân biệt theo tuần).
+interface AssignmentPeriodRow {
+  project_task_id: number;
+  user_id: number | null;
+  legacy_pic_label: string | null;
+  start_date: string;
+  end_date: string;
+  display_name: string | null;
+}
+
+// Nạp 1 lần toàn bộ giai đoạn phân công của các task thuộc `teamId`, nhóm theo task — tránh N+1 khi
+// mỗi goal/proposal cần tra cứu riêng.
+function loadAssignmentsByTask(teamId: number): Map<string, AssignmentPeriodRow[]> {
+  const rows = db.prepare(`
+    SELECT a.project_task_id AS project_task_id, a.user_id AS user_id, a.legacy_pic_label AS legacy_pic_label,
+           a.start_date AS start_date, a.end_date AS end_date, u.display_name AS display_name
+    FROM project_task_assignments a
+    JOIN project_tasks t ON t.id = a.project_task_id
+    LEFT JOIN users u ON u.id = a.user_id
+    WHERE t.team_id = ?
+    ORDER BY a.project_task_id ASC, a.sort_order ASC, a.id ASC
+  `).all(teamId) as unknown as AssignmentPeriodRow[];
+  const byTask = new Map<string, AssignmentPeriodRow[]>();
+  for (const r of rows) {
+    const key = String(r.project_task_id);
+    if (!byTask.has(key)) byTask.set(key, []);
+    byTask.get(key)!.push(r);
+  }
+  return byTask;
+}
+
+// Chuỗi hiển thị "người phụ trách" của 1 task, TRONG ĐÚNG tuần [weekStart, weekEnd] — nối bằng ", "
+// (giữ đúng quy ước hiển thị cũ dạng chuỗi nhiều tên, để không phải sửa lại mọi nơi đang tách chuỗi
+// này bằng split(',')). Dòng phân công không chồng lấn tuần bị loại; trùng tên (hiếm, vd 2 giai đoạn
+// liền kề của cùng 1 User) chỉ giữ 1 lần, theo đúng thứ tự xuất hiện.
+function assigneeLabelForWeek(
+  assignmentsByTask: Map<string, AssignmentPeriodRow[]>,
+  taskId: string | number,
+  weekStart: string,
+  weekEnd: string
+): string {
+  const rows = assignmentsByTask.get(String(taskId)) || [];
+  const seen = new Set<string>();
+  const names: string[] = [];
+  for (const r of rows) {
+    if (!taskOverlapsWeek(r.start_date, r.end_date, weekStart, weekEnd)) continue;
+    const name = r.user_id != null ? (r.display_name || '') : (r.legacy_pic_label || '');
+    if (name && !seen.has(name)) { seen.add(name); names.push(name); }
+  }
+  return names.join(', ');
+}
 
 // CR-20260913 Lát 4 (§6.2/§6.3): mọi hàm đọc dữ liệu Báo cáo tuần dưới đây giờ BẮT BUỘC nhận `teamId`
 // và lọc theo đúng team đó — `projects`/`project_tasks`/`weekly_goals`/`weekly_task_evaluations`/
@@ -100,6 +157,7 @@ export function buildWeekData(weekStartInput: string, teamId: number): WeekData 
   const weekStart = mondayOf(weekStartInput);
   const weekEnd = addDays(weekStart, 6);
   const prevWeekStart = addDays(weekStart, -7);
+  const prevWeekEnd = addDays(prevWeekStart, 6);
 
   const projects = db.prepare('SELECT id, ten_project, sort_order, closed_at, pending_at, is_system FROM projects WHERE team_id = ?').all(teamId) as {
     id: number; ten_project: string; sort_order: number; closed_at: string | null; pending_at: string | null; is_system: number;
@@ -110,8 +168,9 @@ export function buildWeekData(weekStartInput: string, teamId: number): WeekData 
   // Project pending: kết quả tuần trước vẫn giữ (lịch sử đã xảy ra), nhưng KHÔNG có mục tiêu tuần này.
   const pendingProjectIds = new Set(projects.filter((p) => p.pending_at).map((p) => String(p.id)));
 
-  const tasks = db.prepare('SELECT id, project_id, tieu_de, tien_do, assignee, ngay_ket_thuc_du_kien FROM project_tasks WHERE team_id = ?').all(teamId) as unknown as TaskRow[];
+  const tasks = db.prepare('SELECT id, project_id, tieu_de, tien_do, ngay_ket_thuc_du_kien FROM project_tasks WHERE team_id = ?').all(teamId) as unknown as TaskRow[];
   const taskById = new Map(tasks.map((tk) => [String(tk.id), tk]));
+  const assignmentsByTask = loadAssignmentsByTask(teamId);
 
   const thisGoals = db.prepare('SELECT * FROM weekly_goals WHERE week_start = ? AND team_id = ? ORDER BY sort_order ASC, id ASC').all(weekStart, teamId) as unknown as GoalRow[];
   const lastGoals = db.prepare('SELECT * FROM weekly_goals WHERE week_start = ? AND team_id = ? ORDER BY sort_order ASC, id ASC').all(prevWeekStart, teamId) as unknown as GoalRow[];
@@ -126,10 +185,13 @@ export function buildWeekData(weekStartInput: string, teamId: number): WeekData 
   const summaryRows = db.prepare('SELECT project_id, content FROM weekly_project_summaries WHERE week_start = ? AND team_id = ?').all(prevWeekStart, teamId) as { project_id: number; content: string }[];
   const summaryByProject = new Map(summaryRows.map((r) => [String(r.project_id), r.content]));
 
-  function goalView(g: GoalRow, useEval: boolean): GoalView {
+  function goalView(g: GoalRow, useEval: boolean, gWeekStart: string, gWeekEnd: string): GoalView {
     const task = g.project_task_id == null ? undefined : taskById.get(String(g.project_task_id));
     const text = g.goal_text?.trim() || task?.tieu_de || '(không tên)';
-    const assignee = g.assignee?.trim() || task?.assignee?.trim() || '';
+    // `weekly_goals.assignee` (g.assignee) vẫn là cột SỐNG riêng (khác `project_tasks.assignee` đã
+    // đóng băng) — dùng khi đã được ghi rõ ràng (mục tiêu gõ tay, hoặc PIC duyệt ở wizard). Chỉ khi
+    // trống mới suy từ giai đoạn phân công thật của task, đúng tuần của mục tiêu này.
+    const assignee = g.assignee?.trim() || (task ? assigneeLabelForWeek(assignmentsByTask, task.id, gWeekStart, gWeekEnd) : '');
     const tienDo = task ? task.tien_do : null;
     const dueDate = task?.ngay_ket_thuc_du_kien || '';
     // Mục tiêu mặc định nếu chưa đặt = hoàn thành (100%).
@@ -154,7 +216,7 @@ export function buildWeekData(weekStartInput: string, teamId: number): WeekData 
     const key = String(task.project_id);
     if (!unplannedByProject.has(key)) unplannedByProject.set(key, []);
     unplannedByProject.get(key)!.push({
-      text: task.tieu_de, assignee: task.assignee?.trim() || '', tienDo: task.tien_do, note: r.note || '',
+      text: task.tieu_de, assignee: assigneeLabelForWeek(assignmentsByTask, task.id, prevWeekStart, prevWeekEnd), tienDo: task.tien_do, note: r.note || '',
     });
   });
 
@@ -175,8 +237,8 @@ export function buildWeekData(weekStartInput: string, teamId: number): WeekData 
     const isSystem = systemProjectIds.has(key);
     const keepGoal = (g: GoalView) => !isSystem || g.text !== '(không tên)';
     const isPending = pendingProjectIds.has(key);
-    const goals = isPending ? [] : thisGoals.filter((g) => (g.project_id == null ? 'other' : String(g.project_id)) === key).map((g) => goalView(g, false)).filter(keepGoal);
-    const lastWeekGoals = lastGoals.filter((g) => (g.project_id == null ? 'other' : String(g.project_id)) === key).map((g) => goalView(g, true)).filter(keepGoal);
+    const goals = isPending ? [] : thisGoals.filter((g) => (g.project_id == null ? 'other' : String(g.project_id)) === key).map((g) => goalView(g, false, weekStart, weekEnd)).filter(keepGoal);
+    const lastWeekGoals = lastGoals.filter((g) => (g.project_id == null ? 'other' : String(g.project_id)) === key).map((g) => goalView(g, true, prevWeekStart, prevWeekEnd)).filter(keepGoal);
 
     const doneCount = lastWeekGoals.filter((g) => g.achieved).length;
     return {
@@ -623,6 +685,7 @@ export function buildReportPlan(weekStartInput: string, teamId: number): ReportP
   const weekStart = mondayOf(weekStartInput);
   const weekEnd = addDays(weekStart, 6);
   const prevWeekStart = addDays(weekStart, -7);
+  const prevWeekEnd = addDays(prevWeekStart, 6);
   const today = toISODate(new Date());
 
   // Chỉ lấy project đang chạy — project đã close hoặc đang pending không vào báo cáo
@@ -631,11 +694,12 @@ export function buildReportPlan(weekStartInput: string, teamId: number): ReportP
   const projectName = new Map(projects.map((p) => [String(p.id), p.ten_project]));
   const projectOrder = new Map(projects.map((p) => [String(p.id), p.sort_order]));
 
-  const allTasks = db.prepare('SELECT id, project_id, tieu_de, tien_do, assignee, estimate_hours, ngay_bat_dau_du_kien, ngay_ket_thuc_du_kien FROM project_tasks WHERE team_id = ?').all(teamId) as unknown as {
-    id: number; project_id: number; tieu_de: string; tien_do: number; assignee: string | null; estimate_hours: number | null; ngay_bat_dau_du_kien: string; ngay_ket_thuc_du_kien: string;
+  const allTasks = db.prepare('SELECT id, project_id, tieu_de, tien_do, estimate_hours, ngay_bat_dau_du_kien, ngay_ket_thuc_du_kien FROM project_tasks WHERE team_id = ?').all(teamId) as unknown as {
+    id: number; project_id: number; tieu_de: string; tien_do: number; estimate_hours: number | null; ngay_bat_dau_du_kien: string; ngay_ket_thuc_du_kien: string;
   }[];
   const tasks = allTasks.filter((t) => projectName.has(String(t.project_id)));
   const taskById = new Map(tasks.map((t) => [String(t.id), t]));
+  const assignmentsByTask = loadAssignmentsByTask(teamId);
   const taskNumbers = buildTaskNumbers(teamId);
   const numberOf = (id: string) => taskNumbers.get(id)?.label || id;
   const orderOf = (id: string) => taskNumbers.get(id)?.order ?? Number(id);
@@ -670,7 +734,8 @@ export function buildReportPlan(weekStartInput: string, teamId: number): ReportP
     const saved = savedEvalByTask.get(String(task.id));
     evalByProject.get(pid)!.goals.push({
       taskId: String(task.id), taskNumber: numberOf(String(task.id)), taskOrder: orderOf(String(task.id)),
-      title: task.tieu_de, assignee: g.assignee?.trim() || task.assignee?.trim() || '',
+      title: task.tieu_de,
+      assignee: g.assignee?.trim() || assigneeLabelForWeek(assignmentsByTask, task.id, prevWeekStart, prevWeekEnd),
       currentProgress: task.tien_do, startProgress, targetProgress: target,
       autoStatus, status: saved?.status || autoStatus, note: saved?.note || '',
     });
@@ -774,7 +839,7 @@ export function buildReportPlan(weekStartInput: string, teamId: number): ReportP
     proposals.push({
       taskId: id, taskNumber: numberOf(id), taskOrder: orderOf(id),
       projectId: String(t.project_id), projectName: projectName.get(String(t.project_id)) || `Project ${t.project_id}`,
-      title: t.tieu_de, assignee: t.assignee?.trim() || '', dueDate: plannedEnd,
+      title: t.tieu_de, assignee: assigneeLabelForWeek(assignmentsByTask, t.id, weekStart, weekEnd), dueDate: plannedEnd,
       currentProgress: cur, computedTarget, estimateHours: est, isCarryOver: carryOverSet.has(id), explanation,
       remainingDays, thisWeekDays,
     });
