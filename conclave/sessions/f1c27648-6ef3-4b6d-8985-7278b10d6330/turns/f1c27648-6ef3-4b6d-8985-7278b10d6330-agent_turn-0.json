@@ -1,0 +1,29 @@
+{
+  "agent": "codex",
+  "bodyMarkdown": "#### Reviewer\n\n**Cách tôi hiểu vấn đề**\n\nVòng này xác nhận bản vá `pics.ts` đã đóng đúng lỗ hổng vòng 1, đồng thời rà độc lập phần Lát 4 còn lại so với CR §6.3: schema, trigger, `row_version`, audit và hợp đồng di trú 7 bước.\n\n**Giả định đang dùng**\n\n- Nhánh hiện tại là `feature/lat4-di-tru-du-lieu`, với bản vá PIC nằm trong `eb7aa519`.\n- Quyết định Leader về PIC chỉ Leader sửa và việc tự điền người tạo task ở giao diện được để sau là đã chốt.\n- `npm run check` xanh theo thông tin cung cấp; tôi chưa chạy lại vì đây là bước khám phá.\n\n**Quan sát ban đầu**\n\n- `pics.ts` hiện đã bắt buộc phiên đăng nhập và tài khoản hoạt động, kiểm tra quyền theo team, lọc mọi truy vấn theo `team_id`, kiểm tra toàn bộ danh sách khi đổi thứ tự, và ghi audit cho tạo/sửa/xóa/sắp xếp. Việc đổi tên PIC không còn ghi đè `projects.pic` hay `project_tasks.assignee`. Các test mới cũng phủ đăng nhập, khác team, Member chỉ đọc, reorder lẫn ID khác team và rename.\n- Trigger giữ `project_tasks.team_id` khớp project cha có mặt ở migration, đúng hướng để chặn lệch team tại DB.\n- Có các điểm cần soi sâu ở vòng tiếp theo:\n  - `verifySlice4Migration()` tự ghi rõ mới kiểm tra một phần hợp đồng CR: chưa so tập ID, hash nội dung cũ, rollup, assignment cùng team, dữ liệu tuần cùng team, Mind Map/file đính kèm và rollback DB đích khi lệch.\n  - `weekly_task_evaluations` và `weekly_project_summaries` vẫn dùng khóa chính cũ không có `team_id`; cần đối chiếu kỹ xem đây là sai hợp đồng schema hay được an toàn nhờ ID task/project là toàn cục.\n  - `POST /weeks/:weekStart/apply` vẫn nhận và ghi trực tiếp `assignee` vào cache `project_tasks.assignee`; điều này cần được phân biệt rõ với quyết định cache chỉ được tính lại từ assignment thật.\n  - Hai bảng cấu hình báo cáo tuần và risk đã được tạo ở Lát 4 dù route/seed thuộc Lát 5; đây là rủi ro lệch phạm vi hơn là kết luận lỗi ngay lúc này.\n\n```yaml\nturn_result:\n  agent: \"codex\"\n  round: 1\n  blocking_objections: 0\n  new_decisions: 0\n  questions_for_user: 0\n  permission_requests: 0\n  converged: false\n  note: \"Đã xác nhận sơ bộ bản vá PIC đúng hướng; còn các điểm cần đối chiếu sâu về kiểm chứng di trú, khóa dữ liệu tuần và cache người phụ trách.\"\n  rules_version_seen: \"RULES-2026-09-04-a\"\n  session_id: \"f1c27648-6ef3-4b6d-8985-7278b10d6330\"\n```\n",
+  "createdAt": "2026-09-22T07:08:14.440Z",
+  "questionCards": [],
+  "recordId": "f1c27648-6ef3-4b6d-8985-7278b10d6330-agent_turn-0",
+  "recordType": "agent_turn",
+  "roles": [
+    "Reviewer",
+    "QA",
+    "Infra"
+  ],
+  "round": 1,
+  "rulesVersion": "RULES-2026-09-04-a",
+  "schemaVersion": 1,
+  "sessionId": "f1c27648-6ef3-4b6d-8985-7278b10d6330",
+  "turnResult": {
+    "agent": "codex",
+    "blocking_objections": 0,
+    "converged": false,
+    "new_decisions": 0,
+    "note": "Đã xác nhận sơ bộ bản vá PIC đúng hướng; còn các điểm cần đối chiếu sâu về kiểm chứng di trú, khóa dữ liệu tuần và cache người phụ trách.",
+    "permission_requests": 0,
+    "questions_for_user": 0,
+    "round": 1,
+    "rules_version_seen": "RULES-2026-09-04-a",
+    "session_id": "f1c27648-6ef3-4b6d-8985-7278b10d6330"
+  }
+}
