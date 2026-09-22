@@ -1,40 +1,56 @@
 // CR-20260814-hop-nhat-dong-bo-definition-xuong-task — test tích hợp cho luật ghi duy nhất
 // definition -> task release (FR-1..FR-10). Chạy Express thật + DB cô lập.
-import { test, before, after } from 'node:test';
+//
+// CR-20260913 Lát 4: helper của file này gọi /api/tasks (task cá nhân) để dựng dữ liệu — route đó giờ
+// đòi phiên đăng nhập thật (FR-14/FR-31), dùng chung harness OIDC giả ở fixtures/auth-harness.ts.
+import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import type { Server } from 'node:http';
+import { createMockAuthServer, loginFlow, makeOnboardingHelpers } from './fixtures/auth-harness.js';
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+const ADMIN_EMAIL = 'admin@drjoy.jp';
+
+const mockAuth = await createMockAuthServer();
 const tmpAppData = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-schedules-release-itest-'));
 process.env.APPDATA = tmpAppData;
+process.env.AUTH_BASE_URL = mockAuth.authBaseUrl;
+process.env.AUTH_CLIENT = 'indigo';
+process.env.APP_CALLBACK_URL = 'http://127.0.0.1:0/api/auth/callback';
+process.env.ADMIN_BOOTSTRAP_EMAIL = ADMIN_EMAIL;
 
 const { app } = await import('../../server/app.js');
 const { db } = await import('../../server/db.js');
 
 let server: Server;
 let base = '';
-
-before(async () => {
-  await new Promise<void>((resolve) => {
-    server = app.listen(0, '127.0.0.1', () => {
-      const addr = server.address();
-      base = `http://127.0.0.1:${typeof addr === 'object' && addr ? addr.port : 0}`;
-      resolve();
-    });
+await new Promise<void>((resolve) => {
+  server = app.listen(0, '127.0.0.1', () => {
+    const addr = server.address();
+    base = `http://127.0.0.1:${typeof addr === 'object' && addr ? addr.port : 0}`;
+    resolve();
   });
 });
+
+const flow = loginFlow(() => base, mockAuth.issueAuthCode);
+const onboarding = makeOnboardingHelpers(() => base, flow);
+const adminSession = await flow.loginAs(ADMIN_EMAIL, 'Admin Thật', 'schedules-release-itest-admin-sub');
+const teamId = await onboarding.makeTeam(adminSession, '[itest] Team Schedules Release');
+await onboarding.setFeatureVisibility(adminSession, teamId, 'personal_task', 'on');
+const actor = await onboarding.joinAndApprove('schedules-release-itest@drjoy.jp', 'Người test schedules-release', teamId, 'member', adminSession);
+const authHeaders = flow.H(actor.session);
+
 after(async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
+  await mockAuth.close();
   try { fs.rmSync(tmpAppData, { recursive: true, force: true }); } catch { /* bỏ qua */ }
 });
 
 async function req(method: string, p: string, body?: unknown) {
   const res = await fetch(`${base}${p}`, {
-    method, headers: { 'Content-Type': 'application/json' },
+    method, headers: authHeaders,
     body: body === undefined ? undefined : JSON.stringify(body)
   });
   const text = await res.text();

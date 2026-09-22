@@ -1,35 +1,52 @@
 // Test tích hợp cho GET /api/weeks/:weekStart/dm-report.xlsx (CR-20260915-xuat-excel-bao-cao-dm).
-import { test, before, after } from 'node:test';
+//
+// CR-20260913 Lát 4: route giờ đòi phiên đăng nhập thật + `teamId` (Báo cáo tuần là dữ liệu theo
+// team) — dùng chung harness OIDC giả ở fixtures/auth-harness.ts, và mọi bảng liên quan
+// (projects/project_tasks/weekly_goals/weekly_task_evaluations) đều cần cột `team_id` khớp actor.
+import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import type { Server } from 'node:http';
 import ExcelJS from 'exceljs';
+import { createMockAuthServer, loginFlow, makeOnboardingHelpers } from './fixtures/auth-harness.js';
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-void repoRoot;
+const ADMIN_EMAIL = 'admin@drjoy.jp';
+
+const mockAuth = await createMockAuthServer();
 const tmpAppData = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-weekly-xlsx-itest-'));
 process.env.APPDATA = tmpAppData;
+process.env.AUTH_BASE_URL = mockAuth.authBaseUrl;
+process.env.AUTH_CLIENT = 'indigo';
+process.env.APP_CALLBACK_URL = 'http://127.0.0.1:0/api/auth/callback';
+process.env.ADMIN_BOOTSTRAP_EMAIL = ADMIN_EMAIL;
 
 const { app } = await import('../../server/app.js');
 const { db } = await import('../../server/db.js');
 
 let server: Server;
 let base = '';
-
-before(async () => {
-  await new Promise<void>((resolve) => {
-    server = app.listen(0, '127.0.0.1', () => {
-      const addr = server.address();
-      base = `http://127.0.0.1:${typeof addr === 'object' && addr ? addr.port : 0}`;
-      resolve();
-    });
+await new Promise<void>((resolve) => {
+  server = app.listen(0, '127.0.0.1', () => {
+    const addr = server.address();
+    base = `http://127.0.0.1:${typeof addr === 'object' && addr ? addr.port : 0}`;
+    resolve();
   });
 });
+
+const flow = loginFlow(() => base, mockAuth.issueAuthCode);
+const onboarding = makeOnboardingHelpers(() => base, flow);
+const adminSession = await flow.loginAs(ADMIN_EMAIL, 'Admin Thật', 'weekly-xlsx-admin-sub');
+const teamId = await onboarding.makeTeam(adminSession, '[itest] Team Weekly Excel');
+await onboarding.setFeatureVisibility(adminSession, teamId, 'project', 'on');
+await onboarding.setFeatureVisibility(adminSession, teamId, 'weekly_report', 'on');
+const leader = await onboarding.joinAndApprove('weekly-xlsx-leader@drjoy.jp', 'Leader weekly excel', teamId, 'leader', adminSession);
+const authHeaders = flow.H(leader.session);
+
 after(async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
+  await mockAuth.close();
   try { fs.rmSync(tmpAppData, { recursive: true, force: true }); } catch { /* bỏ qua */ }
 });
 
@@ -39,41 +56,42 @@ const PREV_WEEK_START = '2026-09-07';
 function seedBaseData() {
   const now = new Date().toISOString();
   const project = db.prepare(`
-    INSERT INTO projects (ten_project, pic, ngay_bat_dau, sort_order, created_at, updated_at)
-    VALUES (?, ?, ?, 1, ?, ?)
-  `).run('Project Test Excel', 'itest', '2026-01-01', now, now);
+    INSERT INTO projects (ten_project, pic, team_id, ngay_bat_dau, sort_order, created_at, updated_at)
+    VALUES (?, ?, ?, ?, 1, ?, ?)
+  `).run('Project Test Excel', 'itest', teamId, '2026-01-01', now, now);
   const projectId = Number(project.lastInsertRowid);
 
   const task = db.prepare(`
     INSERT INTO project_tasks (
-      project_id, parent_id, level, tieu_de, ghi_chu, ngay_bat_dau_du_kien, ngay_ket_thuc_du_kien,
+      project_id, parent_id, team_id, level, tieu_de, ghi_chu, ngay_bat_dau_du_kien, ngay_ket_thuc_du_kien,
       estimate_hours, tien_do, task_links, assignee, sort_order, execution_order, created_at, updated_at
-    ) VALUES (?, NULL, 1, ?, '', '2026-09-07', '2026-09-07', 7, 0, '[]', 'Nam', 1, 1, ?, ?)
-  `).run(projectId, 'Task tuần trước', now, now);
+    ) VALUES (?, NULL, ?, 1, ?, '', '2026-09-07', '2026-09-07', 7, 0, '[]', 'Nam', 1, 1, ?, ?)
+  `).run(projectId, teamId, 'Task tuần trước', now, now);
   const taskId = Number(task.lastInsertRowid);
 
   // Task này là "mục tiêu" của TUẦN TRƯỚC (weekly_goals week_start = PREV_WEEK_START) -> xuất hiện ở
   // lastWeekGoals khi build cho WEEK_START. Đánh giá kèm theo: khong_dat + note.
   db.prepare(`
-    INSERT INTO weekly_goals (week_start, project_id, project_task_id, assignee, goal_text, target_progress, sort_order, created_at, updated_at)
-    VALUES (?, ?, ?, 'Nam', '', 100, 1, ?, ?)
-  `).run(PREV_WEEK_START, projectId, taskId, now, now);
+    INSERT INTO weekly_goals (week_start, team_id, project_id, project_task_id, assignee, goal_text, target_progress, sort_order, created_at, updated_at)
+    VALUES (?, ?, ?, ?, 'Nam', '', 100, 1, ?, ?)
+  `).run(PREV_WEEK_START, teamId, projectId, taskId, now, now);
   db.prepare(`
-    INSERT INTO weekly_task_evaluations (week_start, project_task_id, status, note, unplanned)
-    VALUES (?, ?, 'khong_dat', 'Bận việc khác', 0)
-  `).run(PREV_WEEK_START, taskId);
+    INSERT INTO weekly_task_evaluations (week_start, project_task_id, team_id, status, note, unplanned)
+    VALUES (?, ?, ?, 'khong_dat', 'Bận việc khác', 0)
+  `).run(PREV_WEEK_START, taskId, teamId);
 
   // Mục tiêu TUẦN NÀY (gõ tay, không gắn task cụ thể) cho cùng project, giao 2 người -> nhân dòng.
   db.prepare(`
-    INSERT INTO weekly_goals (week_start, project_id, project_task_id, assignee, goal_text, target_progress, sort_order, created_at, updated_at)
-    VALUES (?, ?, NULL, 'Nam, Phú', 'Việc tuần này', 100, 2, ?, ?)
-  `).run(WEEK_START, projectId, now, now);
+    INSERT INTO weekly_goals (week_start, team_id, project_id, project_task_id, assignee, goal_text, target_progress, sort_order, created_at, updated_at)
+    VALUES (?, ?, ?, NULL, 'Nam, Phú', 'Việc tuần này', 100, 2, ?, ?)
+  `).run(WEEK_START, teamId, projectId, now, now);
 
   return { projectId, taskId };
 }
 
 async function getBuffer(p: string) {
-  const res = await fetch(`${base}${p}`);
+  const sep = p.includes('?') ? '&' : '?';
+  const res = await fetch(`${base}${p}${sep}teamId=${teamId}`, { headers: authHeaders });
   const buf = Buffer.from(await res.arrayBuffer());
   return { res, buf };
 }

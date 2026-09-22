@@ -17,6 +17,7 @@ const tmpAppData = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-pics-itest-'));
 process.env.APPDATA = tmpAppData;
 
 const { app } = await import('../../server/app.js');
+const { db } = await import('../../server/db.js');
 
 let server: Server;
 let base = '';
@@ -87,31 +88,46 @@ test('QA: PATCH /pics/:id đổi tên hợp lệ + màu cùng lúc -> cả 2 đ�
   assert.equal(patch.json.color, '#777777');
 });
 
+// CR-20260913 Lát 4: `projects.pic`/`project_tasks.assignee` không còn nhận input qua
+// POST/PATCH /api/projects[...] (route ngừng đọc 2 field này — FR-15) — 2 test dưới đây kiểm cơ chế
+// đổi-tên-lan-toả của pics.ts, vốn vẫn đọc/ghi thẳng 2 cột này bằng SQL thô (route đó không thuộc phạm
+// vi Lát 4, không sửa). Vì API không còn đường ghi chuỗi tự do vào 2 cột này, mô phỏng đúng DỮ LIỆU
+// LỊCH SỬ (di trú trước Lát 4) bằng cách chèn thẳng vào DB, thay vì gọi qua route mới.
 test('QA: đổi tên PIC lan sang project.pic / project_tasks.assignee (chuỗi "A, B")', async () => {
   const pic = await req('POST', '/api/pics', { name: '[itest] Renamer' });
-  const proj = await req('POST', '/api/projects', { ten: '[itest] proj for rename', pic: '[itest] Renamer', ngayBatDau: '2026-09-01' });
-  const task = await req('POST', `/api/projects/${proj.json.id}/tasks`, {
-    tieuDe: 'task', ngayBatDauDuKien: '2026-09-01', ngayKetThucDuKien: '2026-09-02', tienDo: 0, assignee: 'Ai đó, [itest] Renamer'
-  });
+  const now = new Date().toISOString();
+  const proj = db.prepare(`
+    INSERT INTO projects (ten_project, pic, ngay_bat_dau, sort_order, created_at, updated_at)
+    VALUES (?, ?, ?, 0, ?, ?)
+  `).run('[itest] proj for rename', '[itest] Renamer', '2026-09-01', now, now);
+  const projectId = Number(proj.lastInsertRowid);
+  const task = db.prepare(`
+    INSERT INTO project_tasks (project_id, level, tieu_de, ngay_bat_dau_du_kien, ngay_ket_thuc_du_kien, tien_do, assignee, created_at, updated_at)
+    VALUES (?, 1, ?, ?, ?, 0, ?, ?, ?)
+  `).run(projectId, 'task', '2026-09-01', '2026-09-02', 'Ai đó, [itest] Renamer', now, now);
+  const taskId = Number(task.lastInsertRowid);
 
   const rename = await req('PATCH', `/api/pics/${pic.json.id}`, { name: '[itest] Renamer đã đổi' });
   assert.equal(rename.status, 200);
 
-  const projAfter = await req('GET', '/api/projects');
-  const projRow = (projAfter.json as { id: string; pic: string }[]).find((p) => p.id === proj.json.id);
-  assert.equal(projRow?.pic, '[itest] Renamer đã đổi');
+  const projRow = db.prepare('SELECT pic FROM projects WHERE id = ?').get(projectId) as { pic: string };
+  assert.equal(projRow.pic, '[itest] Renamer đã đổi');
 
-  const tasksAfter = await req('GET', `/api/projects/${proj.json.id}/tasks`);
-  const taskRow = (tasksAfter.json as { id: string; assignee: string }[]).find((t) => t.id === task.json.id);
-  assert.equal(taskRow?.assignee, 'Ai đó, [itest] Renamer đã đổi', 'chỉ phần tử khớp CHÍNH XÁC mới đổi, không đụng "Ai đó"');
+  const taskRow = db.prepare('SELECT assignee FROM project_tasks WHERE id = ?').get(taskId) as { assignee: string };
+  assert.equal(taskRow.assignee, 'Ai đó, [itest] Renamer đã đổi', 'chỉ phần tử khớp CHÍNH XÁC mới đổi, không đụng "Ai đó"');
 });
 
 test('QA: xoá PIC còn task chưa hoàn thành -> 400, không cho xoá', async () => {
   const pic = await req('POST', '/api/pics', { name: '[itest] Busy PIC' });
-  const proj = await req('POST', '/api/projects', { ten: '[itest] proj busy', pic: 'ai', ngayBatDau: '2026-09-01' });
-  await req('POST', `/api/projects/${proj.json.id}/tasks`, {
-    tieuDe: 'task chưa xong', ngayBatDauDuKien: '2026-09-01', ngayKetThucDuKien: '2026-09-02', tienDo: 50, assignee: '[itest] Busy PIC'
-  });
+  const now = new Date().toISOString();
+  const proj = db.prepare(`
+    INSERT INTO projects (ten_project, pic, ngay_bat_dau, sort_order, created_at, updated_at)
+    VALUES (?, ?, ?, 0, ?, ?)
+  `).run('[itest] proj busy', 'ai', '2026-09-01', now, now);
+  db.prepare(`
+    INSERT INTO project_tasks (project_id, level, tieu_de, ngay_bat_dau_du_kien, ngay_ket_thuc_du_kien, tien_do, assignee, created_at, updated_at)
+    VALUES (?, 1, ?, ?, ?, 50, ?, ?, ?)
+  `).run(Number(proj.lastInsertRowid), 'task chưa xong', '2026-09-01', '2026-09-02', '[itest] Busy PIC', now, now);
 
   const del = await req('DELETE', `/api/pics/${pic.json.id}`);
   assert.equal(del.status, 400);
