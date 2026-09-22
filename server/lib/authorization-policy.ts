@@ -58,6 +58,48 @@ export const AUTHORIZATION_POLICY: Record<string, Record<string, PolicyEntry>> =
     list_own: { feature: null, roles: ['user', 'admin'] }, // không có scope.teamId — mọi actor đã đăng nhập
     create: { feature: null, roles: ['leader'] },
     delete: { feature: null, roles: ['leader'] }
+  },
+
+  // Lát 4 mới — Project & Gantt (CR §3.1/AC-7/AC-8, docs/exchanges/2026-09-13.md mục 3.1). "Sửa task
+  // mình được gán phụ trách" cho Member không tách được thành role-list đơn giản (phụ thuộc TỪNG bản
+  // ghi) — route tự kiểm thêm sau khi authorize() cho qua theo bảng dưới (xem comment ở projects.ts).
+  project: {
+    list: { feature: 'project', roles: ['leader', 'member'] },
+    create: { feature: 'project', roles: ['leader'] },
+    update: { feature: 'project', roles: ['leader'] },
+    delete: { feature: 'project', roles: ['leader'] },
+    close: { feature: 'project', roles: ['leader'] },
+    reorder: { feature: 'project', roles: ['leader'] }
+  },
+  project_task: {
+    list: { feature: 'project', roles: ['leader', 'member'] },
+    create: { feature: 'project', roles: ['leader', 'member'] },
+    update: { feature: 'project', roles: ['leader', 'member'] }, // Member: route tự kiểm chỉ task được gán
+    delete: { feature: 'project', roles: ['leader'] },
+    reorder: { feature: 'project', roles: ['leader', 'member'] },
+    execution_order: { feature: 'project', roles: ['leader'] } // "kéo đổi thứ tự thực thi Gantt" — Leader-only
+  },
+  project_task_assignment: {
+    // Cả Leader lẫn Member đều gán được người phụ trách (Leader gán bất kỳ ai, Member tự nhận/tự rút
+    // việc của chính mình) — route tự so diff mảng cũ/mới để chặn Member đụng dòng người khác.
+    update: { feature: 'project', roles: ['leader', 'member'] }
+  },
+
+  // Lát 4 mới — Báo cáo tuần (CR §3.2/FR-21, sửa 13/09: KHÔNG có luồng Member tự đặt mục tiêu — Member
+  // chỉ xem, mọi thao tác ghi/xoá thuộc Leader).
+  weekly_goal: {
+    list: { feature: 'weekly_report', roles: ['leader', 'member'] },
+    delete_one: { feature: 'weekly_report', roles: ['leader'] },
+    delete_all: { feature: 'weekly_report', roles: ['leader'] }
+  },
+  weekly_report: {
+    badges: { feature: 'weekly_report', roles: ['leader', 'member'] }, // goal-badge-ids/at-risk-ids/goal-task-ids/report-kinds
+    plan: { feature: 'weekly_report', roles: ['leader'] },
+    apply: { feature: 'weekly_report', roles: ['leader'] }, // chốt tuần (wizard "Xác nhận & lưu")
+    render: { feature: 'weekly_report', roles: ['leader', 'member'] }, // text/dm-report/xlsx — chỉ đọc/xuất, không ghi DB
+    history_list: { feature: 'weekly_report', roles: ['leader', 'member'] },
+    history_create: { feature: 'weekly_report', roles: ['leader'] }, // phê duyệt/finalize báo cáo
+    history_delete: { feature: 'weekly_report', roles: ['leader'] }
   }
 
   // 'audit_log'.'read' KHÔNG khai ở đây — policyKind: 'audit' có luật riêng hẳn (Admin luôn qua, global,
