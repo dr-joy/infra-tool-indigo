@@ -100,6 +100,19 @@ export const AUTHORIZATION_POLICY: Record<string, Record<string, PolicyEntry>> =
     history_list: { feature: 'weekly_report', roles: ['leader', 'member'] },
     history_create: { feature: 'weekly_report', roles: ['leader'] }, // phê duyệt/finalize báo cáo
     history_delete: { feature: 'weekly_report', roles: ['leader'] }
+  },
+
+  // Lát 4 mới (Council review run e6cd1c8c, 22/09 — lỗ hổng thật: 5 route pics.ts không hề qua authorize()
+  // trước bản sửa này). PIC đã chuyển hẳn thành dữ liệu lịch sử chỉ-đọc (CR §6.3, không còn là nguồn chọn
+  // người) — không gắn với feature bật/tắt nào trong 5 feature ở trên nên `feature: null`, giống
+  // `team_member`. GET cho Leader+Member xem đúng team mình; POST/PATCH/PATCH reorder/DELETE giới hạn
+  // Leader-only — GIẢ ĐỊNH cần Leader xác nhận lại (xem comment đầu server/routes/pics.ts).
+  pic: {
+    list: { feature: null, roles: ['leader', 'member'] },
+    create: { feature: null, roles: ['leader'] },
+    update: { feature: null, roles: ['leader'] },
+    reorder: { feature: null, roles: ['leader'] },
+    delete: { feature: null, roles: ['leader'] }
   }
 
   // 'audit_log'.'read' KHÔNG khai ở đây — policyKind: 'audit' có luật riêng hẳn (Admin luôn qua, global,
