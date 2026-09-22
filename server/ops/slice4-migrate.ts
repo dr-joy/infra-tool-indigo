@@ -68,13 +68,28 @@ function countRowsByTable(db: DatabaseSync, tables: readonly string[]): Record<s
 // `id`, xem server/schema/weekly-report.ts); canonicalColumns = các cột ĐÃ TỒN TẠI TRƯỚC Lát 4, phải
 // giữ nguyên giá trị qua di trú (CR §6.3 bước 6: "hash nội dung canonical, cột cũ không đổi giá trị").
 // CHỦ Ý LOẠI TRỪ khỏi canonicalColumns: mọi cột Lát 4 mới thêm/backfill (team_id, owner_user_id,
-// responsible_user_id, legacy_pic_label, user_id của project_task_assignments, visibility/
-// shared_team_id của mindmaps — visibility bị COALESCE NULL->'private' nên KHÔNG canonical) và mọi
-// cột row_version (bộ đếm optimistic-lock, không phải "nội dung"). project_task_assignments không có
-// legacy_pic_label bị đổi bởi bước vận hành nào (bước 5 migrateLegacyPicLabels KHÔNG đụng bảng này —
-// việc pic->legacy_pic_label của riêng bảng này đã xảy ra 1 LẦN lúc rebuild tự động ở
-// server/db-migrations.ts, giống hệt nhau giữa nguồn và đích) nên coi luôn là canonical để bắt được
-// hỏng dữ liệu khi rebuild.
+// responsible_user_id, legacy_pic_label, visibility/shared_team_id của mindmaps — visibility bị
+// COALESCE NULL->'private' nên KHÔNG canonical) và mọi cột row_version (bộ đếm optimistic-lock,
+// không phải "nội dung").
+//
+// ⚠️ project_task_assignments LÀ NGOẠI LỆ, không dùng chung cơ chế generic canonicalRowHashes()/
+// idKeySet() theo TÊN CỘT giống hệt như các bảng khác ở trên: đây là bảng DUY NHẤT trong
+// CANONICAL_TABLE_CONFIG bị rebuild ĐỔI TÊN CỘT (rebuildProjectTaskAssignmentsForSlice4() trong
+// server/db-migrations.ts: cột `pic` NOT NULL của schema Desktop CŨ bị thay bằng CẢ HAI cột
+// `user_id` + `legacy_pic_label` ở schema MỚI, copy nguyên công thức
+// COALESCE(NULLIF(TRIM(pic), ''), '(khong ro)')). Ý đồ đúng (giá trị phải giữ nguyên giữa nguồn/đích
+// vì việc đổi tên chỉ xảy ra 1 LẦN lúc rebuild) không đổi, nhưng KHÔNG được liệt `user_id`/
+// `legacy_pic_label` vào canonicalColumns bên dưới rồi để diffCanonicalContent() generic SELECT
+// thẳng 2 cột đó từ sourceDb — DB nguồn thật (bản backup Desktop trước di trú) chỉ có cột `pic`,
+// KHÔNG có `user_id`/`legacy_pic_label`, SELECT thẳng sẽ ném lỗi SQL "no such column" (bug thật, tìm
+// ra ở Council review vòng 3 — run a44549fb-c1aa-421f-8307-4483796c43fd). Cách đúng: entry
+// `project_task_assignments` dưới đây VẪN giữ `user_id`/`legacy_pic_label` trong canonicalColumns —
+// vì entry này còn được snapshotForIdempotencyCheck() dùng, hàm đó CHỈ chạy trên targetDb (đã có 2
+// cột này) nên không sao. Chỉ RIÊNG diffCanonicalContent() (hàm ngay dưới đây, thao tác cả
+// sourceDb LẪN targetDb) mới bỏ qua bảng này trong vòng lặp generic — bảng này được so sánh riêng ở
+// hàm diffProjectTaskAssignments() (đọc `pic` từ nguồn, tính lại đúng công thức rebuild, so với
+// `legacy_pic_label` đích — chỉ ở những dòng đích có user_id IS NULL; các cột không đổi tên vẫn so
+// hash bình thường qua canonicalRowHashes() với 1 config riêng, không gồm user_id/legacy_pic_label).
 interface CanonicalTableConfig {
   idColumns: readonly string[];
   canonicalColumns: readonly string[];
@@ -157,6 +172,11 @@ function canonicalRowHashes(db: DatabaseSync, table: string, config: CanonicalTa
 function diffCanonicalContent(sourceDb: DatabaseSync, targetDb: DatabaseSync, problems: string[]): void {
   const MAX_EXAMPLES = 5;
   for (const [table, config] of Object.entries(CANONICAL_TABLE_CONFIG)) {
+    // project_task_assignments bị rebuild đổi TÊN CỘT (pic -> user_id + legacy_pic_label) — SELECT
+    // thẳng canonicalColumns (có user_id/legacy_pic_label) từ sourceDb sẽ ném lỗi SQL "no such
+    // column" vì DB nguồn thật chỉ có cột `pic`. Bỏ qua ở đây, xử lý riêng ở diffProjectTaskAssignments()
+    // (xem comment ở CANONICAL_TABLE_CONFIG phía trên) — được gọi thêm trong verifySlice4Migration().
+    if (table === 'project_task_assignments') continue;
     const sourceIds = idKeySet(sourceDb, table, config.idColumns);
     const targetIds = idKeySet(targetDb, table, config.idColumns);
 
@@ -179,6 +199,74 @@ function diffCanonicalContent(sourceDb: DatabaseSync, targetDb: DatabaseSync, pr
     if (changed.length > 0) {
       problems.push(`Bảng ${table}: ${changed.length} dòng bị đổi nội dung cột cũ (hash canonical lệch) — ví dụ khoá: ${changed.slice(0, MAX_EXAMPLES).join(', ')}`);
     }
+  }
+}
+
+// Đúng NGUYÊN VĂN công thức SQL rebuildProjectTaskAssignmentsForSlice4() dùng lúc rebuild tự động
+// (server/db-migrations.ts): COALESCE(NULLIF(TRIM(pic), ''), '(khong ro)') — TRIM(pic) rỗng (kể cả
+// pic toàn khoảng trắng) thì thành nhãn mặc định, khác thì giữ NGUYÊN VĂN bản đã TRIM (không phải
+// pic gốc chưa trim).
+function expectedLegacyPicLabel(pic: string | null): string {
+  const trimmed = (pic ?? '').trim();
+  return trimmed === '' ? '(khong ro)' : trimmed;
+}
+
+// So sánh RIÊNG cho project_task_assignments — bảng DUY NHẤT trong CANONICAL_TABLE_CONFIG bị rebuild
+// đổi TÊN CỘT, không dùng chung được cơ chế generic diffCanonicalContent() (xem 2 comment ở trên).
+// Cột id/project_task_id/start_date/end_date/estimate_hours/sort_order/tien_do không đổi tên nên so
+// tập ID + hash nội dung như bình thường; riêng pic (nguồn) <-> legacy_pic_label (đích) so bằng công
+// thức rebuild thật, CHỈ ở những dòng đích có user_id IS NULL (dòng đã gán User thật thì
+// legacy_pic_label là nhãn lịch sử, không bắt buộc còn khớp pic gốc — CR §6.3).
+const PTA_TABLE = 'project_task_assignments';
+const PTA_SHARED_CONFIG: CanonicalTableConfig = {
+  idColumns: ['id'],
+  canonicalColumns: ['id', 'project_task_id', 'start_date', 'end_date', 'estimate_hours', 'sort_order', 'tien_do']
+};
+
+function diffProjectTaskAssignments(sourceDb: DatabaseSync, targetDb: DatabaseSync, problems: string[]): void {
+  const MAX_EXAMPLES = 5;
+
+  const sourceIds = idKeySet(sourceDb, PTA_TABLE, PTA_SHARED_CONFIG.idColumns);
+  const targetIds = idKeySet(targetDb, PTA_TABLE, PTA_SHARED_CONFIG.idColumns);
+  const missingInTarget = [...sourceIds].filter((k) => !targetIds.has(k));
+  if (missingInTarget.length > 0) {
+    problems.push(`Bảng ${PTA_TABLE}: mất ${missingInTarget.length} dòng (có ở nguồn, không còn ở đích) — ví dụ: ${missingInTarget.slice(0, MAX_EXAMPLES).join(', ')}`);
+  }
+  const addedInTarget = [...targetIds].filter((k) => !sourceIds.has(k));
+  if (addedInTarget.length > 0) {
+    problems.push(`Bảng ${PTA_TABLE}: thừa ${addedInTarget.length} dòng (không có ở nguồn, xuất hiện ở đích) — ví dụ: ${addedInTarget.slice(0, MAX_EXAMPLES).join(', ')}`);
+  }
+
+  const sourceHashes = canonicalRowHashes(sourceDb, PTA_TABLE, PTA_SHARED_CONFIG);
+  const targetHashes = canonicalRowHashes(targetDb, PTA_TABLE, PTA_SHARED_CONFIG);
+  const changed: string[] = [];
+  for (const [key, sourceHash] of sourceHashes) {
+    const targetHash = targetHashes.get(key);
+    if (targetHash !== undefined && targetHash !== sourceHash) changed.push(key);
+  }
+  if (changed.length > 0) {
+    problems.push(`Bảng ${PTA_TABLE}: ${changed.length} dòng bị đổi nội dung cột cũ (hash canonical lệch) — ví dụ khoá: ${changed.slice(0, MAX_EXAMPLES).join(', ')}`);
+  }
+
+  const sourcePicById = new Map<number, string | null>();
+  if (tableExists(sourceDb, PTA_TABLE)) {
+    for (const row of sourceDb.prepare(`SELECT id, pic FROM ${PTA_TABLE}`).all() as { id: number; pic: string | null }[]) {
+      sourcePicById.set(row.id, row.pic);
+    }
+  }
+  const targetLabelRows = tableExists(targetDb, PTA_TABLE)
+    ? (targetDb.prepare(`SELECT id, user_id, legacy_pic_label FROM ${PTA_TABLE}`).all() as { id: number; user_id: number | null; legacy_pic_label: string | null }[])
+    : [];
+  const labelMismatch: number[] = [];
+  for (const row of targetLabelRows) {
+    if (row.user_id != null) continue; // đã gán User thật — không bắt buộc còn khớp pic gốc.
+    const sourcePic = sourcePicById.get(row.id);
+    if (sourcePic === undefined) continue; // dòng thừa ở đích đã báo ở trên, không lặp lại lỗi.
+    const expected = expectedLegacyPicLabel(sourcePic);
+    if (row.legacy_pic_label !== expected) labelMismatch.push(row.id);
+  }
+  if (labelMismatch.length > 0) {
+    problems.push(`Bảng ${PTA_TABLE}: ${labelMismatch.length} dòng có legacy_pic_label KHÔNG khớp công thức rebuild từ pic nguồn (COALESCE(NULLIF(TRIM(pic), ''), '(khong ro)')) — id: ${labelMismatch.slice(0, MAX_EXAMPLES).join(', ')}`);
   }
 }
 
@@ -438,9 +526,15 @@ export function migrateLegacyPicLabels(targetDb: DatabaseSync): LegacyPicLabelCo
 
 // Kiểm assignment (CR §6.3 bước 6: "kiểm assignment: task tồn tại, ngày hợp lệ, nhãn legacy khớp
 // đúng chuỗi nguồn, User mới nếu có thuộc đúng team"). Tách riêng khỏi diffCanonicalContent dù có
-// phần trùng (legacy_pic_label cũng nằm trong canonical hash) vì đây là kiểm NGỮ NGHĨA (task cha có
-// thật không, ngày có hợp lệ không, user có đúng team không) — thứ hash không phát hiện được, và cho
-// thông điệp lỗi cụ thể dễ đọc hơn "hash lệch".
+// phần trùng (legacy_pic_label cũng được kiểm ở diffProjectTaskAssignments) vì đây là kiểm NGỮ NGHĨA
+// (task cha có thật không, ngày có hợp lệ không, user có đúng team không) — thứ hash không phát hiện
+// được, và cho thông điệp lỗi cụ thể dễ đọc hơn "hash lệch".
+//
+// ⚠️ DB nguồn thật chỉ có cột `pic` (không có `legacy_pic_label`) — đọc thẳng `legacy_pic_label` từ
+// sourceDb ở đây từng là bug thật (SQL "no such column", cùng gốc với bug ở diffCanonicalContent, xem
+// comment ở CANONICAL_TABLE_CONFIG). Đọc `pic`, tính lại đúng công thức rebuild bằng
+// expectedLegacyPicLabel() — CHỈ so khi dòng đích chưa gán User thật (user_id IS NULL), khớp đúng
+// logic diffProjectTaskAssignments().
 function verifyAssignments(sourceDb: DatabaseSync, targetDb: DatabaseSync, problems: string[]): void {
   if (!tableExists(targetDb, 'project_task_assignments')) return;
   const MAX_EXAMPLES = 5;
@@ -450,10 +544,10 @@ function verifyAssignments(sourceDb: DatabaseSync, targetDb: DatabaseSync, probl
   );
   const sourceAssignmentRows = (
     tableExists(sourceDb, 'project_task_assignments')
-      ? sourceDb.prepare('SELECT id, legacy_pic_label FROM project_task_assignments').all()
+      ? sourceDb.prepare('SELECT id, pic FROM project_task_assignments').all()
       : []
-  ) as { id: number; legacy_pic_label: string | null }[];
-  const sourceLabelById = new Map(sourceAssignmentRows.map((r) => [r.id, r.legacy_pic_label]));
+  ) as { id: number; pic: string | null }[];
+  const sourceLabelById = new Map(sourceAssignmentRows.map((r) => [r.id, expectedLegacyPicLabel(r.pic)]));
 
   const rows = targetDb.prepare(`
     SELECT id, project_task_id, user_id, legacy_pic_label, start_date, end_date
@@ -474,7 +568,7 @@ function verifyAssignments(sourceDb: DatabaseSync, targetDb: DatabaseSync, probl
       invalidDate.push(row.id);
     }
 
-    if (sourceLabelById.has(row.id) && sourceLabelById.get(row.id) !== row.legacy_pic_label) {
+    if (row.user_id == null && sourceLabelById.has(row.id) && sourceLabelById.get(row.id) !== row.legacy_pic_label) {
       labelMismatch.push(row.id);
     }
 
@@ -673,6 +767,7 @@ export function verifySlice4Migration(
     }
 
     diffCanonicalContent(sourceDb, targetDb, problems);
+    diffProjectTaskAssignments(sourceDb, targetDb, problems);
     verifyAssignments(sourceDb, targetDb, problems);
     diffProjectRollups(sourceDb, targetDb, problems);
   } finally {
