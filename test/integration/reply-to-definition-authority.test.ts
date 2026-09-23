@@ -1,7 +1,9 @@
 // CR-20260913 Lát 6 (FR-28a): tạo definition (regular/emergency) giờ đòi phiên đăng nhập thật + actor
 // thuộc ≥1 team đang Bật "Task cá nhân" (server/routes/release.ts) — dùng chung harness OIDC giả ở
-// fixtures/auth-harness.ts. 2 route /schedules/... (schedules.ts) KHÔNG đổi ở Lát 6 (ngoài phạm vi đợt
-// này, xem báo cáo bàn giao) nên vẫn gọi thẳng không cần header đăng nhập.
+// fixtures/auth-harness.ts. Retrofit auth đợt sau (schedules.ts, cùng CR §6.3): 2 route /schedules/...
+// dưới đây nay CŨNG đòi phiên đăng nhập + owner_user_id (cùng policyKind 'personal_task' — xem comment
+// đầu server/routes/schedules.ts) nên dùng CHUNG 1 actor/authHeaders với route /release/... phía trên,
+// không tách riêng như trước nữa.
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import os from 'node:os';
@@ -47,12 +49,10 @@ after(async () => {
   try { fs.rmSync(tmpAppData, { recursive: true, force: true }); } catch { /* bỏ qua */ }
 });
 
-// Route /release/... (Lát 6, đòi đăng nhập) dùng authHeaders; route /schedules/... (không đổi ở Lát 6)
-// vẫn gọi không header, giữ nguyên hành vi cũ.
+// Cả /release/... lẫn /schedules/... nay đều đòi phiên đăng nhập thật (Lát 6, xem comment ở trên).
 async function req(method: string, p: string, body?: unknown) {
-  const headers = p.startsWith('/api/release/') ? authHeaders : { 'Content-Type': 'application/json' };
   const res = await fetch(`${base}${p}`, {
-    method, headers,
+    method, headers: authHeaders,
     body: body === undefined ? undefined : JSON.stringify(body)
   });
   const text = await res.text();
