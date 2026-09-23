@@ -253,3 +253,83 @@ test('POST /weeks/:weekStart/report-history: loại báo cáo đã is_active=fal
   });
   assert.equal(r.status, 400, JSON.stringify(r.json));
 });
+
+// ── Council review vòng chốt Lát 5 (2026-09-23) — 2 lỗ hổng thật trong POST /report-history ────────
+// #1: `findReportKindByCode` khớp KHÔNG phân biệt hoa/thường nhưng route lại dùng biến `kind` gốc
+// (chưa chuẩn hoá) để SELECT/INSERT vào weekly_report_history — UNIQUE(team_id, week_start, kind,
+// mode) của bảng PHÂN BIỆT hoa/thường (SQLite mặc định) -> gọi kind="khac" rồi kind="KHAC" tạo ra 2
+// dòng khác nhau dù cùng khớp 1 kindRow cấu hình. Đã sửa: dùng `kindRow.code` (giá trị đã chuẩn hoá)
+// cho mọi SELECT/INSERT/audit log liên quan tới weekly_report_history.
+test('POST /weeks/:weekStart/report-history: kind gửi khác hoa/thường ("KHAC" vs "khac") phải nhận diện là CÙNG 1 bản, không tạo trùng', async () => {
+  const created = await req('POST', '/api/weeks/report-kinds', { teamId: teamA, code: 'casetest', label: 'Case Test', renderMode: 'internal_markdown' });
+  assert.equal(created.status, 201, JSON.stringify(created.json));
+
+  const week = '2026-10-05';
+  const first = await req('POST', `/api/weeks/${week}/report-history`, {
+    teamId: teamA, kind: 'casetest', content: '[itest] noi dung ban dau (kind thuong)'
+  });
+  assert.equal(first.status, 200, JSON.stringify(first.json));
+  assert.equal(first.json.overwritten, false);
+
+  // Gọi lại với casing khác ("CASETEST") mà KHÔNG kèm force -> nếu nhận diện đúng là CÙNG 1 bản thì
+  // phải 409 REPORT_EXISTS giống hệt gọi lại đúng nguyên casing cũ (không phải tạo thành công 1 bản
+  // mới, tức không phải trả 200).
+  const second = await req('POST', `/api/weeks/${week}/report-history`, {
+    teamId: teamA, kind: 'CASETEST', content: '[itest] noi dung goi lai (kind HOA)'
+  });
+  assert.equal(second.status, 409, JSON.stringify(second.json));
+  assert.equal(second.json.code, 'REPORT_EXISTS');
+
+  // Xác nhận DB không bị trùng dòng: đúng 1 bản ghi cho tuần này với kind chuẩn hoá "casetest".
+  const list = await req('GET', `/api/weeks/report-history?teamId=${teamA}`);
+  assert.equal(list.status, 200, JSON.stringify(list.json));
+  const rowsThisWeek = (list.json as { weekStart: string; kind: string }[]).filter((r) => r.weekStart === week);
+  assert.equal(rowsThisWeek.length, 1, 'không được có 2 dòng riêng biệt cho "khac"/"KHAC" cùng tuần');
+  assert.equal(rowsThisWeek[0].kind, 'casetest', 'kind lưu trong DB phải là giá trị đã chuẩn hoá (đúng casing của kindRow.code)');
+});
+
+// #2: check `is_active` trước đây đặt TRƯỚC khi biết `existing` có tồn tại hay không -> chặn nhầm cả
+// nhánh Leader sửa/ghi đè (force=true) báo cáo ĐÃ CÓ trong history của một loại vừa bị Admin tắt sau
+// khi báo cáo đã tồn tại. Đã sửa: chỉ chặn khi `!existing` (tạo mới thật sự).
+test('POST /weeks/:weekStart/report-history: kind vừa bị tắt (is_active=false) vẫn sửa được báo cáo ĐÃ CÓ qua force=true', async () => {
+  const created = await req('POST', '/api/weeks/report-kinds', { teamId: teamA, code: 'togglekind', label: 'Toggle Kind', renderMode: 'internal_markdown' });
+  assert.equal(created.status, 201, JSON.stringify(created.json));
+  const rowId = created.json.rowId as string;
+  let rowVersion = created.json.rowVersion as number;
+
+  const week = '2026-10-12';
+  const initial = await req('POST', `/api/weeks/${week}/report-history`, {
+    teamId: teamA, kind: 'togglekind', content: '[itest] noi dung ban dau (kind con bat)'
+  });
+  assert.equal(initial.status, 200, JSON.stringify(initial.json));
+
+  // Admin/Leader tắt kind này SAU KHI báo cáo đã tồn tại.
+  const patched = await req('PATCH', `/api/weeks/report-kinds/${rowId}`, { teamId: teamA, isActive: false, rowVersion });
+  assert.equal(patched.status, 200, JSON.stringify(patched.json));
+  rowVersion = patched.json.rowVersion as number;
+
+  // Lấy rowVersion hiện tại của báo cáo để sửa (giống cách client thật phải làm trước khi force).
+  const list = await req('GET', `/api/weeks/report-history?teamId=${teamA}`);
+  const existingRow = (list.json as { weekStart: string; kind: string; id: string; rowVersion: number }[])
+    .find((r) => r.weekStart === week && r.kind === 'togglekind')!;
+  assert.ok(existingRow, 'phải tìm thấy báo cáo đã tạo ở bước trên');
+
+  const edited = await req('POST', `/api/weeks/${week}/report-history`, {
+    teamId: teamA, kind: 'togglekind', content: '[itest] noi dung da sua (kind da tat, force=true)',
+    force: true, rowVersion: existingRow.rowVersion
+  });
+  assert.equal(edited.status, 200, JSON.stringify(edited.json), 'sửa báo cáo ĐÃ CÓ bằng force=true không được bị chặn dù kind đã tắt');
+  assert.equal(edited.json.overwritten, true);
+
+  const listAfter = await req('GET', `/api/weeks/report-history?teamId=${teamA}`);
+  const rowAfter = (listAfter.json as { weekStart: string; kind: string; content: string }[])
+    .find((r) => r.weekStart === week && r.kind === 'togglekind')!;
+  assert.equal(rowAfter.content, '[itest] noi dung da sua (kind da tat, force=true)');
+
+  // Đối chứng: tạo MỚI hoàn toàn (tuần khác, chưa từng có existing) với kind đã tắt này vẫn phải bị
+  // chặn 400 như cũ — không phải chỉ sửa thứ tự làm mất luôn phần chặn tạo mới.
+  const brandNew = await req('POST', '/api/weeks/2026-10-19/report-history', {
+    teamId: teamA, kind: 'togglekind', content: '[itest] tao moi hoan toan voi kind da tat'
+  });
+  assert.equal(brandNew.status, 400, JSON.stringify(brandNew.json));
+});

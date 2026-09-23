@@ -289,18 +289,25 @@ router.post('/weeks/:weekStart/report-history', requireSession, requireActiveAcc
   if (!kindRow) {
     return res.status(400).json({ message: 'Loại báo cáo không hợp lệ' });
   }
-  // Schema (`weekly_report_kinds.is_active`) ghi rõ ý định "ngừng dùng không phá lịch sử" — điểm TẠO
-  // MỚI (phê duyệt/finalize) phải chặn loại đã tắt; báo cáo CŨ đã có trong history vẫn đọc/xem lại
-  // bình thường (không đụng route GET/DELETE history).
-  if (!kindRow.is_active) {
-    return res.status(400).json({ message: 'Loại báo cáo này đã ngừng dùng, không tạo được báo cáo mới bằng loại này' });
-  }
   if (!content) return res.status(400).json({ message: 'Nội dung báo cáo trống' });
 
+  // Council review 2026-09-23 (lỗ hổng #1): `findReportKindByCode` khớp KHÔNG phân biệt hoa/thường,
+  // nhưng UNIQUE(team_id, week_start, kind, mode) của weekly_report_history PHÂN BIỆT hoa/thường
+  // (SQLite mặc định) -> nếu dùng lại biến `kind` gốc (chưa chuẩn hoá, do client gửi) thì "khac" và
+  // "KHAC" cùng khớp một `kindRow` cấu hình nhưng tạo ra 2 dòng khác nhau trong bảng, vi phạm đúng bất
+  // biến "mỗi tuần+loại chỉ có 1 bản". Từ đây trở đi dùng `kindRow.code` (giá trị ĐÃ CHUẨN HOÁ, đúng
+  // casing lưu trong weekly_report_kinds), không dùng lại `kind` thô nữa.
   const existing = db.prepare('SELECT id, row_version FROM weekly_report_history WHERE team_id = ? AND week_start = ? AND kind = ? AND mode = ?')
-    .get(teamId, weekStart, kind, mode) as { id: number; row_version: number } | undefined;
+    .get(teamId, weekStart, kindRow.code, mode) as { id: number; row_version: number } | undefined;
   if (existing && !body.force) {
     return res.status(409).json({ message: 'Báo cáo của tuần này đã tồn tại', code: 'REPORT_EXISTS' });
+  }
+  // Council review 2026-09-23 (lỗ hổng #2): check `is_active` chỉ được áp dụng cho điểm TẠO MỚI thật
+  // sự (`!existing`) — Schema (`weekly_report_kinds.is_active`) ghi rõ ý định "ngừng dùng không phá
+  // lịch sử": Leader vẫn phải sửa/ghi đè được báo cáo ĐÃ CÓ (`existing && force`) của một loại vừa bị
+  // Admin tắt sau khi báo cáo đã tồn tại — chỉ chặn khi đây thực sự là bản ghi mới cho tuần/loại đó.
+  if (!existing && !kindRow.is_active) {
+    return res.status(400).json({ message: 'Loại báo cáo này đã ngừng dùng, không tạo được báo cáo mới bằng loại này' });
   }
 
   const now = new Date().toISOString();
@@ -310,9 +317,9 @@ router.post('/weeks/:weekStart/report-history', requireSession, requireActiveAcc
     if (updated.changes === 0) throw new HttpError(409, 'Có người vừa thay đổi báo cáo này, vui lòng tải lại', 'VERSION_CONFLICT');
   } else {
     db.prepare('INSERT INTO weekly_report_history (week_start, team_id, kind, mode, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-      .run(weekStart, teamId, kind, mode, content, now, now);
+      .run(weekStart, teamId, kindRow.code, mode, content, now, now);
   }
-  writeAudit(actor.userId, teamId, 'weekly_report.finalize', `weekly_report_history:${weekStart}:${kind}`, { weekStart, kind, overwritten: Boolean(existing) });
+  writeAudit(actor.userId, teamId, 'weekly_report.finalize', `weekly_report_history:${weekStart}:${kindRow.code}`, { weekStart, kind: kindRow.code, overwritten: Boolean(existing) });
   res.json({ ok: true, overwritten: Boolean(existing) });
 });
 
