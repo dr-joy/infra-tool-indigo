@@ -142,8 +142,9 @@ test('AC-12 (cổng máy, regression route): task tên trùng NHƯNG khác origi
 });
 
 test('AC-3: task đã hoàn thành -> lưu definition/đồng bộ KHÔNG đụng, báo bỏ qua lý do done', async () => {
-  const releaseMonth = '2099-03';
   const releaseDate = '2099-03-14';
+  // 2026-09-23 (dọn nợ CR §6.3): khoá batch nay là ĐÚNG NGÀY ĐẦY ĐỦ, không còn cắt tháng.
+  const releaseMonth = releaseDate;
   const definition = await makeDefinition({ title: '[itest] AC3 done' });
   await req('POST', '/api/schedules/regular-release/task', { releaseDate, definitionId: definition.id });
   const row = db.prepare('SELECT * FROM tasks WHERE origin_ref = ?').get(definition.id) as Record<string, unknown>;
@@ -159,8 +160,8 @@ test('AC-3: task đã hoàn thành -> lưu definition/đồng bộ KHÔNG đụn
 });
 
 test('AC-4/AC-4b: definition KHÔNG template -> Note giữ nguyên; định nghĩa CÓ template -> Note ghi theo template', async () => {
-  const releaseMonth = '2099-04';
   const releaseDate = '2099-04-14';
+  const releaseMonth = releaseDate;
   const definition = await makeDefinition({ title: '[itest] AC4 no template', note: 'placeholder' });
   await req('POST', '/api/schedules/regular-release/task', { releaseDate, definitionId: definition.id });
   const row = db.prepare('SELECT * FROM tasks WHERE origin_ref = ?').get(definition.id) as Record<string, unknown>;
@@ -176,8 +177,8 @@ test('AC-4/AC-4b: definition KHÔNG template -> Note giữ nguyên; định ngh�
 });
 
 test('AC-8: đồng bộ 2 lần liên tiếp -> lần 2 báo không có gì cần cập nhật (idempotent)', async () => {
-  const releaseMonth = '2099-05';
   const releaseDate = '2099-05-14';
+  const releaseMonth = releaseDate;
   const definition = await makeDefinition({ title: '[itest] AC8 idempotent' });
   await req('POST', '/api/schedules/regular-release/task', { releaseDate, definitionId: definition.id });
   await req('PATCH', `/api/release/task-definitions/${definition.id}`, { ...definition, title: '[itest] AC8 changed once' });
@@ -195,8 +196,8 @@ test('AC-13: FE không còn gửi ghiChu/aiNote tự dựng — request thiếu 
 });
 
 test('FR-5 (drift): definition sửa xong nhưng CHƯA đồng bộ -> endpoint drift thấy lệch mà không cần bấm gì', async () => {
-  const releaseMonth = '2099-07';
   const releaseDate = '2099-07-14';
+  const releaseMonth = releaseDate;
   const definition = await makeDefinition({ title: '[itest] drift before' });
   await req('POST', '/api/schedules/regular-release/task', { releaseDate, definitionId: definition.id });
   await req('PATCH', `/api/release/task-definitions/${definition.id}`, { ...definition, title: '[itest] drift AFTER' });
@@ -253,7 +254,7 @@ test('auth: actor thuộc team CHƯA Bật "Task cá nhân" -> 403 FEATURE_DISAB
 
 test('owner scoping: actor B KHÔNG sync/thấy được definition hay task release định kỳ của actor A dù cùng team', async () => {
   const releaseDate = '2099-09-03';
-  const releaseMonth = releaseDate.slice(0, 7);
+  const releaseMonth = releaseDate;
   const definitionA = await req('POST', '/api/release/task-definitions', {
     title: '[itest] cua actor A', startTime: '10:00', dateToken: 'release.date'
   });
@@ -276,4 +277,41 @@ test('owner scoping: actor B KHÔNG sync/thấy được definition hay task rel
     tasks: [{ tenTask: '[itest] B muon dung ref cua A', gioBatDau: '10:15', ngayCuThe: releaseDate, originRef: definitionA.json.id }]
   }, authHeadersOther);
   assert.equal(bulkB.status, 409, 'lô tạo hàng loạt cũng phải từ chối originRef của actor khác');
+});
+
+// ── 2026-09-23 (dọn nợ CR §6.3): hồi quy — 2 đợt định kỳ KHÁC NGÀY nhưng CÙNG tháng dương lịch không
+// còn lẫn nhóm task (khoá batch trước đây cắt còn tháng, nay dùng đúng ngày đầy đủ) ──────────────────
+
+test('hồi quy khoá batch: 2 đợt định kỳ khác NGÀY nhưng cùng THÁNG dương lịch không lẫn task, không báo trùng nhầm', async () => {
+  const releaseDateA = '2099-10-05';
+  const releaseDateB = '2099-10-20'; // cùng tháng 2099-10 với A, nhưng khác ngày
+  const tasksA = [{ tenTask: '[itest] batch A', gioBatDau: '10:00', ngayCuThe: releaseDateA }];
+  const tasksB = [{ tenTask: '[itest] batch B', gioBatDau: '10:15', ngayCuThe: releaseDateB }];
+
+  const createdA = await req('POST', '/api/schedules/regular-release/tasks', { releaseDate: releaseDateA, tasks: tasksA });
+  assert.equal(createdA.status, 201, 'tạo batch A lần đầu phải thành công');
+
+  // Trước bản sửa, khoá batch bị cắt còn '2099-10' cho cả A lẫn B -> tạo B sẽ thấy "đã có task tồn
+  // tại" (409, đúng batch của A) dù người dùng chưa từng tạo gì cho ngày B. Sau bản sửa, B phải tạo
+  // được bình thường vì khoá batch (đúng ngày đầy đủ) của A và B khác nhau.
+  const createdB = await req('POST', '/api/schedules/regular-release/tasks', { releaseDate: releaseDateB, tasks: tasksB });
+  assert.equal(createdB.status, 201, 'tạo batch B (khác ngày, cùng tháng với A) KHÔNG được báo trùng nhầm với A');
+
+  const rowsA = db.prepare("SELECT * FROM tasks WHERE ten_task = '[itest] batch A'").all() as Record<string, unknown>[];
+  const rowsB = db.prepare("SELECT * FROM tasks WHERE ten_task = '[itest] batch B'").all() as Record<string, unknown>[];
+  assert.equal(rowsA.length, 1);
+  assert.equal(rowsB.length, 1);
+  assert.notEqual(rowsA[0].release_month, rowsB[0].release_month, 'khoá batch của 2 ngày khác nhau phải khác nhau');
+  assert.equal(rowsA[0].release_month, releaseDateA);
+  assert.equal(rowsB[0].release_month, releaseDateB);
+
+  // "Đã tồn tại" (409 không force) phải đúng theo TỪNG ngày, không lẫn giữa A/B.
+  const recreateA = await req('POST', '/api/schedules/regular-release/tasks', { releaseDate: releaseDateA, tasks: tasksA });
+  assert.equal(recreateA.status, 409);
+  assert.equal(recreateA.json.code, 'REGULAR_RELEASE_EXISTS');
+
+  // force xoá-tạo-lại của A không được đụng tới task của B (khác khoá batch).
+  await req('POST', '/api/schedules/regular-release/tasks', { releaseDate: releaseDateA, tasks: tasksA, force: true });
+  const rowsBAfterForceA = db.prepare("SELECT * FROM tasks WHERE ten_task = '[itest] batch B'").all() as Record<string, unknown>[];
+  assert.equal(rowsBAfterForceA.length, 1, 'force xoá-tạo-lại batch A không được xoá task của batch B');
 });

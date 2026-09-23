@@ -99,7 +99,7 @@ Qua **3 vòng Council review thật** (Claude+Codex, run `23517248`→`10966304`
 
 451 test backend + 40 frontend pass, `npm run check` xanh (trừ gate Design token — nợ cũ không liên quan).
 
-**1 việc ghi nợ có chủ đích (Leader đã đồng ý 23/09):** route CŨ `schedules.ts` (release định kỳ, FE `src/screens/release.tsx` hiện đang gọi) vẫn cho gõ tay ngày tự do, không bắt qua `release_cycles` — nếu 2 đợt định kỳ cùng tháng dương lịch cùng mở vẫn có thể lẫn task (đúng rủi ro CR cảnh báo). Route MỚI (FR-28a nhánh định kỳ, `POST /release/schedule/personal-regular-tasks`) đã dùng đúng khoá `cycle_id`, không dính lỗi này. Sửa dứt điểm đường cũ cần đổi cả FE + viết lại ~20 test tích hợp đang xanh — để lại cho đợt sau khi cần.
+**Việc ghi nợ có chủ đích ở trên ĐÃ SỬA (23/09, xem đoạn "Lát 11" bên dưới):** route CŨ `schedules.ts` không còn khoá task theo tháng dương lịch cắt ngắn — xem chi tiết ở đoạn Lát 11.
 
 **Đã merge vào `master` + push `indigo`, đã dọn nhánh.**
 
@@ -186,16 +186,48 @@ xem chi tiết ở đoạn Lát 9 phía trên và [exchange 2026-09-23](../excha
 đổi-team-khi-popup-mở ở `showForm`/`unlockTarget` cùng loại với Lát 9, xác nhận không reachable, đã thêm
 fix phòng thủ + cancellation guard cho board chính.
 
-**CHƯA LÀM (để lại, không phải quên):** FR-28a phần nối "Tab cá nhân" (`LayoutReleaseKhanCap`/
-`LayoutReleaseDinhKy` trong `release.tsx`, đã có sẵn từ trước) vào lịch CHÍNH THỨC của team qua 2 route
-đã có (`POST /release/schedule/personal-emergency-tasks`, `.../personal-regular-tasks`) — cố ý hoãn lại
-vì đây là 1 phần khác biệt rõ (nút "áp dụng checklist cá nhân theo lịch team"), không ảnh hưởng tới 6 FR
-đã xong ở trên; là việc còn lại duy nhất được biết trước khi Giai đoạn 2-3 coi là xong hoàn toàn.
+**Lát 11 XONG (23/09) — nối Tab cá nhân FR-28a + dọn nợ khoá `schedules.ts`.** 2 việc cuối cùng còn lại
+của CR-20260913 Giai đoạn 2-3 (trừ việc chạy migration thật lên Dev13, cố ý để lại — xem "Tiếp theo"
+dưới). Council **thiết kế** cho việc này bị dừng hẳn sau 4/4 lần gọi Codex đều `invalid_turn_output`
+KHÔNG đọc lại được nội dung thô (khác các lần trước — kiến trúc gọi lần này không giữ log thô khi
+validate thất bại, xem [exchange 2026-09-23](../exchanges/2026-09-23.md)) — quyết định dựa trên đầu tư
+của Claude tự đọc code + hỏi trực tiếp người dùng qua `AskUserQuestion`, không có ý kiến độc lập Codex.
+
+- **Việc 1 (nối Tab cá nhân):** thêm nút "áp dụng checklist cá nhân theo lịch team" vào cả
+  `LayoutReleaseDinhKy` (chọn 1 cycle định kỳ đang mở từ `GET .../regular-cycles`) và
+  `LayoutReleaseKhanCap` (chọn 1 đợt khẩn cấp team đã đăng ký chính thức, lọc client-side từ
+  `GET .../schedule-board` theo `activeTeamId` — người dùng chọn "tái dùng route đã có" thay vì thêm
+  route hẹp mới). Cả 2 gọi đúng 2 route đã có sẵn từ Lát 6 (`POST .../personal-regular-tasks`,
+  `.../personal-emergency-tasks`), không sửa logic sinh task. Thêm 1 route mới hẹp
+  `GET /release/schedule/personal-task-status?teamId=` (chỉ để FE ẩn/hiện nút — Admin/team chưa Bật
+  thì ẩn hẳn, không hiện kèm lỗi — không phải nguồn phân quyền, 2 route sinh task vẫn tự kiểm lại đầy
+  đủ). `release.tsx` trước đó hoàn toàn chưa có khái niệm `activeTeamId` — nối `useActiveTeamId()` vào,
+  nhất quán pattern Lát 7.
+- **Việc 2 (dọn nợ khoá `schedules.ts`):** đọc kỹ mới phát hiện cách sửa RẺ HƠN nhiều so với ước tính
+  ban đầu (đổi hợp đồng route + viết lại ~30 test) — `release_month` chưa từng được bất kỳ code nào khác
+  hiểu là tháng dương lịch thật (chỉ là 1 chuỗi khoá bất kỳ dùng để nhóm/khớp task), nên chỉ cần đổi giá
+  trị khoá từ tháng CẮT NGẮN (`releaseDate.slice(0,7)`) sang đúng NGÀY ĐẦY ĐỦ (`releaseBatchKey`) là giải
+  đúng rủi ro "2 đợt định kỳ cùng tháng lẫn task" — không đổi UI, không đổi hợp đồng request/response,
+  không đụng `reply-to-definition-authority.test.ts` (0/11 chỗ gọi kiểm giá trị `release_month`). Người
+  dùng xác nhận dùng cách này thay vì đường tốn kém hơn đã chọn ban đầu khi chưa biết chi tiết. Thêm 1
+  test hồi quy trực tiếp (`schedules-release.test.ts`) tạo 2 đợt khác ngày cùng tháng, xác nhận không
+  còn báo trùng nhầm và `force` xoá-tạo-lại 1 đợt không đụng đợt kia.
+
+464 test backend (458 cũ + 5 test mới `personal-task-status` + 1 test hồi quy khoá batch) + 95 test
+client (không đổi số, `screens.test.tsx`/`release-regular-create-error.test.tsx` đã mount cả 2 layout
+nên xác nhận không throw) đều pass, `tsc --noEmit` sạch, `npm run check` xanh 10/10 cổng (trừ gate Exe —
+chưa `npm run package`). **Đã qua Council review (23/09, run `0071b973`)** — cũng dừng vì Codex
+`invalid_turn_output` 2 lần liên tiếp (theo đúng chỉ dẫn người dùng: lỗi lần nữa thì dừng, không thử lần
+3), chỉ có lượt hợp lệ của Claude, không có ý kiến độc lập Codex. 6 điểm tự nêu, tự triage: 1 điểm thật
+đáng sửa (nhánh khẩn cấp hiển thị ngày dạng ISO thô, nhánh định kỳ đã format đẹp — đã sửa cho nhất quán),
+5 điểm còn lại không phải bug hoặc rủi ro thấp chấp nhận được (xem chi tiết bảng triage ở
+[exchange 2026-09-23](../exchanges/2026-09-23.md)). Chưa tự smoke UI thật trong trình duyệt (môi trường
+làm việc không có công cụ trình duyệt) — chỉ xác nhận qua test tự động + đọc code, cả 2 vòng Council.
 Popup "cảnh báo bớt thành viên"/"tạo team"/"yêu cầu mở khoá" đã xong ở Lát 8/9/10.
 
-**Đã merge vào `master` + push `indigo`, đã dọn nhánh.**
+**Chưa merge/push — đang chờ xác nhận người dùng.**
 
-**Khoảng trống hệ thống MỚI PHÁT HIỆN khi làm Lát 5, ngoài phạm vi Lát 5, cần Leader quyết hướng trước Lát 6:** frontend HIỆN CHƯA có bất kỳ context đăng nhập/team-selector/màn Admin nào — không file nào trong `src/` gọi kèm `teamId`, không `AuthContext`, không màn quản trị team/feature-visibility/join-request nào tồn tại; nghĩa là toàn bộ UI hiện tại vẫn thao tác như bản desktop 1 người dùng cũ dù backend đã lên hẳn kiến trúc nhiều team từ Lát 3. 2 màn đã sửa trong Lát 5 (chia sẻ Mind Map, khoá Redmine cá nhân) tự né được khoảng trống này bằng cách gọi thẳng `/api/auth/me`+`/api/me/teams` cục bộ, không phụ thuộc hạ tầng chung — nhưng đây chỉ là vá cục bộ, không phải giải pháp cho toàn bộ frontend. **Tiếp theo (23/09, cập nhật sau khi Lát 6 xong — dòng cũ ở trên đã lỗi thời):** CR-20260913 hết 6 lát theo kế hoạch — toàn bộ backend đã xong (Lát 1-6). Việc còn lại: (1) quyết định hướng frontend (team-selector + Admin UI) — hiện chưa nối dây, mọi màn vẫn thao tác như bản desktop 1 người dùng cũ dù backend đã lên kiến trúc nhiều team từ Lát 3, xem mục "Khoảng trống hệ thống" ngay dưới; (2) chạy thật hợp đồng di trú 7 hàm (`server/ops/slice4-migrate.ts`) lên dữ liệu Dev13 thật khi Leader sẵn sàng chuyển sang server (script chưa từng chạy lên dữ liệu thật); (3) dọn nợ kỹ thuật đã ghi nhận: đường `schedules.ts` cũ chưa bắt qua `release_cycles` (Lát 6), 3 mục non-blocking cũ (đã dọn ở Lát 5) | Đường C + skill `security-gate` + `docs-sync` · [CR-20260913](../delivery/changes/CR-20260913-nen-tang-da-nguoi-dung.md) · [Thiết kế Lát 3: exchange 2026-09-19](../exchanges/2026-09-19.md) · [Đối chiếu + Council review Lát 3: exchange 2026-09-21 §Trao Đổi](../exchanges/2026-09-21.md) · [Council review Lát 4 (4 vòng): exchange 2026-09-22](../exchanges/2026-09-22.md) · [Quyết định + lý do: exchange 2026-09-13](../exchanges/2026-09-13.md) · [Bức tranh lớn: exchange 2026-09-12](../exchanges/2026-09-12.md) |
+**Khoảng trống hệ thống MỚI PHÁT HIỆN khi làm Lát 5, ngoài phạm vi Lát 5, cần Leader quyết hướng trước Lát 6:** frontend HIỆN CHƯA có bất kỳ context đăng nhập/team-selector/màn Admin nào — không file nào trong `src/` gọi kèm `teamId`, không `AuthContext`, không màn quản trị team/feature-visibility/join-request nào tồn tại; nghĩa là toàn bộ UI hiện tại vẫn thao tác như bản desktop 1 người dùng cũ dù backend đã lên hẳn kiến trúc nhiều team từ Lát 3. 2 màn đã sửa trong Lát 5 (chia sẻ Mind Map, khoá Redmine cá nhân) tự né được khoảng trống này bằng cách gọi thẳng `/api/auth/me`+`/api/me/teams` cục bộ, không phụ thuộc hạ tầng chung — nhưng đây chỉ là vá cục bộ, không phải giải pháp cho toàn bộ frontend. **Tiếp theo (23/09, cập nhật sau khi Lát 6 xong — dòng cũ ở trên đã lỗi thời):** CR-20260913 hết 6 lát theo kế hoạch — toàn bộ backend đã xong (Lát 1-6). Việc còn lại: (1) quyết định hướng frontend (team-selector + Admin UI) — hiện chưa nối dây, mọi màn vẫn thao tác như bản desktop 1 người dùng cũ dù backend đã lên kiến trúc nhiều team từ Lát 3, xem mục "Khoảng trống hệ thống" ngay dưới; (2) chạy thật hợp đồng di trú 7 hàm (`server/ops/slice4-migrate.ts`) lên dữ liệu Dev13 thật khi Leader sẵn sàng chuyển sang server (script chưa từng chạy lên dữ liệu thật) — còn lại DUY NHẤT sau khi Lát 11 (23/09) đã dọn xong nợ `schedules.ts` và nối Tab cá nhân, xem đoạn Lát 11 ở trên; (3) [đã xong ở Lát 11] ~~dọn nợ kỹ thuật: đường `schedules.ts` cũ chưa bắt qua `release_cycles` (Lát 6)~~, 3 mục non-blocking cũ (đã dọn ở Lát 5) | Đường C + skill `security-gate` + `docs-sync` · [CR-20260913](../delivery/changes/CR-20260913-nen-tang-da-nguoi-dung.md) · [Thiết kế Lát 3: exchange 2026-09-19](../exchanges/2026-09-19.md) · [Đối chiếu + Council review Lát 3: exchange 2026-09-21 §Trao Đổi](../exchanges/2026-09-21.md) · [Council review Lát 4 (4 vòng): exchange 2026-09-22](../exchanges/2026-09-22.md) · [Quyết định + lý do: exchange 2026-09-13](../exchanges/2026-09-13.md) · [Bức tranh lớn: exchange 2026-09-12](../exchanges/2026-09-12.md) |
 | `BL-20260921-002` | P1 | `Done` | Bug candidate | Leader | **Phát hiện khi Council review Lát 2 (run `22ca353b`, 21/09):** lỗ hổng login-CSRF residual trong thiết kế FR-1 đã chốt — cookie `login_nonce` chỉ kiểm "có mặt + còn hạn", KHÔNG buộc đúng-code, vì giao thức `auth.drjoy.vn` không cho app tự cài `state`/token riêng vào `redirect_uri` (danh sách `allowed_clients` khớp CHÍNH XÁC từng chuỗi, không nhận query param tự do). Kịch bản cụ thể: nạn nhân TỰ bấm "Đăng nhập" thật (nhận cookie `login_nonce` hợp lệ, sống vài phút) → trong lúc đó kẻ tấn công gửi 1 link `/auth/callback?code=<mã của hắn>` → nạn nhân bấm vào → app thấy nonce hợp lệ (đúng của nạn nhân) nên cho exchange code (của kẻ tấn công) → nạn nhân bị đăng nhập vào tài khoản kẻ tấn công. Hẹp hơn kịch bản gốc (yêu cầu nạn nhân vừa tự đăng nhập thật) nhưng vẫn thật, đặc biệt hợp với chuỗi phishing "bấm đăng nhập lại → bấm link này thay" | **Đóng 21/09 — Leader chọn "Chấp nhận rủi ro, giữ nguyên"** (phương án khuyến nghị): đúng thiết kế FR-1 đã chốt, không rút ngắn TTL `login_nonce`, không xin `auth.drjoy.vn` hỗ trợ thêm. Không mở việc code mới | Council review [exchange 2026-09-21 §Trao Đổi](../exchanges/2026-09-21.md) · [CR-20260913 FR-1](../delivery/changes/CR-20260913-nen-tang-da-nguoi-dung.md) |
 | `BL-20260921-003` | P2 | `Inbox` | Tech debt | Leader | **Phát hiện khi Council review Lát 2 (run `22ca353b`, 21/09), nhưng KHÔNG phải lỗi của Lát 2** — thuộc `server/lib/secret.ts`/Dockerfile Lát 1 (đã xong trước đó): master key mã hoá (`secret.key`) lưu tại `path.dirname(DATA_DIR)` — với container `DATA_DIR=/data`, đường dẫn thật là `/secret.key`, NẰM NGOÀI volume bền vững (Dockerfile Lát 1 chỉ khai báo mount `/data`). Container bị tạo lại (redeploy, restart hạ tầng) sẽ SINH KEY MỚI, làm mọi secret đã mã hoá cũ (khoá Redmine cá nhân, VÀ giờ thêm `refresh_token` của `auth.drjoy.vn` từ Lát 2) không giải mã lại được — DB còn nguyên nhưng dữ liệu đã mã hoá coi như mất vĩnh viễn. Lát 2 làm rủi ro này CAO HƠN (thêm 1 loại secret quan trọng phụ thuộc key này) nhưng không phải nơi sinh ra bug | Chuyển `secret.key` vào đúng dưới `DATA_DIR` (trong volume bền vững) hoặc thêm 1 mount riêng cho đường dẫn hiện tại; cân nhắc thêm kiểm tra fail-closed rõ ràng lúc khởi động nếu key bị mất/đổi giữa 2 lần chạy (khác hành vi "tự sinh key mới âm thầm" hiện tại) | Council review [exchange 2026-09-21 §Trao Đổi](../exchanges/2026-09-21.md) · `server/lib/secret.ts`, Dockerfile (Lát 1, [CR-20260913](../delivery/changes/CR-20260913-nen-tang-da-nguoi-dung.md)) |
 | `BL-20260826-001` | P1 | `Dropped` | Feature | Leader | **Dropped 2026-09-13 — AI automation đã bị xoá hoàn toàn (CR-20260912):** App không kiểm tra tên tool trong whitelist AI automation có THẬT SỰ tồn tại trên máy đang chạy hay không (26/08 truy sai hướng mất hàng giờ vì việc này) | Không còn việc để làm tiếp — cơ chế whitelist tool cho AI automation đã bị xoá cùng tính năng | Đường C · nối tiếp [CR-20260821](../delivery/changes/CR-20260821-whitelist-tool-vao-app.md) (mục "Bug phát hiện khi smoke thật") |

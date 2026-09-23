@@ -30,9 +30,15 @@ import { authorize } from '../lib/authorize.js';
 // và phá toàn bộ bộ test tích hợp đã có (`test/integration/schedules-release.test.ts`,
 // `test/integration/tasks.test.ts`, `test/integration/reply-to-definition-authority.test.ts`) — một
 // quyết định sản phẩm/migration riêng, ngoài phạm vi được giao ở đây, nên CỐ Ý không tự làm mà chỉ vá
-// đúng lỗ hổng auth/ownership. Rủi ro còn lại (đã ghi rõ, không giấu): dùng route CŨ này để tự sinh task
-// cho 2 ngày release ĐỊNH KỲ khác nhau nhưng CÙNG tháng dương lịch vẫn có thể lẫn nhóm qua khoá
-// `release_month` (YYYY-MM) như trước — xem thêm ghi chú tại từng route bên dưới.
+// đúng lỗ hổng auth/ownership.
+//
+// SỬA 2026-09-23 (dọn nợ, xem docs/exchanges/2026-09-23.md): rủi ro "2 đợt định kỳ khác NGÀY nhưng CÙNG
+// tháng dương lịch lẫn nhóm task" từng ghi ở đây ĐÃ VÁ — không phải bằng cách đổi hợp đồng như đường mới
+// (route cũ VẪN giữ nguyên gõ tay ngày tự do, VẪN không đòi chọn `release_cycles`), mà bằng cách nhận ra
+// khoá batch (cột `tasks.release_month`) chưa từng được code nào khác hiểu là "tháng dương lịch thật" —
+// chỉ là 1 chuỗi khoá bất kỳ dùng để nhóm/khớp task. Đổi khoá từ tháng CẮT NGẮN (`releaseDate.slice(0,7)`)
+// sang đúng NGÀY ĐẦY ĐỦ (`releaseBatchKey`, xem 2 route bên dưới) là đủ giải đúng rủi ro, không cần đổi
+// UI/hợp đồng/test nào ngoài phần literal `releaseMonth` tự tính trong `schedules-release.test.ts`.
 function requireOwnPersonalTaskSchedule(req: Parameters<typeof actorFromRequest>[0]) {
   const actor = actorFromRequest(req);
   authorize({ actor, policyKind: 'personal_task', resource: 'personal_task', action: 'own', scope: { ownerId: actor.userId } });
@@ -236,7 +242,16 @@ router.post('/schedules/regular-release/tasks', requireSession, requireActiveAcc
     return res.status(400).json({ message: 'Danh sách task không hợp lệ' });
   }
 
+  // 2026-09-23 (dọn nợ CR §6.3): khoá batch của task MỚI (cột `release_month`, chỉ là 1 chuỗi khoá
+  // bất kỳ — không đâu khác trong code diễn dịch nó thành tháng dương lịch thật để tính toán) trước
+  // đây bị CẮT còn tháng (`releaseDate.slice(0, 7)`), khiến 2 đợt release định kỳ khác NGÀY nhưng
+  // cùng THÁNG dương lịch lẫn task vào chung 1 nhóm (đếm/xoá/đồng bộ nhầm nhau). Sửa bằng cách dùng
+  // đúng NGÀY ĐẦY ĐỦ (`releaseBatchKey`) làm khoá batch thay vì cắt tháng — không đổi UI (vẫn gõ tay
+  // ngày), không đổi hợp đồng request/response. `releaseMonth` (cắt tháng) GIỮ NGUYÊN, dùng RIÊNG cho
+  // phép lịch cửa sổ tháng của nhánh tương thích dữ liệu LEGACY (trước Lát 4, release_month IS NULL)
+  // ngay dưới đây — 2 mục đích khác nhau, không gộp chung 1 biến.
   const releaseMonth = body.releaseDate.slice(0, 7);
+  const releaseBatchKey = body.releaseDate;
   const releaseTaskNames = [
     ...new Set(body.tasks.map((task) => task.tenTask?.trim()).filter((v): v is string => Boolean(v)))
   ];
@@ -267,7 +282,7 @@ router.post('/schedules/regular-release/tasks', requireSession, requireActiveAcc
     ? ` OR (release_month IS NULL AND owner_user_id = ? AND loai_task = 'dinh_ky' AND ngay_cu_the BETWEEN ? AND ? AND ten_task IN (${legacyPlaceholders}))`
     : '';
   const existing = db.prepare(`SELECT COUNT(*) AS total FROM tasks WHERE release_month = ? AND owner_user_id = ?${legacyWhere}`)
-    .get(releaseMonth, actor.userId, ...(legacyPlaceholders ? [actor.userId, legacyWindowStart, legacyWindowEnd, ...releaseTaskNames] : [])) as { total: number };
+    .get(releaseBatchKey, actor.userId, ...(legacyPlaceholders ? [actor.userId, legacyWindowStart, legacyWindowEnd, ...releaseTaskNames] : [])) as { total: number };
   if (existing.total > 0 && !body.force) {
     return res.status(409).json({
       code: 'REGULAR_RELEASE_EXISTS',
@@ -313,7 +328,7 @@ router.post('/schedules/regular-release/tasks', requireSession, requireActiveAcc
     // ten-task-match-ok: xoa-tao-lai-ca-dot-co-xac-nhan-nguoi-dung-qua-409-force
     if (body.force) {
       db.prepare(`DELETE FROM tasks WHERE release_month = ? AND owner_user_id = ?${legacyDeleteWhere}`)
-        .run(releaseMonth, actor.userId, ...(legacyPlaceholders ? [actor.userId, legacyDeleteWindowStart, legacyDeleteWindowEnd, ...releaseTaskNames] : []));
+        .run(releaseBatchKey, actor.userId, ...(legacyPlaceholders ? [actor.userId, legacyDeleteWindowStart, legacyDeleteWindowEnd, ...releaseTaskNames] : []));
     }
     for (const task of body.tasks || []) {
       if (!task.tenTask?.trim() || !task.ngayCuThe || !/^\d{4}-\d{2}-\d{2}$/.test(task.ngayCuThe) || !task.gioBatDau || !timePattern.test(task.gioBatDau)) {
@@ -331,7 +346,7 @@ router.post('/schedules/regular-release/tasks', requireSession, requireActiveAcc
         }
         replyToRef = replyToByOriginRef.get(originRef) ?? null;
       }
-      insert.run(task.tenTask.trim(), task.ghiChu?.trim() || '', now, normalizedStart, toTime(end), task.ngayCuThe, releaseMonth, body.releaseDate, JSON.stringify(normalizeTaskLinks(task.links)), originRef, replyToRef, actor.userId);
+      insert.run(task.tenTask.trim(), task.ghiChu?.trim() || '', now, normalizedStart, toTime(end), task.ngayCuThe, releaseBatchKey, body.releaseDate, JSON.stringify(normalizeTaskLinks(task.links)), originRef, replyToRef, actor.userId);
     }
     db.exec('COMMIT');
     res.status(201).json({ created: body.tasks!.length });
@@ -350,8 +365,10 @@ router.post('/schedules/regular-release/task', requireSession, requireActiveAcco
     if (!releaseDate || !/^\d{4}-\d{2}-\d{2}$/.test(releaseDate)) throw new HttpError(400, 'Ngày release không hợp lệ');
     if (!definitionId) throw new HttpError(400, 'Thiếu definitionId');
 
-    const releaseMonth = releaseDate.slice(0, 7);
-    const { willUpdate, willInsert, skipped } = planReleaseWrite(releaseMonth, [definitionId], new Date(), {
+    // 2026-09-23 (dọn nợ CR §6.3): khoá batch dùng đúng ngày đầy đủ, không cắt còn tháng — xem chú
+    // thích đầy đủ tại route bulk (`/schedules/regular-release/tasks`) phía trên.
+    const releaseBatchKey = releaseDate;
+    const { willUpdate, willInsert, skipped } = planReleaseWrite(releaseBatchKey, [definitionId], new Date(), {
       allowInsert: true, releaseDateForInsert: releaseDate
     }, actor.userId);
     // Council code-review (run 581517e4, 2026-09-12): `definitionId` không resolve được (đã xoá/sai id)
@@ -367,7 +384,7 @@ router.post('/schedules/regular-release/task', requireSession, requireActiveAcco
     db.exec('BEGIN TRANSACTION');
     try {
       if (willInsert.length > 0) {
-        applyInsert(willInsert[0], releaseMonth, now, actor.userId);
+        applyInsert(willInsert[0], releaseBatchKey, now, actor.userId);
         db.exec('COMMIT');
         return res.status(201).json({ created: 1, updated: 0 });
       }

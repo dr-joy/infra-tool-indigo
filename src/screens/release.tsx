@@ -12,7 +12,8 @@ import {
 import { useLang } from '../useLang';
 import type { TranslationKey } from '../i18n';
 import { InfoTip, TimeInput } from '../ui';
-import { api, ApiError } from '../api';
+import { api, apiTeam, ApiError } from '../api';
+import { useActiveTeamId } from '../auth-context';
 import { Modal } from '../components/Modal';
 import { CopyNoteButton, TaskLinkIcon, TaskLinkBadges, TaskLinkEditor, SortIcon } from '../components/task-atoms';
 import { usePics, useToast } from '../context';
@@ -631,8 +632,65 @@ export function ManHinhLenLich({ onTasksCreated }: { onTasksCreated: (date?: str
   );
 }
 
+// FR-28a — Tab cá nhân: "áp dụng checklist cá nhân theo lịch team" (2026-09-23, nối 2 route đã có sẵn
+// từ Lát 6 vào 2 layout release.tsx). `enabled` = false khi Admin chưa Bật "Task cá nhân" cho team đang
+// chọn HOẶC team đó chưa tự Bật autogen riêng — route chỉ dùng để FE ẩn/hiện nút, không phải nguồn phân
+// quyền (2 route personal-emergency-tasks/personal-regular-tasks vẫn tự kiểm lại đầy đủ).
+interface PersonalTaskStatus { enabled: boolean; }
+interface PersonalRegularCycleRow { id: number; releaseKey: string; regularReleaseDate: string; }
+interface PersonalEmergencyCycleOption { cycleId: number; releaseKey: string; releaseDateLabel: string; }
+interface PersonalGenerateSummary { created: number; skippedExisting: number; }
+
+function releaseKeyDatePart(releaseKey: string): string {
+  const idx = releaseKey.indexOf(':');
+  return idx === -1 ? releaseKey : releaseKey.slice(idx + 1);
+}
+
 function LayoutReleaseDinhKy({ onTasksCreated }: { onTasksCreated: (date?: string) => Promise<void> }) {
   const { t } = useLang();
+  const activeTeamId = useActiveTeamId();
+  const [personalStatus, setPersonalStatus] = useState<PersonalTaskStatus | null>(null);
+  const [personalCycles, setPersonalCycles] = useState<PersonalRegularCycleRow[]>([]);
+  const [selectedPersonalCycleId, setSelectedPersonalCycleId] = useState('');
+  const [isApplyingPersonal, setIsApplyingPersonal] = useState(false);
+  const [personalApplyStatus, setPersonalApplyStatus] = useState('');
+
+  useEffect(() => {
+    let alive = true;
+    if (activeTeamId == null) { setPersonalStatus(null); setPersonalCycles([]); return; }
+    (async () => {
+      try {
+        const [status, cycles] = await Promise.all([
+          apiTeam<PersonalTaskStatus>(activeTeamId, '/api/release/schedule/personal-task-status'),
+          api<PersonalRegularCycleRow[]>('/api/release/schedule/regular-cycles')
+        ]);
+        if (!alive) return;
+        setPersonalStatus(status);
+        setPersonalCycles(cycles);
+      } catch {
+        if (alive) { setPersonalStatus({ enabled: false }); setPersonalCycles([]); }
+      }
+    })();
+    return () => { alive = false; };
+  }, [activeTeamId]);
+
+  async function applyPersonalRegularChecklist() {
+    if (!selectedPersonalCycleId) return;
+    setIsApplyingPersonal(true);
+    try {
+      const summary = await apiTeam<PersonalGenerateSummary>(activeTeamId, '/api/release/schedule/personal-regular-tasks', {
+        method: 'POST',
+        body: JSON.stringify({ cycleId: Number(selectedPersonalCycleId) })
+      });
+      setPersonalApplyStatus(`Đã tạo ${summary.created} task cá nhân${summary.skippedExisting > 0 ? `, bỏ qua ${summary.skippedExisting} task đã có` : ''}.`);
+      await onTasksCreated();
+    } catch (e) {
+      setPersonalApplyStatus(e instanceof Error ? e.message : 'Không thể áp dụng checklist cá nhân.');
+    } finally {
+      setIsApplyingPersonal(false);
+    }
+  }
+
   const [releaseDate, setReleaseDate] = useState('');
   const [managedTemplates, setManagedTemplates] = useState<ReleaseTemplateItem[]>([]);
   const [taskDefinitions, setTaskDefinitions] = useState<ReleaseTaskDefinition[]>([]);
@@ -660,7 +718,9 @@ function LayoutReleaseDinhKy({ onTasksCreated }: { onTasksCreated: (date?: strin
   async function loadDrift(date: string) {
     if (!date) { setDriftCount(null); return; }
     try {
-      const drift = await api<{ lech: unknown[] }>(`/api/schedules/release/drift?releaseMonth=${date.slice(0, 7)}`);
+      // 2026-09-23 (dọn nợ CR §6.3): gửi đúng NGÀY ĐẦY ĐỦ, không cắt còn tháng — khớp khoá batch
+      // `releaseBatchKey` server đã đổi (server/routes/schedules.ts), tránh 2 đợt cùng tháng lẫn nhau.
+      const drift = await api<{ lech: unknown[] }>(`/api/schedules/release/drift?releaseMonth=${date}`);
       setDriftCount(drift.lech.length);
     } catch {
       setDriftCount(null);
@@ -715,7 +775,8 @@ function LayoutReleaseDinhKy({ onTasksCreated }: { onTasksCreated: (date?: strin
   // (AC-13) — không tự dựng nội dung task nữa (đó chính là nguồn 2 luật lệch nhau của BUG-20260814).
   async function openReleaseSyncPreview() {
     if (!releaseDate || taskDefinitions.length === 0) return;
-    const releaseMonth = releaseDate.slice(0, 7);
+    // 2026-09-23 (dọn nợ CR §6.3): dùng đúng ngày đầy đủ làm khoá batch, không cắt còn tháng.
+    const releaseMonth = releaseDate;
     setIsSyncing(true);
     try {
       const preview = await api<ReleaseSyncPreview>('/api/schedules/release/sync-preview', {
@@ -730,7 +791,8 @@ function LayoutReleaseDinhKy({ onTasksCreated }: { onTasksCreated: (date?: strin
 
   async function applyReleaseSync() {
     if (!releaseDate || taskDefinitions.length === 0) return;
-    const releaseMonth = releaseDate.slice(0, 7);
+    // 2026-09-23 (dọn nợ CR §6.3): dùng đúng ngày đầy đủ làm khoá batch, không cắt còn tháng.
+    const releaseMonth = releaseDate;
     setIsSyncing(true);
     try {
       const result = await api<{ updated: number; skipped: number }>('/api/schedules/release/sync', {
@@ -838,6 +900,29 @@ function LayoutReleaseDinhKy({ onTasksCreated }: { onTasksCreated: (date?: strin
             </span>
           </div>
           {taskStatus && <p className="release-copy-status">{taskStatus}</p>}
+          {personalStatus?.enabled && (
+            <div className="release-management-actions">
+              <label className="field">
+                Đợt release định kỳ (Lịch chung)
+                <select value={selectedPersonalCycleId} onChange={(e) => setSelectedPersonalCycleId(e.target.value)}>
+                  <option value="">— Chọn đợt —</option>
+                  {personalCycles.map((cycle) => (
+                    <option key={cycle.id} value={cycle.id}>{formatVNDate(taoNgayTuInput(cycle.regularReleaseDate))}</option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                className="nut-phu release-hover-emerald"
+                disabled={!selectedPersonalCycleId || isApplyingPersonal}
+                title="Sinh task cá nhân của bạn theo đúng ngày đợt release định kỳ đã chọn ở Lịch chung"
+                onClick={applyPersonalRegularChecklist}
+              >
+                Áp dụng checklist cá nhân theo lịch team
+              </button>
+              {personalApplyStatus && <p className="release-copy-status">{personalApplyStatus}</p>}
+            </div>
+          )}
         </div>
         <ReleaseTimelineDecoration />
       </div>
@@ -2222,6 +2307,53 @@ function LayoutReleaseKhanCap({ onTasksCreated }: { onTasksCreated: (date?: stri
   const isScheduleReady = Boolean(schedule.stagingDeployAt && schedule.releaseDeployAt && schedule.demoDeployAt);
   const releaseMasterTime = schedule.releaseDeployAt.includes('T') ? schedule.releaseDeployAt.split('T')[1] : '';
 
+  const activeTeamId = useActiveTeamId();
+  const [personalStatus, setPersonalStatus] = useState<PersonalTaskStatus | null>(null);
+  const [personalEmergencyCycles, setPersonalEmergencyCycles] = useState<PersonalEmergencyCycleOption[]>([]);
+  const [selectedPersonalCycleId, setSelectedPersonalCycleId] = useState('');
+  const [personalLocale, setPersonalLocale] = useState<'vi' | 'ja'>('vi');
+  const [isApplyingPersonal, setIsApplyingPersonal] = useState(false);
+  const [personalApplyStatus, setPersonalApplyStatus] = useState('');
+
+  useEffect(() => {
+    let alive = true;
+    if (activeTeamId == null) { setPersonalStatus(null); setPersonalEmergencyCycles([]); return; }
+    (async () => {
+      try {
+        const [status, board] = await Promise.all([
+          apiTeam<PersonalTaskStatus>(activeTeamId, '/api/release/schedule/personal-task-status'),
+          api<{ cycles: { id: number; releaseKey: string; registrations: { cycleId: number; teamId: number }[] }[] }>('/api/release/schedule-board')
+        ]);
+        if (!alive) return;
+        setPersonalStatus(status);
+        const options: PersonalEmergencyCycleOption[] = board.cycles
+          .filter((cycle) => cycle.registrations.some((r) => r.teamId === activeTeamId))
+          .map((cycle) => ({ cycleId: cycle.id, releaseKey: cycle.releaseKey, releaseDateLabel: formatVNDate(taoNgayTuInput(releaseKeyDatePart(cycle.releaseKey))) }));
+        setPersonalEmergencyCycles(options);
+      } catch {
+        if (alive) { setPersonalStatus({ enabled: false }); setPersonalEmergencyCycles([]); }
+      }
+    })();
+    return () => { alive = false; };
+  }, [activeTeamId]);
+
+  async function applyPersonalEmergencyChecklist() {
+    if (!selectedPersonalCycleId) return;
+    setIsApplyingPersonal(true);
+    try {
+      const summary = await apiTeam<PersonalGenerateSummary>(activeTeamId, '/api/release/schedule/personal-emergency-tasks', {
+        method: 'POST',
+        body: JSON.stringify({ cycleId: Number(selectedPersonalCycleId), locale: personalLocale })
+      });
+      setPersonalApplyStatus(`Đã tạo ${summary.created} task cá nhân${summary.skippedExisting > 0 ? `, bỏ qua ${summary.skippedExisting} task đã có` : ''}.`);
+      await onTasksCreated();
+    } catch (e) {
+      setPersonalApplyStatus(e instanceof Error ? e.message : 'Không thể áp dụng checklist cá nhân.');
+    } finally {
+      setIsApplyingPersonal(false);
+    }
+  }
+
   async function loadEmergencyTemplates() {
     const templates = await api<ReleaseTemplateItem[]>('/api/release/emergency/templates');
     setEmergencyTemplates(sortTemplatesByName(templates));
@@ -2478,6 +2610,36 @@ function LayoutReleaseKhanCap({ onTasksCreated }: { onTasksCreated: (date?: stri
           </button>
         </div>
         {status && <p className="release-copy-status">{status}</p>}
+        {personalStatus?.enabled && (
+          <div className="release-management-actions">
+            <label className="field">
+              Đợt release khẩn cấp team đã đăng ký (Lịch chung)
+              <select value={selectedPersonalCycleId} onChange={(e) => setSelectedPersonalCycleId(e.target.value)}>
+                <option value="">— Chọn đợt —</option>
+                {personalEmergencyCycles.map((cycle) => (
+                  <option key={cycle.cycleId} value={cycle.cycleId}>{cycle.releaseDateLabel}</option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              Ngôn ngữ nội dung
+              <select value={personalLocale} onChange={(e) => setPersonalLocale(e.target.value === 'ja' ? 'ja' : 'vi')}>
+                <option value="vi">Tiếng Việt</option>
+                <option value="ja">日本語</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              className="nut-phu release-hover-emerald"
+              disabled={!selectedPersonalCycleId || isApplyingPersonal}
+              title="Sinh task cá nhân của bạn theo đúng lịch khẩn cấp CHÍNH THỨC team đã đăng ký ở Lịch chung"
+              onClick={applyPersonalEmergencyChecklist}
+            >
+              Áp dụng checklist cá nhân theo lịch team
+            </button>
+            {personalApplyStatus && <p className="release-copy-status">{personalApplyStatus}</p>}
+          </div>
+        )}
       </div>
       <EmergencyReleaseMemeDecoration />
       {moQuanLyTemplateKhanCap && (

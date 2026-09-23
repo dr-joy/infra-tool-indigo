@@ -621,6 +621,28 @@ router.get('/release/schedule-board', requireSession, requireActiveAccount, (req
   }
 });
 
+// ── 2026-09-23 (nối Tab cá nhân FR-28a vào release.tsx) — actor tự kiểm team đang chọn có dùng được
+// "áp dụng checklist cá nhân theo lịch team" không, để FE ẩn/hiện nút cho gọn (KHÔNG phải nguồn phân
+// quyền — 2 route personal-emergency-tasks/personal-regular-tasks bên dưới vẫn tự kiểm lại đầy đủ
+// đúng 2 điều kiện y hệt khi thật sự gọi, giống cách `coordinatorTeamId` ở route ngay trên chỉ là gợi ý
+// hiển thị).
+router.get('/release/schedule/personal-task-status', requireSession, requireActiveAccount, (req, res) => {
+  try {
+    const actor = actorFromRequest(req);
+    authorize({ actor, policyKind: 'personal_task', resource: 'release_task_definition_personal', action: 'own', scope: { ownerId: actor.userId } });
+    const teamId = parseIntIdOrThrow(req.query.teamId, 'teamId');
+    if (!actor.memberships.some((m) => m.teamId === teamId)) {
+      throw new HttpError(403, 'Bạn không phải thành viên của team này', 'NOT_TEAM_MEMBER');
+    }
+    const featureRow = db.prepare('SELECT level FROM team_feature_visibility WHERE team_id = ? AND feature = ?')
+      .get(teamId, 'personal_task') as { level: string } | undefined;
+    const autogen = db.prepare('SELECT enabled FROM team_release_task_autogen_settings WHERE team_id = ?').get(teamId) as { enabled: number } | undefined;
+    res.json({ enabled: Boolean(featureRow && featureRow.level === 'on' && autogen && autogen.enabled) });
+  } catch (error) {
+    sendRouteError(res, error, 'Không thể kiểm tra trạng thái Tab cá nhân');
+  }
+});
+
 // ── FR-28a nhánh "Khẩn cấp" — mỗi Member/Leader tự áp dụng checklist CỦA MÌNH cho team+đợt đã chọn.
 // Bắt buộc khớp đúng 3 mốc giờ CHÍNH THỨC team đã đăng ký — không cho gõ tay (CR §6.3).
 router.post('/release/schedule/personal-emergency-tasks', requireSession, requireActiveAccount, (req, res) => {
