@@ -171,6 +171,28 @@ test('PATCH /admin/teams/:id: 2 Admin sửa đồng thời -> đúng 1 thành c�
   assert.deepEqual(statuses, [200, 409]);
 });
 
+test('GET /admin/teams/:id/members: Admin xem roster để chọn Leader, kể cả không tự là thành viên team đó', async () => {
+  const adminSession = await loginAsAdmin();
+  const teamId = await makeTeam(adminSession, 'Team Roster Admin');
+  const { userId } = await joinAndApprove('roster-member@drjoy.jp', 'Roster Member', teamId, 'member', adminSession);
+
+  const res = await fetch(`${base}/api/admin/teams/${teamId}/members`, { headers: H(adminSession) });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(body.members.some((m: { id: number; role: string }) => m.id === userId && m.role === 'member'));
+});
+
+test('GET /admin/teams/:id/members: user thường (không phải Admin) bị 403 ROLE_FORBIDDEN kể cả là Leader team đó', async () => {
+  const adminSession = await loginAsAdmin();
+  const teamId = await makeTeam(adminSession, 'Team Roster Chan Non Admin');
+  const { session: leaderSession } = await joinAndApprove('roster-leader@drjoy.jp', 'Roster Leader', teamId, 'leader', adminSession);
+
+  const res = await fetch(`${base}/api/admin/teams/${teamId}/members`, { headers: H(leaderSession) });
+  assert.equal(res.status, 403);
+  const body = await res.json();
+  assert.equal(body.code, 'ROLE_FORBIDDEN');
+});
+
 test('POST /admin/teams/:id/leader: gán Leader mới, phải đang là thành viên team đó', async () => {
   const adminSession = await loginAsAdmin();
   const teamId = await makeTeam(adminSession, 'Team Đổi Leader');

@@ -12,6 +12,9 @@ import { type TranslationKey } from './i18n';
 const ManHinhLenLich = lazy(() => import('./screens/release').then((m) => ({ default: m.ManHinhLenLich })));
 const ManHinhLuyenDe = lazy(() => import('./luyen-de').then((m) => ({ default: m.ManHinhLuyenDe })));
 const ManHinhMindMap = lazy(() => import('./mind-map').then((m) => ({ default: m.ManHinhMindMap })));
+// Tab Admin (CR-20260913 Giai đoạn 2, Lát 8) — chỉ Admin mới thấy (lọc ở tabsChinhChoActor bên dưới),
+// nên cũng lazy-load giống 3 tab kia: đa số user không phải Admin, không cần tải bundle này bao giờ.
+const ManHinhAdmin = lazy(() => import('./screens/admin').then((m) => ({ default: m.ManHinhAdmin })));
 import { useGlobalShortcuts } from './shortcuts';
 import { InfoTip } from './ui';
 import {
@@ -44,7 +47,7 @@ import { ManHinhBaoCaoTuan } from './screens/weekly';
 import { ManHinhQuanLyDanhMuc } from './screens/settings';
 import { ManHinhTaskCaNhan, type ManHinhTaskCaNhanHandle } from './screens/personal-task';
 import { PicProvider, ToastProvider, useToast } from './context';
-import { AuthProvider } from './auth-context';
+import { AuthProvider, useAuth } from './auth-context';
 import { AuthShell } from './screens/auth-shell';
 import { TeamSwitcher } from './components/team-switcher';
 import { ApiError } from './api';
@@ -71,7 +74,11 @@ const tabsChinh: { key: TabChinh; i18nKey: TranslationKey }[] = [
   { key: 'len_lich', i18nKey: 'tab.schedule' },
   { key: 'luyen_de', i18nKey: 'tab.luyen_de' },
   { key: 'so_do', i18nKey: 'tab.so_do' },
-  { key: 'quan_ly_pic', i18nKey: 'tab.pics' }
+  { key: 'quan_ly_pic', i18nKey: 'tab.pics' },
+  // CR-20260913 Giai đoạn 2 (Lát 8) — chỉ hiện cho Admin (systemRole==='admin'), lọc ở
+  // tabsHienThi bên trong App(), không xoá khỏi mảng gốc để chỗ khác (phím tắt, ?tab= URL) vẫn
+  // nhận diện được key này.
+  { key: 'admin', i18nKey: 'tab.admin' }
 ];
 
 
@@ -88,10 +95,16 @@ function supportsBrowserNotifications() {
 // §8.3 — không được lấy unit test reducer/store làm thay cho việc chưa từng render `main.tsx`).
 export function App() {
   const { t } = useLang();
+  const { actor } = useAuth();
+  const laAdmin = actor?.systemRole === 'admin';
+  // Tab 'admin' chỉ hiện/mở được cho Admin — lọc cả lúc hiện nút LẪN lúc nhận ?tab=admin từ URL, để
+  // không ai mở thẳng bằng URL rồi thấy màn admin render lỗi 403 rải rác (main.tsx tabsChinh giữ đủ
+  // mọi key cho phím tắt/URL nhận diện, tabsHienThi mới là danh sách thật sự render nút + cho phép mở).
+  const tabsHienThi = tabsChinh.filter((tab) => tab.key !== 'admin' || laAdmin);
   // Cho phép mở thẳng tab qua URL: ?tab=project / len_lich / bao_cao_tuan
   const [tabDangMo, setTabDangMo] = useState<TabChinh>(() => {
     const fromUrl = new URLSearchParams(window.location.search).get('tab');
-    return tabsChinh.some((tab) => tab.key === fromUrl) ? (fromUrl as TabChinh) : 'task_ca_nhan';
+    return tabsHienThi.some((tab) => tab.key === fromUrl) ? (fromUrl as TabChinh) : 'task_ca_nhan';
   });
   // Chặn chuyển tab khi MindMap có thay đổi chưa lưu.
   const toast = useToast();
@@ -135,7 +148,7 @@ export function App() {
         <div className="app-brand">Personal Tool</div>
         <nav className="menu-tabs" aria-label="Chức năng chính">
           <div className="menu-tab-list">
-            {tabsChinh.map((tab) => (
+            {tabsHienThi.map((tab) => (
               <button
                 key={tab.key}
                 type="button"
@@ -197,6 +210,14 @@ export function App() {
         {tabDangMo === 'so_do' && (
           <Suspense fallback={<div className="p-6 text-sm">{t('loading.data')}</div>}>
             <ManHinhMindMap toast={toast} guardRef={mmGuard} />
+          </Suspense>
+        )}
+
+        {/* Chốt kép cùng laAdmin (không chỉ ẩn nút ở nav) — phòng trường hợp tabDangMo='admin' còn sót
+            lại từ trước khi actor mất quyền Admin giữa phiên (vd Admin khác vừa đổi system_role). */}
+        {tabDangMo === 'admin' && laAdmin && (
+          <Suspense fallback={<div className="p-6 text-sm">{t('loading.data')}</div>}>
+            <ManHinhAdmin />
           </Suspense>
         )}
       </div>

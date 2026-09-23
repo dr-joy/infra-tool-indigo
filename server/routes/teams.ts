@@ -161,6 +161,21 @@ router.get('/me/teams', requireSession, requireActiveAccount, (req, res) => {
   res.json({ teams: rows });
 });
 
+// ── GET /admin/teams/:id/members — Admin xem roster để chọn Leader mới (Giai đoạn 2 FE, FR-10) ──────
+// Resource 'team'.'list_members' RIÊNG với 'team_member'.'list' bên dưới (route đó chỉ leader/member
+// đúng team, Admin không qua được nếu không tự là thành viên) — xem chú thích ở authorization-policy.ts.
+router.get('/admin/teams/:id/members', requireSession, requireActiveAccount, (req, res) => {
+  const teamId = Number(req.params.id);
+  if (!Number.isInteger(teamId)) return res.status(400).json({ message: 'id không hợp lệ' });
+  authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'team', action: 'list_members', scope: {} });
+  const rows = db.prepare(`
+    SELECT u.id, u.email, u.display_name, u.avatar, tm.role
+    FROM team_members tm JOIN users u ON u.id = tm.user_id
+    WHERE tm.team_id = ? ORDER BY tm.role, u.display_name
+  `).all(teamId);
+  res.json({ members: rows });
+});
+
 // ── GET/POST/DELETE /teams/:teamId/members — Leader tự quản, Member cũng xem được (Leader quyết 19/09) ──
 router.get('/teams/:teamId/members', requireSession, requireActiveAccount, (req, res) => {
   const teamId = Number(req.params.teamId);

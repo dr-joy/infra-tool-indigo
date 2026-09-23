@@ -36,7 +36,13 @@ export const AUTHORIZATION_POLICY: Record<string, Record<string, PolicyEntry>> =
     list: { feature: null, roles: ['admin'] },
     create: { feature: null, roles: ['admin'] },
     update: { feature: null, roles: ['admin'] },
-    change_leader: { feature: null, roles: ['admin'] }
+    change_leader: { feature: null, roles: ['admin'] },
+    // Giai đoạn 2 FE (khu Admin, FR-10) — Admin cần xem danh sách thành viên của 1 team để CHỌN Leader
+    // mới khi gọi 'change_leader' (route đó đòi hỏi target đã là member — Admin phải biết ai để chọn).
+    // Resource RIÊNG (không tái dùng 'team_member'.'list', vốn chỉ cho leader/member trong team đó —
+    // FR-11 coi danh sách roster phục vụ đúng việc "chỉ định Leader" là cấu hình Admin quản lý, KHÁC dữ
+    // liệu nghiệp vụ team như task/project mà Admin không được xem).
+    list_members: { feature: null, roles: ['admin'] }
   },
   feature_visibility: {
     read: { feature: null, roles: ['admin'] },

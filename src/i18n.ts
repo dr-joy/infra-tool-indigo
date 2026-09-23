@@ -16,6 +16,7 @@ const dict = {
   'tab.pics': 'Settings',
   'tab.luyen_de': 'Certificates',
   'tab.so_do': 'MindMap',
+  'tab.admin': 'Admin',
   'ptask.form.assignee': 'Người phụ trách',
   'ptask.form.assignee_none': '— Chưa gán —',
 
