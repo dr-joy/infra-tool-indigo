@@ -616,6 +616,38 @@ export function runSlice4Migrations(db: DatabaseSync, context: DbMigrationContex
 // đã chạy.
 const LEGACY_MINDMAP_FILE_OWNER_SNAPSHOT_VERSION = 2;
 
+// ── Lát 6 (CR-20260913 §6.3, Release nhiều team) — nâng cấp 4 bảng release đã có lên shape "sở hữu
+// theo User" ────────────────────────────────────────────────────────────────────────────────────
+// owner_user_id để NULLABLE (không ép NOT NULL tự động) — cùng lý do đã áp dụng cho
+// responsible_user_id/owner_user_id ở Lát 4 (server/ops/slice4-migrate.ts): giá trị `leaderUserId`
+// thật (Leader Dev13 hiện tại, theo CR §6.3 "di trú: gán owner_user_id = leaderUserId") không suy được
+// tự động lúc boot — đây là tham số cần người vận hành tự tra và truyền tay, không đoán. Backfill thật
+// cho dữ liệu Dev13 sản xuất là một bước vận hành riêng (ngoài phạm vi migration tự động này); route
+// mới ở Lát 6 chỉ đọc theo owner_user_id nên dữ liệu cũ owner_user_id=NULL đơn giản KHÔNG hiện cho ai
+// (đúng nguyên tắc "mỗi User mới tự tạo bộ của mình từ đầu", không tự chia sẻ dữ liệu cũ).
+function themCotSoHuuChoBangReleaseCaNhan(db: DatabaseSync, table: string): void {
+  themCotNeuThieu(db, table, 'owner_user_id', 'owner_user_id INTEGER REFERENCES users(id)');
+  themCotNeuThieu(db, table, 'row_version', 'row_version INTEGER NOT NULL DEFAULT 1');
+  themCotNeuThieu(db, table, 'created_by', 'created_by INTEGER REFERENCES users(id)');
+  themCotNeuThieu(db, table, 'updated_by', 'updated_by INTEGER REFERENCES users(id)');
+}
+
+export function runSlice6Migrations(db: DatabaseSync): void {
+  for (const table of ['release_templates', 'emergency_release_templates'] as const) {
+    themCotSoHuuChoBangReleaseCaNhan(db, table);
+  }
+  for (const table of ['release_task_definitions', 'emergency_release_task_definitions'] as const) {
+    themCotSoHuuChoBangReleaseCaNhan(db, table);
+    // 2 bảng definition (khác 2 bảng template) trước Lát 6 KHÔNG có created_at/updated_at — thêm
+    // nullable rồi backfill mốc "không rõ thời điểm thật" bằng giờ chạy migration, tránh NOT NULL
+    // chặn ALTER trên bảng đã có dữ liệu (giống cách legacy_pic_label được thêm nullable rồi backfill).
+    themCotNeuThieu(db, table, 'created_at', 'created_at TEXT');
+    themCotNeuThieu(db, table, 'updated_at', 'updated_at TEXT');
+    const now = new Date().toISOString();
+    db.prepare(`UPDATE ${table} SET created_at = COALESCE(created_at, ?), updated_at = COALESCE(updated_at, ?)`).run(now, now);
+  }
+}
+
 export function runVersionedMigrations(db: DatabaseSync, context: DbMigrationContext): void {
   const EXECUTION_ORDER_FIX_VERSION = 1;
   const dbUserVersion = (db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version;

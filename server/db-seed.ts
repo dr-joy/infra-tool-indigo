@@ -163,18 +163,28 @@ Xin cảm ơn.`
 
   const demReleaseTaskDefinition = db.prepare('SELECT COUNT(*) AS total FROM release_task_definitions').get() as { total: number };
   if (demReleaseTaskDefinition.total === 0) {
-    const insertDefinition = db.prepare('INSERT INTO release_task_definitions (id, title, date_token, start_time, template_id, note, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)');
-    defaultReleaseTaskDefinitions.forEach((d, index) => insertDefinition.run(...d, index));
+    // CR-20260913 Lát 6 (§6.3): bảng này nay có created_at/updated_at NOT NULL trên DB mới tinh (schema
+    // tạo bảng lần đầu) — bộ mặc định toàn app cũ (seed) không gắn owner_user_id cụ thể nào (NULL, đúng
+    // nguyên tắc "không tự chia sẻ dữ liệu cũ", xem server/schema/release.ts), nhưng vẫn cần mốc thời
+    // gian hợp lệ để không vỡ NOT NULL.
+    const now = new Date().toISOString();
+    const insertDefinition = db.prepare('INSERT INTO release_task_definitions (id, title, date_token, start_time, template_id, note, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    defaultReleaseTaskDefinitions.forEach((d, index) => insertDefinition.run(...d, index, now, now));
   }
 
+  const emergencyDefinitionSeedNow = new Date().toISOString();
   const insertEmergencyFixedDefinition = db.prepare(`
     INSERT OR IGNORE INTO emergency_release_task_definitions (
-      id, title, note, task_date, start_time, immediate_priority, relative_offset_minutes, schedule_mode, template_id, task_links, sort_order
+      id, title, note, task_date, start_time, immediate_priority, relative_offset_minutes, schedule_mode, template_id, task_links, sort_order,
+      created_at, updated_at
     )
-    VALUES (?, ?, ?, ?, 'relative', NULL, ?, 'custom', ?, '[]', ?)
+    VALUES (?, ?, ?, ?, 'relative', NULL, ?, 'custom', ?, '[]', ?, ?, ?)
   `);
   defaultEmergencyFixedTaskDefinitions.forEach((d, index) => {
-    insertEmergencyFixedDefinition.run(String(d[0]), String(d[1]), String(d[5] || ''), String(d[2]), Number(d[3]), String(d[4] || '') || null, 100 + index);
+    insertEmergencyFixedDefinition.run(
+      String(d[0]), String(d[1]), String(d[5] || ''), String(d[2]), Number(d[3]), String(d[4] || '') || null, 100 + index,
+      emergencyDefinitionSeedNow, emergencyDefinitionSeedNow
+    );
   });
 
   const updateEmergencyFixedDefinitionTitle = db.prepare('UPDATE emergency_release_task_definitions SET title = ? WHERE id = ?');

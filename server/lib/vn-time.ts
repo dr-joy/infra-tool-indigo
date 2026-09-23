@@ -2,8 +2,26 @@
 export const VIETNAM_TIME_ZONE = 'Asia/Ho_Chi_Minh';
 export const VIETNAM_UTC_OFFSET = '+07:00';
 
+// CR-20260913 Lát 6 (FR-30) — múi giờ Nhật, dùng cho nội dung template cá nhân khẩn cấp cần hiển thị
+// tiếng Nhật. Cùng kỹ thuật với VIETNAM_TIME_ZONE (Intl.DateTimeFormat theo tên múi giờ IANA, không
+// cộng/trừ phút bằng tay) — đúng lớp lỗi CR đã bắt (addMinutes(date, 120) ở src/screens/release.tsx:322)
+// mà FR-30 yêu cầu không được chép lại.
+export const JAPAN_TIME_ZONE = 'Asia/Tokyo';
+
 const partsFormatter = new Intl.DateTimeFormat('en-US', {
   timeZone: VIETNAM_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hourCycle: 'h23',
+  weekday: 'short'
+});
+
+const japanPartsFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: JAPAN_TIME_ZONE,
   year: 'numeric',
   month: '2-digit',
   day: '2-digit',
@@ -25,9 +43,8 @@ export type VietnamParts = {
   dateKey: string;   // yyyy-mm-dd theo giờ VN
 };
 
-// Bóc các thành phần lịch/đồng hồ của MỘT thời điểm theo giờ VN.
-export function vietnamParts(date: Date = new Date()): VietnamParts {
-  const parts = partsFormatter.formatToParts(date);
+function boParts(formatter: Intl.DateTimeFormat, date: Date): VietnamParts {
+  const parts = formatter.formatToParts(date);
   const num = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((p) => p.type === type)?.value || 0);
   const year = num('year');
   const month = num('month');
@@ -40,6 +57,16 @@ export function vietnamParts(date: Date = new Date()): VietnamParts {
     weekday: WEEKDAY_INDEX[String(parts.find((p) => p.type === 'weekday')?.value || 'Sun')] ?? 0,
     dateKey: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
   };
+}
+
+// Bóc các thành phần lịch/đồng hồ của MỘT thời điểm theo giờ VN.
+export function vietnamParts(date: Date = new Date()): VietnamParts {
+  return boParts(partsFormatter, date);
+}
+
+// Bóc các thành phần lịch/đồng hồ của MỘT thời điểm theo giờ NHẬT (JST, FR-30).
+export function japanParts(date: Date = new Date()): VietnamParts {
+  return boParts(japanPartsFormatter, date);
 }
 
 // Ngày (yyyy-mm-dd) theo giờ VN của một thời điểm.

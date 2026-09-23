@@ -391,7 +391,10 @@ router.get('/schedules/release/drift', (req, res) => {
 // Codex review §4.49 Medium #4: UI checkbox chỉ cho chọn Dr.JOY/Pr.JOY và giới hạn số team, nhưng đó
 // không bảo vệ được API gọi trực tiếp — đóng enum/kích thước ở TẦNG BACKEND, dùng chung cho cả POST
 // (giai đoạn 1) lẫn PATCH (đổi batch đã tồn tại).
-const VALID_EMERGENCY_SYSTEMS = new Set(['Dr.JOY', 'Pr.JOY']);
+// Xuất công khai (Lát 6, server/routes/release-schedule.ts): FR-23a/FR-24 dùng LẠI đúng allowlist này
+// cho `affected_systems` của team_release_registrations — CR §6.3 xác nhận "đã là danh sách đóng,
+// không cần đổi gì khi mở rộng lên nhiều team".
+export const VALID_EMERGENCY_SYSTEMS = new Set(['Dr.JOY', 'Pr.JOY']);
 const MAX_EMERGENCY_TEAMS = 20;
 const MAX_EMERGENCY_TEAM_LABEL_LEN = 100;
 

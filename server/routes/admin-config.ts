@@ -102,4 +102,47 @@ router.put('/admin/release-coordinator', requireSession, requireActiveAccount, (
   }
 });
 
+// ── GET/PUT /admin/release-task-autogen — bật/tắt riêng "Tab cá nhân" cho từng team (FR-28a) ────
+// Điều kiện bắt buộc (route KHÔNG tự enforce ở đây, chỉ báo rõ cho FE): chỉ có tác dụng khi Task cá
+// nhân (`personal_task`) đang Bật cho ĐÚNG team đó — kiểm tra thật nằm ở route sinh task cá nhân khẩn
+// cấp (server/routes/release-schedule.ts), vì đây là hành vi lúc DÙNG, không phải lúc CẤU HÌNH.
+router.get('/admin/release-task-autogen', requireSession, requireActiveAccount, (req, res) => {
+  authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'release_task_autogen_setting', action: 'read', scope: {} });
+  const rows = db.prepare(`
+    SELECT team_id, enabled, row_version, updated_at FROM team_release_task_autogen_settings ORDER BY team_id
+  `).all();
+  res.json({ settings: rows });
+});
+
+router.put('/admin/release-task-autogen', requireSession, requireActiveAccount, (req, res) => {
+  authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'release_task_autogen_setting', action: 'update', scope: {} });
+  const body = req.body as { teamId?: number; enabled?: boolean; rowVersion?: number };
+  const teamId = Number(body.teamId);
+  if (!Number.isInteger(teamId)) return res.status(400).json({ message: 'teamId không hợp lệ' });
+  if (typeof body.enabled !== 'boolean') return res.status(400).json({ message: 'enabled phải là boolean' });
+  if (!db.prepare('SELECT 1 FROM teams WHERE id = ?').get(teamId)) return res.status(404).json({ message: 'Không tìm thấy team' });
+
+  try {
+    withTransaction(() => {
+      const now = new Date().toISOString();
+      const existing = db.prepare('SELECT row_version FROM team_release_task_autogen_settings WHERE team_id = ?').get(teamId) as { row_version: number } | undefined;
+      if (!existing) {
+        db.prepare(`
+          INSERT INTO team_release_task_autogen_settings (team_id, enabled, updated_at, updated_by, row_version) VALUES (?, ?, ?, ?, 1)
+        `).run(teamId, body.enabled ? 1 : 0, now, req.user!.id);
+      } else {
+        const updated = db.prepare(`
+          UPDATE team_release_task_autogen_settings SET enabled = ?, updated_at = ?, updated_by = ?, row_version = row_version + 1
+          WHERE team_id = ? AND row_version = ?
+        `).run(body.enabled ? 1 : 0, now, req.user!.id, teamId, body.rowVersion ?? -1);
+        if (updated.changes === 0) throw new HttpError(409, 'Có người vừa đổi cấu hình này, vui lòng tải lại', 'VERSION_CONFLICT');
+      }
+      writeAudit(req.user!.id, teamId, 'release_task_autogen_setting.update', `team:${teamId}`, { enabled: body.enabled });
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    sendRouteError(res, error, 'Không đổi được cấu hình Tab cá nhân');
+  }
+});
+
 export default router;

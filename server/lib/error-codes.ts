@@ -82,5 +82,17 @@ export const ERROR_CODE_REGISTRY: Record<string, ErrorCodeEntry> = {
   VERSION_CONFLICT: {
     status: 409,
     note: 'Optimistic concurrency chung cho bảng nền Lát 3 (teams/users/join_requests/team_feature_visibility/app_config): UPDATE ... WHERE row_version=? không khớp dòng nào'
+  },
+  REGISTRATION_LOCKED: {
+    status: 409,
+    note: 'CR-20260913 Lát 6 (FR-26): team_release_registrations.status=locked — sửa/huỷ trực tiếp bị chặn, phải qua release_unlock_requests; hoặc cycle đang locked_at chặn tạo đăng ký MỚI cho team chưa từng có mặt'
+  },
+  UNLOCK_REQUEST_STALE: {
+    status: 409,
+    note: 'CR-20260913 Lát 6 (FR-26/FR-27): yêu cầu mở khoá/huỷ đã được duyệt/từ chối bởi người khác trước đó (UPDATE ... WHERE status=pending không khớp dòng nào)'
+  },
+  RELEASE_REGISTRATION_EXISTS: {
+    status: 409,
+    note: 'CR-20260913 Lát 6 (FR-23a/FR-25): team đã có đăng ký lịch khẩn cấp cho đúng cycle đó (UNIQUE (cycle_id, team_id))'
   }
 };

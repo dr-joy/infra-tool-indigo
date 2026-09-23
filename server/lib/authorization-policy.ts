@@ -160,13 +160,59 @@ export const AUTHORIZATION_POLICY: Record<string, Record<string, PolicyEntry>> =
     upsert: { feature: 'weekly_report', roles: ['leader'] }
   },
 
-  // Khai báo TRƯỚC cho Lát 6 (FR-24, CR §6.2: `GET /api/release/schedule-board`) — CHƯA có route nào
-  // gọi (đúng policyKind 'cross_team_release', `roles` không dùng ở policyKind này). Khai sớm đúng
-  // TÊN RESOURCE thật CR đã chốt, không phải đoán — giữ ý nghĩa cho test/unit/authorize.test.ts (viết
-  // từ trước Lát 5) tiếp tục kiểm đúng kịch bản "gate theo feature 'release'", không đổi sang feature
-  // khác chỉ vì cần một entry hợp lệ.
+  // Lát 6 (FR-24, CR §6.2: `GET /api/release/schedule-board`) — đúng policyKind 'cross_team_release',
+  // `roles` không dùng ở policyKind này (route tự áp `projection` theo team sở hữu vs team khác).
   release_schedule: {
     read: { feature: 'release', roles: [] }
+  },
+
+  // Lát 6 (FR-23a/FR-25/FR-27) — đăng ký lịch release KHẨN CẤP của TEAM MÌNH. `scope.teamId` = team sở
+  // hữu registration (Leader team đó, không phải team điều phối) — actor phải là Leader hiệu lực của
+  // đúng team này (bước 2 của policyKind 'team_feature').
+  team_release_registration: {
+    create: { feature: 'release', roles: ['leader'] },
+    update: { feature: 'release', roles: ['leader'] },
+    cancel: { feature: 'release', roles: ['leader'] },
+    request_unlock: { feature: 'release', roles: ['leader'] }
+  },
+
+  // Lát 6 (FR-23b/FR-25/FR-26) — 4 hành động CHỈ Leader team điều phối, dùng resource riêng
+  // 'release_coordinator' (KHÁC 'release_coordinator_config' của Admin ở trên) để kích hoạt đúng bước 4
+  // của authorize() (kiểm actor là Leader hiệu lực của app_config.release_coordinator_team_id). `feature`
+  // CỐ Ý để null (không phải 'release') — FR-9 chốt quyền tầng 4 của Leader điều phối KHÔNG phụ thuộc
+  // trạng thái Bật/Tắt Release của CHÍNH team điều phối; nếu để 'release' thì tắt Release cho chính team
+  // điều phối sẽ vô tình khoá luôn quyền điều phối liên-team, sai FR-9. `scope.teamId` route truyền vào
+  // PHẢI là chính `app_config.release_coordinator_team_id` (không phải team đích bị tác động), vì bước
+  // 1-3 của policyKind 'team_feature' xét theo scope.teamId này trước khi bước 4 tự tra lại config.
+  release_coordinator: {
+    set_regular_date: { feature: null, roles: ['leader'] },
+    force_time: { feature: null, roles: ['leader'] },
+    lock_cycle: { feature: null, roles: ['leader'] },
+    approve_unlock: { feature: null, roles: ['leader'] }
+  },
+
+  // Lát 6 (FR-28a) — Admin bật/tắt riêng "Tab cá nhân" cho từng team phát triển. Toàn cục, giống
+  // 'feature_visibility'.
+  release_task_autogen_setting: {
+    read: { feature: null, roles: ['admin'] },
+    update: { feature: null, roles: ['admin'] }
+  },
+
+  // Lát 6 (FR-23c/FR-28a) — template/định nghĩa task cá nhân (định kỳ + khẩn cấp) của TỪNG NGƯỜI. Dùng
+  // policyKind 'personal_task' (feature 'personal_task' — điều kiện bắt buộc: chỉ có tác dụng khi Task
+  // cá nhân đang Bật cho đúng team actor, không phải feature 'release'). `roles` không dùng ở
+  // policyKind này (route tự ép scope.ownerId).
+  release_template_personal: {
+    own: { feature: 'personal_task', roles: [] }
+  },
+  release_task_definition_personal: {
+    own: { feature: 'personal_task', roles: [] }
+  },
+  emergency_release_template_personal: {
+    own: { feature: 'personal_task', roles: [] }
+  },
+  emergency_release_task_definition_personal: {
+    own: { feature: 'personal_task', roles: [] }
   }
 
   // 'audit_log'.'read' KHÔNG khai ở đây — policyKind: 'audit' có luật riêng hẳn (Admin luôn qua, global,

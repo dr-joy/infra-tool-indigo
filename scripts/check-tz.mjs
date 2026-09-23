@@ -13,7 +13,11 @@ export const VUNG_QUYET_DINH = [
   'server/lib/recurrence.ts',
   'server/routes/schedules.ts',
   'src/lib/date.ts',
-  'src/main.tsx'
+  'src/main.tsx',
+  // CR-20260913 Lát 6 (FR-30) — nội dung template cá nhân khẩn cấp có ngày/giờ (đúng lớp lỗi
+  // addMinutes(date, 120) đã xảy ra 2 lần trong dự án, xem BUG-20260803/BUG-20260804).
+  'server/lib/emergency-template-render.ts',
+  'server/lib/release-schedule.ts'
 ];
 
 // FR-1: API đọc/ghi thành phần ngày-giờ theo múi giờ MÁY.
