@@ -3,7 +3,8 @@
 // qua hook thay vì truyền toast qua props.
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Check, X } from 'lucide-react';
-import { api } from './api';
+import { apiTeam } from './api';
+import { useActiveTeamId } from './auth-context';
 import type { PicItem, ToastItem, ToastKind } from './types';
 
 // ── PIC (người phụ trách) ─────────────────────────────────────────────────────
@@ -12,17 +13,40 @@ export function usePics() {
   return useContext(PicContext);
 }
 
+// CR-20260913 (§6.2, server/routes/pics.ts): GET/POST/PATCH reorder /api/pics giờ bắt buộc `teamId`
+// (bảng `pics` đã chuyển theo team) — dùng apiTeam() với activeTeamId (FR-13) thay vì api() trần như
+// trước Lát 3-6. reloadPics() phải nạp lại mỗi khi đổi team đang chọn (PicProvider chỉ mount TRONG
+// AuthShell lúc phase active, xem src/main.tsx, nên activeTeamId luôn có giá trị hợp lệ ở đây).
 export function PicProvider({ children }: { children: React.ReactNode }) {
   const [pics, setPics] = useState<string[]>([]);
   const [picColors, setPicColors] = useState<Record<string, string>>({});
-  async function reloadPics() {
+  const activeTeamId = useActiveTeamId();
+  // aliveRef: cờ huỷ (cancellation guard) — chỉ dùng khi gọi TỪ effect nạp theo activeTeamId bên
+  // dưới. Đổi team nhanh (A -> B trước khi response của A về) khiến danh sách PIC của A có thể set
+  // state SAU khi đã hiển thị team B (dropdown PIC/màu Gantt sai team); effect cleanup đặt
+  // aliveRef.current = false để response trễ tự bỏ qua (Council review Lát 7 giai đoạn 1). Nơi khác
+  // gọi reloadPics() (sau thêm/sửa/xoá PIC ở settings.tsx) không truyền aliveRef -> giữ nguyên hành
+  // vi cũ; kiểu tham số optional để reloadPics vẫn khớp type `() => Promise<void>` đã export qua
+  // context.
+  const reloadPics = useCallback(async (aliveRef?: { current: boolean }) => {
+    if (activeTeamId == null) { setPics([]); setPicColors({}); return; }
     try {
-      const data = await api<PicItem[]>('/api/pics');
+      const data = await apiTeam<PicItem[]>(activeTeamId, '/api/pics');
+      if (aliveRef && !aliveRef.current) return;
       setPics(data.map((p) => p.name));
       setPicColors(Object.fromEntries(data.filter((p) => p.color).map((p) => [p.name, p.color as string])));
-    } catch { /* server chưa sẵn sàng thì giữ danh sách rỗng */ }
-  }
-  useEffect(() => { void reloadPics(); }, []);
+    } catch { /* server chưa sẵn sàng hoặc chưa chọn được team thì giữ danh sách rỗng */ }
+  }, [activeTeamId]);
+  useEffect(() => {
+    const aliveRef = { current: true };
+    // Reset ngay: pics/picColors không có gate loading riêng ở nơi tiêu thụ (dropdown PIC, màu
+    // Gantt...), nên nếu không reset thì dữ liệu team cũ vẫn hiện tới khi fetch team mới xong (Council
+    // review Lát 7 giai đoạn 1, vòng 2 — điểm "dữ liệu team cũ hiện thoáng qua").
+    setPics([]);
+    setPicColors({});
+    void reloadPics(aliveRef);
+    return () => { aliveRef.current = false; };
+  }, [reloadPics]);
   return <PicContext.Provider value={{ pics, picColors, reloadPics }}>{children}</PicContext.Provider>;
 }
 

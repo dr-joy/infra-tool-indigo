@@ -9,7 +9,8 @@ import {
 import { useLang } from '../useLang';
 import type { TranslationKey } from '../i18n';
 import { InfoTip } from '../ui';
-import { api, ApiError } from '../api';
+import { api, apiTeam, ApiError } from '../api';
+import { useActiveTeamId } from '../auth-context';
 import { Modal } from '../components/Modal';
 import { PopupXacNhanXoa } from '../components/dialogs';
 import { usePics, useToast } from '../context';
@@ -215,6 +216,8 @@ function PopupRiskDM({
 export function ManHinhBaoCaoTuan() {
   const { t } = useLang();
   const toast = useToast();
+  // CR-20260913 FR-13 — mọi route weekly.ts bắt buộc teamId (query/body do bộ chọn team gửi lên).
+  const activeTeamId = useActiveTeamId();
   const [weekStart, setWeekStart] = useState('');
   const [currentWeek, setCurrentWeek] = useState('');
   const [kinds, setKinds] = useState<ReportKindInfo[]>([]);
@@ -276,16 +279,25 @@ export function ManHinhBaoCaoTuan() {
     if (moChonTuan) currentWeekRowRef.current?.scrollIntoView({ block: 'center' });
   }, [moChonTuan]);
 
-  async function taiHistory() {
+  // aliveRef: cờ huỷ (cancellation guard, giống pattern `alive` ở personal-task.tsx) — chỉ dùng khi
+  // gọi TỪ effect nạp theo activeTeamId bên dưới. Đổi team nhanh khiến response cũ có thể set state
+  // SAU khi đã hiển thị team mới; effect cleanup đặt aliveRef.current = false để response trễ tự bỏ
+  // qua (Council review Lát 7 giai đoạn 1). Nơi khác gọi 2 hàm này không truyền aliveRef -> giữ
+  // nguyên hành vi cũ.
+  async function taiHistory(aliveRef?: { current: boolean }) {
+    if (activeTeamId == null) return;
     try {
-      setHistory(await api<ReportHistoryItem[]>('/api/weeks/report-history'));
+      const data = await apiTeam<ReportHistoryItem[]>(activeTeamId, '/api/weeks/report-history');
+      if (aliveRef && !aliveRef.current) return;
+      setHistory(data);
     } catch { /* ignore */ }
   }
 
-  async function taiWeekGoals(week: string) {
-    if (!week) return;
+  async function taiWeekGoals(week: string, aliveRef?: { current: boolean }) {
+    if (!week || activeTeamId == null) return;
     try {
-      const res = await api<WeekGoalsResponse>(`/api/weeks/${week}/goals`);
+      const res = await apiTeam<WeekGoalsResponse>(activeTeamId, `/api/weeks/${week}/goals`);
+      if (aliveRef && !aliveRef.current) return;
       setWeekGoals(res.goals);
       setPrevEvaluated(res.prevEvaluated);
     } catch { /* ignore */ }
@@ -315,32 +327,48 @@ export function ManHinhBaoCaoTuan() {
   const daCoBaoCao = historyThisWeek.some((h) => h.kind === kind);
 
   async function xoaAllGoals() {
-    await api(`/api/weeks/${weekStart}/goals`, { method: 'DELETE' });
+    if (activeTeamId == null) return;
+    await apiTeam(activeTeamId, `/api/weeks/${weekStart}/goals`, { method: 'DELETE' });
     setMoXoaAllGoals(false);
     setDraft(null);
     await taiWeekGoals(weekStart);
   }
 
   useEffect(() => {
+    if (activeTeamId == null) return;
+    const aliveRef = { current: true };
+    // Reset weekStart ngay để rơi vào nhánh "loading.data" (return sớm khi !weekStart, xem phía dưới
+    // component) — không có gate nào khác che kinds/historyThisWeek/weekGoalGroups, nên nếu không
+    // reset thì cả màn Báo cáo tuần của team cũ vẫn hiện nguyên tới khi fetch team mới xong (Council
+    // review Lát 7 giai đoạn 1, vòng 2 — điểm "dữ liệu team cũ hiện thoáng qua"). weekStart không nằm
+    // trong dependency của effect nào khác (chỉ historyThisWeek dùng qua useMemo) nên reset ở đây an
+    // toàn, không gây vòng lặp render.
+    setWeekStart('');
+    setError('');
     (async () => {
       try {
-        const meta = await api<{ currentWeek: string; kinds: ReportKindInfo[] }>('/api/weeks/report-kinds');
+        const meta = await apiTeam<{ currentWeek: string; kinds: ReportKindInfo[] }>(activeTeamId, '/api/weeks/report-kinds');
+        if (!aliveRef.current) return;
         setKinds(meta.kinds);
         if (meta.kinds.length > 0) setKind(meta.kinds[0].id);
         setCurrentWeek(meta.currentWeek);
         setWeekStart(meta.currentWeek);
-        await taiHistory();
-        await taiWeekGoals(meta.currentWeek);
+        await taiHistory(aliveRef);
+        await taiWeekGoals(meta.currentWeek, aliveRef);
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Lỗi tải dữ liệu');
+        if (aliveRef.current) setError(e instanceof Error ? e.message : 'Lỗi tải dữ liệu');
       }
     })();
-  }, []);
+    // Đổi team ở bộ chọn (FR-13) phải tự nạp lại toàn bộ màn Báo cáo tuần, KHÔNG tải lại trang.
+    // aliveRef bị dọn khi effect cleanup chạy (đổi team lần nữa/unmount) -> response trễ của team cũ
+    // (report-kinds/history/goals) bị bỏ, không ghi đè lên dữ liệu team đang xem.
+    return () => { aliveRef.current = false; };
+  }, [activeTeamId]);
 
   async function generateDraft(week = weekStart, k = kind) {
-    if (!week) return;
+    if (!week || activeTeamId == null) return;
     try {
-      const res = await api<{ text: string }>(`/api/weeks/${week}/text?kind=${k}`);
+      const res = await apiTeam<{ text: string }>(activeTeamId, `/api/weeks/${week}/text?kind=${k}`);
       setDraft(res.text);
       setDaLuu(false);
       setViewingHistory(null);
@@ -353,7 +381,8 @@ export function ManHinhBaoCaoTuan() {
 
   // Báo cáo DM: sinh nội dung sau khi đã nhập Risk ở bước 1.
   async function generateDmDraft(risks: DmRiskInput[]) {
-    const res = await api<{ text: string }>(`/api/weeks/${weekStart}/dm-report`, {
+    if (activeTeamId == null) return;
+    const res = await apiTeam<{ text: string }>(activeTeamId, `/api/weeks/${weekStart}/dm-report`, {
       method: 'POST',
       body: JSON.stringify({ risks }),
     });
@@ -377,6 +406,8 @@ export function ManHinhBaoCaoTuan() {
   }
 
   async function xoaGoal(item: WeekGoalItem) {
+    // DELETE /weeks/:weekStart/goals/:id suy team_id từ chính dòng weekly_goals (server/routes/
+    // weekly.ts) — không cần client gửi teamId, khác các route list/tạo mới bên dưới.
     await api(`/api/weeks/${weekStart}/goals/${item.id}`, { method: 'DELETE' });
     setGoalDangXoa(null);
     await taiWeekGoals(weekStart);
@@ -395,12 +426,12 @@ export function ManHinhBaoCaoTuan() {
 
   // Phê duyệt: validate báo cáo tuần đã tồn tại chưa; force = ghi đè
   async function approve(force = false) {
-    if (!draft || !draft.trim()) return;
+    if (!draft || !draft.trim() || activeTeamId == null) return;
     setBusy(true);
     setError('');
     setSavedMsg('');
     try {
-      await api(`/api/weeks/${weekStart}/report-history`, {
+      await apiTeam(activeTeamId, `/api/weeks/${weekStart}/report-history`, {
         method: 'POST',
         body: JSON.stringify({ kind, content: draft, force })
       });
@@ -453,10 +484,11 @@ export function ManHinhBaoCaoTuan() {
   // luôn dựng lại từ dữ liệu mới nhất của tuần trên server. 404 (tuần rỗng) hiện qua banner lỗi có sẵn.
   const [dangXuatExcel, setDangXuatExcel] = useState(false);
   async function xuatExcelDM() {
+    if (activeTeamId == null) return;
     setDangXuatExcel(true);
     setError('');
     try {
-      const res = await fetch(`/api/weeks/${weekStart}/dm-report.xlsx`);
+      const res = await fetch(`/api/weeks/${weekStart}/dm-report.xlsx?teamId=${activeTeamId}`);
       if (!res.ok) {
         const body = await res.json().catch(() => null) as { message?: string } | null;
         setError(body?.message || 'Không thể xuất file Excel');
@@ -481,7 +513,11 @@ export function ManHinhBaoCaoTuan() {
   }
 
   if (!weekStart) {
-    return <section className="flex-1 p-4 text-sm text-slate-500">{t('loading.data')}</section>;
+    // weekStart bị reset về '' ngay khi đổi team (xem effect [activeTeamId] phía trên) để không hiện
+    // dữ liệu team cũ trong lúc team mới đang tải. Nếu fetch team mới lỗi, weekStart không được phục
+    // hồi (dữ liệu team cũ không còn đáng tin) -> hiện lỗi ở đây thay vì kẹt mãi ở "Đang tải dữ liệu"
+    // (error state vẫn giữ nguyên message từ effect đó).
+    return <section className="flex-1 p-4 text-sm text-slate-500">{error || t('loading.data')}</section>;
   }
 
   return (
@@ -875,6 +911,7 @@ function MultiPicSelect({ value, options, onChange }: { value: string; options: 
 // Wizard tạo báo cáo tuần: 1. nhập tiến độ -> 2. lý do & ghi chú từng task -> 3. summary -> 4. duyệt mục tiêu.
 function PopupTaoBaoCao({ weekStart, onClose, onDone }: { weekStart: string; onClose: () => void; onDone: () => void }) {
   const { pics: picOptions } = usePics();
+  const activeTeamId = useActiveTeamId();
   const [step, setStep] = useState(1);
   const [plan, setPlan] = useState<ReportPlanView | null>(null);
   const [loading, setLoading] = useState(true);
@@ -936,19 +973,29 @@ function PopupTaoBaoCao({ weekStart, onClose, onDone }: { weekStart: string; onC
     });
   }
 
-  async function loadPlan() {
+  // aliveRef: cờ huỷ — wizard này cũng đọc activeTeamId riêng, đổi team trong lúc wizard đang mở
+  // (nếu bộ chọn team vẫn bấm được) phải bỏ response trễ của team cũ, không áp kế hoạch sai team lên
+  // form (Council review Lát 7 giai đoạn 1).
+  async function loadPlan(aliveRef?: { current: boolean }) {
+    if (activeTeamId == null) return;
     setLoading(true);
     try {
-      const p = await api<ReportPlanView>(`/api/weeks/${weekStart}/plan`);
+      const p = await apiTeam<ReportPlanView>(activeTeamId, `/api/weeks/${weekStart}/plan`);
+      if (aliveRef && !aliveRef.current) return;
       applyPlan(p, true);
     } catch (e) {
+      if (aliveRef && !aliveRef.current) return;
       setError(e instanceof Error ? e.message : 'Lỗi tải kế hoạch');
     } finally {
-      setLoading(false);
+      if (!aliveRef || aliveRef.current) setLoading(false);
     }
   }
 
-  useEffect(() => { loadPlan(); }, []);
+  useEffect(() => {
+    const aliveRef = { current: true };
+    void loadPlan(aliveRef);
+    return () => { aliveRef.current = false; };
+  }, [activeTeamId]);
 
   const prevWeekStart = isoAddDays(weekStart, -7);
 
@@ -1041,7 +1088,7 @@ function PopupTaoBaoCao({ weekStart, onClose, onDone }: { weekStart: string; onC
   }
 
   async function finish() {
-    if (!plan) return;
+    if (!plan || activeTeamId == null) return;
     setBusy(true);
     setError('');
     try {
@@ -1076,7 +1123,7 @@ function PopupTaoBaoCao({ weekStart, onClose, onDone }: { weekStart: string; onC
         .filter((g) => g.text.trim())
         .map((g) => ({ text: g.text.trim(), assignee: g.assignee, targetProgress: g.target }));
       const projectSummaries = plan.summaryProjects.map((sp) => ({ projectId: sp.projectId, content: projectSummaryDraft[sp.projectId] || '' }));
-      await api(`/api/weeks/${weekStart}/apply`, { method: 'POST', body: JSON.stringify({ evaluations, manualGoalUpdates, projectSummaries, approvedGoals, newKhacGoals }) });
+      await apiTeam(activeTeamId, `/api/weeks/${weekStart}/apply`, { method: 'POST', body: JSON.stringify({ evaluations, manualGoalUpdates, projectSummaries, approvedGoals, newKhacGoals }) });
       onDone();
       onClose();
     } catch (e) {

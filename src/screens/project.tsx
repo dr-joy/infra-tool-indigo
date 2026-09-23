@@ -10,7 +10,8 @@ import {
 import { useLang } from '../useLang';
 import type { TranslationKey } from '../i18n';
 import { InfoTip, TimeInput } from '../ui';
-import { api, ApiError } from '../api';
+import { api, apiTeam, ApiError } from '../api';
+import { useActiveTeamId } from '../auth-context';
 import { Modal } from '../components/Modal';
 import { CopyNoteButton, TaskLinkIcon, TaskLinkBadges, TaskLinkEditor, SortIcon } from '../components/task-atoms';
 import { PopupTaoProjectTask, PopupXacNhanXoa } from '../components/dialogs';
@@ -178,6 +179,9 @@ function thuTrongTuanGantt(value: string) {
 
 export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?: boolean }) {
   const { t } = useLang();
+  // CR-20260913 FR-13 — mọi màn nghiệp vụ hiển thị theo đúng team đang chọn (server/routes/projects.ts
+  // §6.2: GET /projects, GET /projects/closed, POST /projects, PATCH /projects/reorder bắt buộc teamId).
+  const activeTeamId = useActiveTeamId();
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   // Cho phép deep-link tới 1 project qua ?project=<id>
   const [projectDangChon, setProjectDangChon] = useState(() => new URLSearchParams(window.location.search).get('project') || '');
@@ -244,50 +248,86 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
     };
   }, [projectTasks]);
 
-  async function taiProjects() {
+  // aliveRef: cờ huỷ (cancellation guard) — chỉ dùng khi gọi TỪ effect nạp theo activeTeamId bên
+  // dưới. Đổi team nhanh (A -> B trước khi response của A về) khiến response cũ của A có thể set
+  // state SAU khi đã hiển thị team B; effect cleanup đặt aliveRef.current = false để response trễ tự
+  // bỏ qua, không ghi đè dữ liệu team đang xem (Council review Lát 7 giai đoạn 1, race condition khi
+  // đổi team nhanh). Các nơi khác gọi 2 hàm này (nút bấm, sự kiện quick-add...) không truyền aliveRef
+  // nên hành vi giữ nguyên như trước.
+  async function taiProjects(aliveRef?: { current: boolean }) {
+    if (activeTeamId == null) return;
     setDangTaiProject(true);
     try {
-      const data = await api<ProjectItem[]>('/api/projects');
+      const data = await apiTeam<ProjectItem[]>(activeTeamId, '/api/projects');
+      if (aliveRef && !aliveRef.current) return;
       setProjects(data);
       setProjectDangChon((current) => current && data.some((project) => project.id === current) ? current : data[0]?.id || '');
       setProjectError('');
     } catch (error) {
+      if (aliveRef && !aliveRef.current) return;
       setProjectError(error instanceof Error ? error.message : t('err.project_list'));
     } finally {
-      setDangTaiProject(false);
+      if (!aliveRef || aliveRef.current) setDangTaiProject(false);
     }
   }
 
   // Badge 🎯 = mục tiêu của tuần có mục tiêu mới nhất, chưa 100%.
   // Báo đỏ = carry-over chưa xử lý (không được duyệt tiếp, chưa reschedule).
-  async function taiBadgeIds() {
+  async function taiBadgeIds(aliveRef?: { current: boolean }) {
+    if (activeTeamId == null) return;
     try {
       const [goalIds, riskIds] = await Promise.all([
-        api<string[]>('/api/weeks/goal-badge-ids'),
-        api<string[]>('/api/weeks/at-risk-ids')
+        apiTeam<string[]>(activeTeamId, '/api/weeks/goal-badge-ids'),
+        apiTeam<string[]>(activeTeamId, '/api/weeks/at-risk-ids')
       ]);
+      if (aliveRef && !aliveRef.current) return;
       setGoalTaskIds(new Set(goalIds));
       setAtRiskTaskIds(new Set(riskIds));
     } catch { /* ignore */ }
   }
 
-  // Component này mount lại mỗi lần mở tab project nên badge luôn được làm mới
+  // Component này mount lại mỗi lần mở tab project nên badge luôn được làm mới. Thêm activeTeamId vào
+  // dependency (FR-13): đổi team ở bộ chọn phải tự nạp lại, KHÔNG tải lại trang. aliveRef bị dọn
+  // (false) khi effect cleanup chạy (đổi team lần nữa hoặc unmount) -> response trễ của team cũ bị bỏ.
   useEffect(() => {
-    taiProjects();
-    void taiBadgeIds();
-  }, []);
+    const aliveRef = { current: true };
+    // Reset ngay để không hiện project/badge của team cũ trong lúc team mới đang tải: projects.map()
+    // ở sidebar và goalTaskIds/atRiskTaskIds không có gate riêng theo dangTaiProject, nên nếu không
+    // reset thì dữ liệu team cũ vẫn hiện tới khi fetch team mới xong (Council review Lát 7 giai đoạn
+    // 1, vòng 2 — điểm "dữ liệu team cũ hiện thoáng qua").
+    setProjects([]);
+    setGoalTaskIds(new Set());
+    setAtRiskTaskIds(new Set());
+    void taiProjects(aliveRef);
+    void taiBadgeIds(aliveRef);
+    return () => { aliveRef.current = false; };
+  }, [activeTeamId]);
 
+  // Thêm activeTeamId vào dependency (Council review Lát 7 giai đoạn 1, vòng 2): trước đây effect
+  // này chỉ phụ thuộc [projectDangChon] nên đổi team nhanh trong lúc đang mở chi tiết 1 project KHÔNG
+  // làm effect này chạy lại/cleanup -> response taiProjectTasks cũ (gọi lúc còn ở team trước) có thể
+  // set state SAU khi đã ở team mới. aliveRef bị dọn (false) khi effect cleanup chạy (đổi
+  // project/team lần nữa hoặc unmount) -> response trễ tự bỏ qua, khớp pattern taiProjects/taiBadgeIds
+  // ở trên.
   useEffect(() => {
     if (!projectDangChon) {
       setProjectTasks([]);
       setProjectTaskError('');
       return;
     }
-    taiProjectTasks(projectDangChon);
-  }, [projectDangChon]);
+    const aliveRef = { current: true };
+    // Reset ngay: ProjectTaskTree (dưới) chỉ ẩn theo dangTaiProjectTask khi projectTasks ĐANG rỗng
+    // (`dangTaiProjectTask && projectTasks.length === 0`), nên nếu không reset thì cây task của
+    // project/team cũ vẫn hiện dưới tiêu đề project mới tới khi fetch xong.
+    setProjectTasks([]);
+    setProjectTaskError('');
+    void taiProjectTasks(projectDangChon, aliveRef);
+    return () => { aliveRef.current = false; };
+  }, [projectDangChon, activeTeamId]);
 
   async function taoProject(project: ProjectCreateBody) {
-    const newProject = await api<ProjectItem>('/api/projects', {
+    if (activeTeamId == null) throw new Error('Chưa chọn team hiện tại');
+    const newProject = await apiTeam<ProjectItem>(activeTeamId, '/api/projects', {
       method: 'POST',
       body: JSON.stringify(project)
     });
@@ -356,9 +396,10 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
       .filter((project): project is ProjectItem => Boolean(project));
     if (nextProjects.length !== projects.length) return;
 
+    if (activeTeamId == null) return;
     setProjects(nextProjects);
     try {
-      const data = await api<ProjectItem[]>('/api/projects/reorder', {
+      const data = await apiTeam<ProjectItem[]>(activeTeamId, '/api/projects/reorder', {
         method: 'PATCH',
         body: JSON.stringify({ projectIds })
       });
@@ -388,16 +429,30 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
     void sapXepProjects(nextProjectIds);
   }
 
-  async function taiProjectTasks(projectId: string) {
+  // aliveRef: cờ huỷ (cancellation guard) — chỉ dùng khi gọi TỪ effect nạp theo [projectDangChon,
+  // activeTeamId] bên trên. Đổi team nhanh trong lúc đang mở chi tiết 1 project khiến response cũ có
+  // thể set state SAU khi đã ở team mới; effect cleanup đặt aliveRef.current = false để response trễ
+  // tự bỏ qua (Council review Lát 7 giai đoạn 1, vòng 2). Các nơi khác gọi hàm này (sau tạo/sửa/xoá
+  // task, sau đổi assignment trên Gantt tổng...) không truyền aliveRef -> giữ nguyên hành vi cũ, vì đó
+  // là thao tác người dùng chủ động, đã chắc chắn đang ở đúng project/team lúc bấm.
+  // Đổi sang apiTeam() (thay vì api() trần như trước) để lỗi quyền (NOT_TEAM_MEMBER/ROLE_FORBIDDEN)
+  // mang được ApiError.teamId — AuthProvider (auth-context.tsx) dựa vào đó để nhận ra lỗi trễ của
+  // team đã rời đi, không hiện nhầm popup "mất quyền". Route GET /projects/:id/tasks tự suy team từ
+  // bản ghi project (không đọc query teamId, xem server/routes/projects.ts) nên teamId gắn thêm ở đây
+  // chỉ phục vụ đúng mục đích gắn nhãn lỗi phía client, không đổi hành vi server.
+  async function taiProjectTasks(projectId: string, aliveRef?: { current: boolean }) {
+    if (activeTeamId == null) return;
     setDangTaiProjectTask(true);
     try {
-      const data = await api<ProjectTaskItem[]>(`/api/projects/${projectId}/tasks`);
+      const data = await apiTeam<ProjectTaskItem[]>(activeTeamId, `/api/projects/${projectId}/tasks`);
+      if (aliveRef && !aliveRef.current) return;
       setProjectTasks(data);
       setProjectTaskError('');
     } catch (error) {
+      if (aliveRef && !aliveRef.current) return;
       setProjectTaskError(error instanceof Error ? error.message : t('err.project_tasks'));
     } finally {
-      setDangTaiProjectTask(false);
+      if (!aliveRef || aliveRef.current) setDangTaiProjectTask(false);
     }
   }
 
@@ -585,10 +640,11 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
   }
 
   async function taiClosedProjects() {
+    if (activeTeamId == null) return;
     setDangTaiClosedProjects(true);
     setClosedProjectsError('');
     try {
-      const data = await api<ProjectItem[]>('/api/projects/closed');
+      const data = await apiTeam<ProjectItem[]>(activeTeamId, '/api/projects/closed');
       setClosedProjects(data);
     } catch (error) {
       setClosedProjectsError(error instanceof Error ? error.message : t('err.closed_projects'));

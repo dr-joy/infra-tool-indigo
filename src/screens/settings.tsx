@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Check, ChevronDown, ChevronUp, Pencil, Plus, Trash2, X } from 'lucide-react';
-import { api } from '../api';
+import { api, apiTeam } from '../api';
 import { usePics, useToast } from '../context';
+import { useActiveTeamId } from '../auth-context';
 import { PopupXacNhanXoa } from '../components/dialogs';
 import { PIC_COLOR_PALETTE } from '../lib/task-utils';
 import { ShortcutSettingsScreen } from '../shortcuts';
@@ -19,6 +20,7 @@ import { ManHinhQuanLyCategory } from './luyen-de-category';
 function ManHinhQuanLyPic() {
   const { reloadPics } = usePics();
   const toast = useToast();
+  const activeTeamId = useActiveTeamId();
   const [items, setItems] = useState<PicItem[]>([]);
   const [newName, setNewName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -32,15 +34,33 @@ function ManHinhQuanLyPic() {
     return e instanceof Error ? e.message : 'Có lỗi xảy ra';
   }
 
-  async function taiDanhSach() {
+  // CR-20260913 (§6.2, server/routes/pics.ts): bảng pics đã theo team -> GET bắt buộc teamId (FR-13).
+  // aliveRef: cờ huỷ — chỉ dùng khi gọi TỪ effect nạp theo activeTeamId bên dưới. Đổi team nhanh
+  // khiến response cũ có thể set state SAU khi đã hiển thị team mới; effect cleanup đặt
+  // aliveRef.current = false để response trễ tự bỏ qua (Council review Lát 7 giai đoạn 1). Các nơi
+  // khác gọi hàm này (sau thêm/sửa/xoá PIC) không truyền aliveRef -> giữ nguyên hành vi cũ.
+  async function taiDanhSach(aliveRef?: { current: boolean }) {
+    if (activeTeamId == null) { setItems([]); return; }
     try {
-      setItems(await api<PicItem[]>('/api/pics'));
+      const data = await apiTeam<PicItem[]>(activeTeamId, '/api/pics');
+      if (aliveRef && !aliveRef.current) return;
+      setItems(data);
       setError('');
     } catch (e) {
+      if (aliveRef && !aliveRef.current) return;
       setError(loiThanThien(e));
     }
   }
-  useEffect(() => { void taiDanhSach(); }, []);
+  useEffect(() => {
+    const aliveRef = { current: true };
+    // Reset ngay: items.map() ở dưới không có gate loading riêng, nên nếu không reset thì danh sách
+    // PIC của team cũ vẫn hiện tới khi fetch team mới xong (Council review Lát 7 giai đoạn 1, vòng 2
+    // — điểm "dữ liệu team cũ hiện thoáng qua").
+    setItems([]);
+    setError('');
+    void taiDanhSach(aliveRef);
+    return () => { aliveRef.current = false; };
+  }, [activeTeamId]);
 
   async function capNhatXong() {
     await taiDanhSach();
@@ -49,11 +69,11 @@ function ManHinhQuanLyPic() {
 
   async function themPic() {
     const name = newName.trim();
-    if (!name) return;
+    if (!name || activeTeamId == null) return;
     setBusy(true);
     setError('');
     try {
-      await api('/api/pics', { method: 'POST', body: JSON.stringify({ name }) });
+      await apiTeam(activeTeamId, '/api/pics', { method: 'POST', body: JSON.stringify({ name }) });
       setNewName('');
       await capNhatXong();
       toast('Đã thêm PIC');
@@ -107,12 +127,12 @@ function ManHinhQuanLyPic() {
 
   async function diChuyen(index: number, delta: number) {
     const target = index + delta;
-    if (target < 0 || target >= items.length) return;
+    if (target < 0 || target >= items.length || activeTeamId == null) return;
     const next = [...items];
     [next[index], next[target]] = [next[target], next[index]];
     setItems(next);
     try {
-      await api('/api/pics/reorder', { method: 'PATCH', body: JSON.stringify({ picIds: next.map((p) => p.id) }) });
+      await apiTeam(activeTeamId, '/api/pics/reorder', { method: 'PATCH', body: JSON.stringify({ picIds: next.map((p) => p.id) }) });
       await reloadPics();
     } catch (e) {
       setError(loiThanThien(e));
