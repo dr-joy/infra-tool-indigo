@@ -383,14 +383,62 @@ router.delete('/mindmaps/attachments/:attachmentId', requireSession, requireActi
   res.json({ ok: true });
 });
 
+// Cùng regex mà server/lib/mindmap-gc.ts (bản CŨ, đã xoá ở Lát 5 — xem lịch sử git trước Lát 5) từng
+// dùng để dò URL file đính kèm cũ nhúng tự do trong cột mindmaps.data — tái dùng NGUYÊN VĂN logic dò
+// URL đó (Council review vòng 1 Lát 5 yêu cầu, không viết lại từ đầu) để xác định mindmap nào đang
+// tham chiếu một file di sản cụ thể.
+const LEGACY_FILE_URL_RE = /\/api\/mindmaps\/files\/([^"'\s]+)/g;
+
+// Tìm mọi mindmap còn tham chiếu tới storedName trong cột data. Bình thường chỉ có đúng 1 mindmap sở
+// hữu; nếu >1 (vd dữ liệu bị copy/paste trùng URL) trả về cả tập, route gọi hàm này tự quyết cách xử lý
+// (cấp quyền nếu actor đọc được ÍT NHẤT MỘT bản ghi trong tập — không có căn cứ nào để chọn đúng 1
+// trong nhiều bản ghi làm "chủ thật sự", nên không tự bịa quy tắc chọn 1).
+function findMindmapsReferencingLegacyFile(storedName: string): MindmapRow[] {
+  const rows = db.prepare('SELECT * FROM mindmaps').all() as unknown as MindmapRow[];
+  const matches: MindmapRow[] = [];
+  for (const row of rows) {
+    const raw = String(row.data ?? '');
+    for (const match of raw.matchAll(LEGACY_FILE_URL_RE)) {
+      let decoded: string;
+      try {
+        decoded = decodeURIComponent(match[1]);
+      } catch {
+        continue; // URL không decode được -> bỏ qua match này, không đoán (giống mindmap-gc.ts cũ)
+      }
+      if (decoded === storedName) {
+        matches.push(row);
+        break;
+      }
+    }
+  }
+  return matches;
+}
+
 // ── Đường DI SẢN (trước Lát 5) — CHỈ còn phục vụ lại file đã tải trước khi có mindmap_attachments,
-// không nhận upload mới. Vẫn yêu cầu đăng nhập (route cũ trước đây KHÔNG hề có auth). Không tra được
-// quyền sở hữu/chia sẻ cho các file này (không có bản ghi liên kết) nên chỉ mở cho actor đã đăng nhập,
-// KHÔNG mở public — chấp nhận đây là hạn chế đã biết của dữ liệu lịch sử, xem báo cáo Lát 5.
+// không nhận upload mới. Quyền tải: dò trong mindmaps.data xem mindmap nào tham chiếu file này (đúng
+// cách mindmap-gc.ts cũ dò để GC), rồi áp ĐÚNG quyền đọc như route
+// /mindmaps/attachments/:attachmentId/download (requireBrowseGate + canRead — owner hoặc cùng team +
+// visibility 'shared'). Không tìm thấy mindmap nào tham chiếu (file mồ côi thật sự, vd JSON đã bị sửa
+// xoá tham chiếu) thì KHÔNG chặn được theo sở hữu — giữ hành vi cũ làm phương án cuối (chỉ cần đăng
+// nhập), nhưng log cảnh báo rõ để sau này biết còn bao nhiêu file mồ côi thật (Council review vòng 1
+// Lát 5).
 router.get('/mindmaps/files/:name', requireSession, requireActiveAccount, (req, res) => {
   const stored = path.basename(String(req.params.name));
   const full = path.join(filesDir, stored);
   if (!full.startsWith(filesDir) || !fs.existsSync(full)) return res.status(404).json({ message: 'Không tìm thấy file' });
+
+  const owners = findMindmapsReferencingLegacyFile(stored);
+  if (owners.length > 0) {
+    const actor = requireBrowseGate(req);
+    const canAccess = owners.some((row) => canRead(actor, row));
+    if (!canAccess) throw new HttpError(403, 'Bạn không có quyền tải file này', 'ROLE_FORBIDDEN');
+    if (owners.length > 1) {
+      console.warn(`[mindmap-legacy-file] file "${stored}" được ${owners.length} mindmap tham chiếu (id: ${owners.map((r) => r.id).join(', ')}) — đã cấp quyền vì actor đọc được ít nhất một trong số đó.`);
+    }
+  } else {
+    console.warn(`[mindmap-legacy-file] không tìm thấy mindmap nào còn tham chiếu file "${stored}" — coi là file mồ côi thật, chỉ áp dụng yêu cầu đăng nhập (hạn chế đã biết của dữ liệu lịch sử).`);
+  }
+
   const display = stored.includes('__') ? stored.slice(stored.indexOf('__') + 2) : stored;
   res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(display)}"`);
   res.setHeader('X-Content-Type-Options', 'nosniff');

@@ -6,7 +6,7 @@
 // owner mới ghi được dù đang chia sẻ, và 3 lớp xác thực file đính kèm mới (đuôi + MIME khai báo +
 // nội dung thật — FR-32a/FR-43): đuôi nguy hiểm bị chặn, magic-bytes không khớp bị chặn, file rỗng bị
 // chặn, và file phục vụ lại LUÔN attachment (không bao giờ inline).
-import { test, after } from 'node:test';
+import { test, after, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import os from 'node:os';
 import path from 'node:path';
@@ -25,6 +25,12 @@ process.env.APP_CALLBACK_URL = 'http://127.0.0.1:0/api/auth/callback';
 process.env.ADMIN_BOOTSTRAP_EMAIL = ADMIN_EMAIL;
 
 const { app } = await import('../../server/app.js');
+// Đọc SAU khi app.js đã import (nên paths.ts đã tính dataDir dựa trên APPDATA đã set ở trên) — dùng để
+// tự đặt file "di sản" thẳng vào đúng thư mục server/routes/mindmaps.ts đọc lại (test đường
+// GET /mindmaps/files/:name, Council review vòng 1 Lát 5).
+const { dataDir } = await import('../../server/paths.js');
+const legacyFilesDir = path.join(dataDir, 'mindmap-files');
+fs.mkdirSync(legacyFilesDir, { recursive: true });
 
 let server: Server;
 let base = '';
@@ -228,4 +234,76 @@ test('đổi sơ đồ về riêng tư -> teammate KHÔNG tải được attachm
 
   // trả lại trạng thái chia sẻ cho các test khác chạy sau (nếu node:test không đảm bảo cô lập thứ tự)
   await req('PUT', `/api/mindmaps/${sharedMapId}`, { visibility: 'team', sharedTeamId: teamA });
+});
+
+// ── Đường DI SẢN GET /mindmaps/files/:name — tra quyền qua tham chiếu trong mindmaps.data
+// (Council review vòng 1 Lát 5: route cũ chỉ yêu cầu đăng nhập, KHÔNG tra sở hữu/chia sẻ). Fix: dò
+// mindmaps.data tìm mindmap tham chiếu file, áp đúng quyền canRead(); không tìm thấy -> coi mồ côi
+// thật, giữ hành vi cũ (chỉ cần đăng nhập).
+function writeLegacyFile(name: string, content = 'nội dung file cũ'): void {
+  fs.writeFileSync(path.join(legacyFilesDir, name), content, 'utf8');
+}
+
+test('DI SẢN: file được 1 mindmap RIÊNG TƯ tham chiếu -> chỉ owner tải được, teammate cùng team và outsider đều 403', async () => {
+  writeLegacyFile('legacy-private-1.txt');
+  const created = await req('POST', '/api/mindmaps', {
+    title: '[itest] map tham chiếu file di sản riêng tư',
+    data: { root: { id: 'r', text: 'xem file /api/mindmaps/files/legacy-private-1.txt', children: [] } }
+  });
+  assert.equal(created.status, 201, JSON.stringify(created.json));
+
+  const url = `${base}/api/mindmaps/files/legacy-private-1.txt`;
+  assert.equal((await fetch(url, { headers: ownerHeaders })).status, 200, 'owner phải tải được');
+  assert.equal((await fetch(url, { headers: teammateHeaders })).status, 403, 'teammate không phải owner, mindmap đang riêng tư -> 403');
+  assert.equal((await fetch(url, { headers: outsiderHeaders })).status, 403);
+  assert.equal((await fetch(url)).status, 401, 'chưa đăng nhập vẫn 401 như mọi route khác');
+});
+
+test('DI SẢN: đổi mindmap tham chiếu sang chia sẻ team -> teammate tải được, outsider team khác vẫn 403', async () => {
+  writeLegacyFile('legacy-shared-1.txt');
+  const created = await req('POST', '/api/mindmaps', {
+    title: '[itest] map tham chiếu file di sản sẽ chia sẻ',
+    data: { root: { id: 'r', text: 'đính kèm /api/mindmaps/files/legacy-shared-1.txt', children: [] } }
+  });
+  const id = created.json.id;
+  const url = `${base}/api/mindmaps/files/legacy-shared-1.txt`;
+  assert.equal((await fetch(url, { headers: teammateHeaders })).status, 403);
+
+  await req('PUT', `/api/mindmaps/${id}`, { visibility: 'team', sharedTeamId: teamA });
+  assert.equal((await fetch(url, { headers: teammateHeaders })).status, 200, 'chia sẻ team A -> teammate cùng team đọc được');
+  assert.equal((await fetch(url, { headers: outsiderHeaders })).status, 403, 'outsider team B vẫn không được');
+});
+
+test('DI SẢN: file KHÔNG được mindmap nào tham chiếu (mồ côi thật) -> giữ hành vi cũ, chỉ cần đăng nhập, có log cảnh báo', async () => {
+  writeLegacyFile('legacy-orphan-1.txt');
+  const url = `${base}/api/mindmaps/files/legacy-orphan-1.txt`;
+  const warnSpy = mock.method(console, 'warn', () => {});
+  try {
+    assert.equal((await fetch(url, { headers: outsiderHeaders })).status, 200, 'file mồ côi thật -> phương án cuối là chỉ cần đăng nhập (chưa có cách tra quyền)');
+    assert.equal((await fetch(url)).status, 401);
+    const loggedOrphanWarning = warnSpy.mock.calls.some((c) => String(c.arguments[0] ?? '').includes('mồ côi'));
+    assert.ok(loggedOrphanWarning, 'phải log cảnh báo rõ ràng khi rơi vào nhánh mồ côi thật (để sau này đếm được còn bao nhiêu)');
+  } finally {
+    warnSpy.mock.restore();
+  }
+});
+
+test('DI SẢN: file được ≥2 mindmap tham chiếu -> cấp quyền nếu actor đọc được ÍT NHẤT MỘT bản ghi trong số đó', async () => {
+  writeLegacyFile('legacy-multi-1.txt');
+  const byOwner = await req('POST', '/api/mindmaps', {
+    title: '[itest] map A tham chiếu file dùng chung',
+    data: { root: { id: 'r', text: '/api/mindmaps/files/legacy-multi-1.txt', children: [] } }
+  });
+  assert.equal(byOwner.status, 201);
+  const byTeammate = await req('POST', '/api/mindmaps', {
+    title: '[itest] map B (khác owner) cũng tham chiếu file dùng chung',
+    data: { root: { id: 'r', text: '/api/mindmaps/files/legacy-multi-1.txt', children: [] } }
+  }, teammateHeaders);
+  assert.equal(byTeammate.status, 201);
+
+  const url = `${base}/api/mindmaps/files/legacy-multi-1.txt`;
+  // outsider không đọc được map A (owner riêng tư) lẫn map B (teammate riêng tư) -> 403
+  assert.equal((await fetch(url, { headers: outsiderHeaders })).status, 403);
+  // teammate đọc được CHÍNH map B của mình (dù không đọc được map A) -> phải được cấp quyền
+  assert.equal((await fetch(url, { headers: teammateHeaders })).status, 200);
 });
