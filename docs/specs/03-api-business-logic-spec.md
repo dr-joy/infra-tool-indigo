@@ -101,7 +101,7 @@ GET (kèm `dangSuDung`) · POST (unique) · PATCH reorder · PATCH `:id` (đổi
 Category (pick-list nhóm chứng chỉ, đổi tên cascade `nhom`, xoá chặn nếu còn dùng) · Kỳ thi (CRUD, export JSON song ngữ) · Bộ đề (import: mỗi câu ≥2 đáp án, **409** trùng fileName) · Sửa câu (VI/topic/difficulty, `dichThuCong`) · **Rút câu** công bằng (`ORDER BY lan_ra, last_rut_at, RANDOM`) · Phiên luyện (lưu kết quả) · Import JSON (chỉ ghi VI khi ≠ '').
 
 ## 8. Redmine (`routes/redmine.ts`)
-Config trong `app_settings`; API key **mã hoá AES-256-GCM** (`enc:v1:...`), master key `%APPDATA%\TaskManager\secret.key` (0600). GET config (mask key) · PUT (baseUrl bắt buộc, key rỗng→giữ cũ) · DELETE key · POST test (`/users/current.json` header `X-Redmine-API-Key`; **401** key sai, **502** lỗi khác).
+Config trong `app_settings`; API key **mã hoá AES-256-GCM** (`enc:v1:...`), master key `%APPDATA%\TaskManager\data\secret.key` (0600, container: `DATA_DIR/secret.key`). GET config (mask key) · PUT (baseUrl bắt buộc, key rỗng→giữ cũ) · DELETE key · POST test (`/users/current.json` header `X-Redmine-API-Key`; **401** key sai, **502** lỗi khác).
 
 ## 9. MindMap (`routes/mindmaps.ts`)
 Cây lưu JSON trong `mindmaps.data`; file đính kèm `dataDir/mindmap-files`. GET list/detail · POST/PUT (data phải là object) · POST upload (**413** >30MB) · GET file (chống path traversal) · DELETE.

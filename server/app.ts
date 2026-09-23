@@ -10,6 +10,7 @@ import { appBaseDir, dataDir } from './paths.js';
 import { sendRouteError } from './lib/utils.js';
 import { shutdownState } from './lib/shutdown-state.js';
 import { db } from './db.js';
+import { secretKeyState } from './lib/secret.js';
 import tasksRouter from './routes/tasks.js';
 import projectsRouter from './routes/projects.js';
 import releaseRouter from './routes/release.js';
@@ -50,6 +51,12 @@ app.get('/health/live', (_req: Request, res: Response) => {
 app.get('/health/ready', (_req: Request, res: Response) => {
   if (shutdownState.shuttingDown) {
     return res.status(503).json({ status: 'not_ready', reason: 'shutting_down' });
+  }
+  // BL-20260921-003 (2026-09-23): master key hiện tại không khớp key đã dùng trước đó (vd secret.key
+  // bị mất/thay giữa 2 lần khởi động) — không phải lỗi tạm thời tự phục hồi được như 2 kiểm tra trên,
+  // nhưng vẫn cần hạ tầng thấy rõ qua readiness thay vì chỉ nằm im trong log (xem server/lib/secret.ts).
+  if (secretKeyState.mismatch) {
+    return res.status(503).json({ status: 'not_ready', reason: 'secret_key_mismatch' });
   }
   try {
     db.prepare('SELECT 1').get();

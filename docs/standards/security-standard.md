@@ -42,7 +42,14 @@ App **local, 1 người dùng**, server bind `127.0.0.1` → **không có auth t
 ## 3. Secret & dữ liệu tại chỗ (at-rest)
 
 - [ ] Secret (API key…) **mã hóa AES-256-GCM** trước khi lưu (`lib/secret.ts`), có prefix version (`enc:v1:`).
-- [ ] Master key lưu **ngoài** thư mục `data/` (leak DB không giải được), file `mode 0600`.
+- [ ] Master key lưu **bên trong** thư mục `data/` (cạnh `data/backups/`), file `mode 0600` — SỬA 2026-09-23
+  (BL-20260921-003): trước đây yêu cầu lưu **ngoài** `data/` để backup DB không kéo theo key, nhưng bản
+  container (CR-20260913 FR-36) chỉ có đúng 1 volume bền vững (`/data`) — key ngoài đó bị container tái
+  tạo xoá mất, làm mọi secret đã mã hoá cũ không giải lại được. `scripts/backup-db.mjs` chỉ `VACUUM INTO`
+  đúng file `.sqlite`, không copy cả thư mục, nên nguy cơ gốc (backup DB kéo theo key) không xảy ra qua
+  kênh backup của app — đổi lại, chấp nhận đánh đổi: ai có quyền snapshot nguyên ổ hạ tầng `/data` sẽ có
+  cả DB lẫn key (rủi ro hẹp hơn, cần quyền hạ tầng đặc quyền). Có thêm cơ chế canary (`server/lib/secret.ts`)
+  phát hiện key bị mất/đổi giữa 2 lần chạy, báo qua `/health/ready` thay vì âm thầm sinh key mới.
 - [ ] **Không log** secret/token/key/password ở bất kỳ đâu (server & client).
 - [ ] Không trả secret về client; nếu cần hiển thị → **masked** (vd `••••1234`).
 - [ ] Setting chứa secret phải có trạng thái rõ: *đã cấu hình / chưa cấu hình*.

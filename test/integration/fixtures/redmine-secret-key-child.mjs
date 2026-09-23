@@ -71,7 +71,12 @@ try {
     // lại (issuer+subject giống hệt -> cùng user_id), không tạo team/join-request lại (đã tồn tại).
     const memberSession = await flow.loginAs(MEMBER_EMAIL, 'User Thật', MEMBER_SUB);
     const res = await fetch(`${base}/api/me/redmine`, { headers: flow.H(memberSession) });
-    process.stdout.write(JSON.stringify({ status: res.status, body: await res.json() }));
+    const body = await res.json();
+    // BL-20260921-003 (2026-09-23): GET /me/redmine ở trên đã chạm getMasterKey() (qua giaiMa()) nên
+    // cờ mismatch (nếu có) đã set TRƯỚC khi đọc /health/ready ngay sau đây, cùng tiến trình.
+    const health = await fetch(`${base}/health/ready`);
+    const healthBody = await health.json();
+    process.stdout.write(JSON.stringify({ status: res.status, body, health: { status: health.status, body: healthBody } }));
   }
 } finally {
   server.close();
