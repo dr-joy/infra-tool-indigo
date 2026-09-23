@@ -32,6 +32,16 @@ const { dataDir } = await import('../../server/paths.js');
 const legacyFilesDir = path.join(dataDir, 'mindmap-files');
 fs.mkdirSync(legacyFilesDir, { recursive: true });
 
+// Council review vòng 2 Lát 5 — route /mindmaps/files/:name không còn quét SỐNG mindmaps.data nữa,
+// chỉ tra bảng snapshot bất biến legacy_mindmap_file_owners (chụp ĐÚNG 1 LẦN lúc khởi động DB thật,
+// xem server/db-migrations.ts). Ở app khởi động cho test này, lượt chụp tự động đó đã chạy TRƯỚC khi
+// bất kỳ mindmap nào của test tồn tại (mindmaps table rỗng) nên không chụp được gì — các test DI SẢN
+// dưới đây phải tự gọi RAW hàm chụp (bỏ qua gate "chỉ chạy 1 lần" của PRAGMA user_version) đúng vào
+// thời điểm muốn mô phỏng "lúc snapshot được chụp", y hệt cách sản phẩm thật vận hành: mindmap tạo
+// TRƯỚC thời điểm gọi hàm này được coi là chủ sở hữu thật; mindmap tạo SAU thì không.
+const { db } = await import('../../server/db.js');
+const { captureLegacyMindmapFileOwnersSnapshot } = await import('../../server/lib/legacy-mindmap-file-owners.js');
+
 let server: Server;
 let base = '';
 await new Promise<void>((resolve) => {
@@ -236,21 +246,23 @@ test('đổi sơ đồ về riêng tư -> teammate KHÔNG tải được attachm
   await req('PUT', `/api/mindmaps/${sharedMapId}`, { visibility: 'team', sharedTeamId: teamA });
 });
 
-// ── Đường DI SẢN GET /mindmaps/files/:name — tra quyền qua tham chiếu trong mindmaps.data
-// (Council review vòng 1 Lát 5: route cũ chỉ yêu cầu đăng nhập, KHÔNG tra sở hữu/chia sẻ). Fix: dò
-// mindmaps.data tìm mindmap tham chiếu file, áp đúng quyền canRead(); không tìm thấy -> coi mồ côi
-// thật, giữ hành vi cũ (chỉ cần đăng nhập).
+// ── Đường DI SẢN GET /mindmaps/files/:name — tra quyền qua snapshot chủ sở hữu bất biến
+// (Council review vòng 1 Lát 5: route cũ chỉ yêu cầu đăng nhập, KHÔNG tra sở hữu/chia sẻ; review vòng
+// 2 phát hiện bản vá vòng 1 quét SỐNG mindmaps.data là chính lỗ hổng — actor tự nhét URL vào mindmap
+// riêng của mình là tự cấp quyền cho bản thân). Fix vòng 2: chụp snapshot BẤT BIẾN một lần, route chỉ
+// tra snapshot đó; canRead() vẫn tính lại theo trạng thái SỐNG của mindmap đã được snapshot ghi nhận.
 function writeLegacyFile(name: string, content = 'nội dung file cũ'): void {
   fs.writeFileSync(path.join(legacyFilesDir, name), content, 'utf8');
 }
 
-test('DI SẢN: file được 1 mindmap RIÊNG TƯ tham chiếu -> chỉ owner tải được, teammate cùng team và outsider đều 403', async () => {
+test('DI SẢN: file được 1 mindmap RIÊNG TƯ tham chiếu TRƯỚC thời điểm chụp -> chỉ owner tải được, teammate cùng team và outsider đều 403', async () => {
   writeLegacyFile('legacy-private-1.txt');
   const created = await req('POST', '/api/mindmaps', {
     title: '[itest] map tham chiếu file di sản riêng tư',
     data: { root: { id: 'r', text: 'xem file /api/mindmaps/files/legacy-private-1.txt', children: [] } }
   });
   assert.equal(created.status, 201, JSON.stringify(created.json));
+  captureLegacyMindmapFileOwnersSnapshot(db); // mô phỏng thời điểm chụp — mindmap trên đã tồn tại TRƯỚC
 
   const url = `${base}/api/mindmaps/files/legacy-private-1.txt`;
   assert.equal((await fetch(url, { headers: ownerHeaders })).status, 200, 'owner phải tải được');
@@ -259,23 +271,27 @@ test('DI SẢN: file được 1 mindmap RIÊNG TƯ tham chiếu -> chỉ owner t
   assert.equal((await fetch(url)).status, 401, 'chưa đăng nhập vẫn 401 như mọi route khác');
 });
 
-test('DI SẢN: đổi mindmap tham chiếu sang chia sẻ team -> teammate tải được, outsider team khác vẫn 403', async () => {
+test('DI SẢN: đổi mindmap tham chiếu (đã có trong snapshot) sang chia sẻ team -> teammate tải được, outsider team khác vẫn 403', async () => {
   writeLegacyFile('legacy-shared-1.txt');
   const created = await req('POST', '/api/mindmaps', {
     title: '[itest] map tham chiếu file di sản sẽ chia sẻ',
     data: { root: { id: 'r', text: 'đính kèm /api/mindmaps/files/legacy-shared-1.txt', children: [] } }
   });
   const id = created.json.id;
+  captureLegacyMindmapFileOwnersSnapshot(db); // chụp NGAY lúc mindmap còn riêng tư
   const url = `${base}/api/mindmaps/files/legacy-shared-1.txt`;
   assert.equal((await fetch(url, { headers: teammateHeaders })).status, 403);
 
+  // Đổi visibility SAU thời điểm chụp vẫn có tác dụng ngay — snapshot chỉ đóng băng "mindmap nào là
+  // chủ sở hữu của file", KHÔNG đóng băng quyền đọc của chính mindmap đó (canRead() vẫn tính SỐNG).
   await req('PUT', `/api/mindmaps/${id}`, { visibility: 'team', sharedTeamId: teamA });
   assert.equal((await fetch(url, { headers: teammateHeaders })).status, 200, 'chia sẻ team A -> teammate cùng team đọc được');
   assert.equal((await fetch(url, { headers: outsiderHeaders })).status, 403, 'outsider team B vẫn không được');
 });
 
-test('DI SẢN: file KHÔNG được mindmap nào tham chiếu (mồ côi thật) -> giữ hành vi cũ, chỉ cần đăng nhập, có log cảnh báo', async () => {
+test('DI SẢN: file không có trong snapshot tại thời điểm chụp (mồ côi thật) -> giữ hành vi cũ, chỉ cần đăng nhập, có log cảnh báo', async () => {
   writeLegacyFile('legacy-orphan-1.txt');
+  captureLegacyMindmapFileOwnersSnapshot(db); // chụp lúc CHƯA có mindmap nào tham chiếu file này
   const url = `${base}/api/mindmaps/files/legacy-orphan-1.txt`;
   const warnSpy = mock.method(console, 'warn', () => {});
   try {
@@ -288,7 +304,7 @@ test('DI SẢN: file KHÔNG được mindmap nào tham chiếu (mồ côi thật
   }
 });
 
-test('DI SẢN: file được ≥2 mindmap tham chiếu -> cấp quyền nếu actor đọc được ÍT NHẤT MỘT bản ghi trong số đó', async () => {
+test('DI SẢN: file được ≥2 mindmap tham chiếu TRƯỚC thời điểm chụp -> cấp quyền nếu actor đọc được ÍT NHẤT MỘT bản ghi trong số đó', async () => {
   writeLegacyFile('legacy-multi-1.txt');
   const byOwner = await req('POST', '/api/mindmaps', {
     title: '[itest] map A tham chiếu file dùng chung',
@@ -300,10 +316,41 @@ test('DI SẢN: file được ≥2 mindmap tham chiếu -> cấp quyền nếu a
     data: { root: { id: 'r', text: '/api/mindmaps/files/legacy-multi-1.txt', children: [] } }
   }, teammateHeaders);
   assert.equal(byTeammate.status, 201);
+  captureLegacyMindmapFileOwnersSnapshot(db); // chụp snapshot NGAY BÂY GIỜ — cả map A lẫn map B đều đã tồn tại
 
   const url = `${base}/api/mindmaps/files/legacy-multi-1.txt`;
   // outsider không đọc được map A (owner riêng tư) lẫn map B (teammate riêng tư) -> 403
   assert.equal((await fetch(url, { headers: outsiderHeaders })).status, 403);
   // teammate đọc được CHÍNH map B của mình (dù không đọc được map A) -> phải được cấp quyền
   assert.equal((await fetch(url, { headers: teammateHeaders })).status, 200);
+});
+
+test('DI SẢN (chống hồi quy lỗ hổng đã đóng — Council review vòng 2): actor tự tạo mindmap RIÊNG tham chiếu file di sản SAU thời điểm chụp -> KHÔNG được cấp quyền qua đường đó', async () => {
+  writeLegacyFile('legacy-post-snapshot-1.txt');
+  // Chủ thật duy nhất TRƯỚC thời điểm chụp: chỉ owner (không phải outsider).
+  const byOwner = await req('POST', '/api/mindmaps', {
+    title: '[itest] map chủ thật, tạo TRƯỚC khi chụp',
+    data: { root: { id: 'r', text: '/api/mindmaps/files/legacy-post-snapshot-1.txt', children: [] } }
+  });
+  assert.equal(byOwner.status, 201);
+  captureLegacyMindmapFileOwnersSnapshot(db); // chụp NGAY — chỉ mindmap của owner được ghi nhận
+
+  const url = `${base}/api/mindmaps/files/legacy-post-snapshot-1.txt`;
+  assert.equal((await fetch(url, { headers: outsiderHeaders })).status, 403, 'trước khi tự nhét tham chiếu, outsider đã đúng là không có quyền');
+
+  // Lỗ hổng bản vá vòng 1 (đã đóng ở vòng 2): outsider KHÔNG PHẢI chủ thật, tự biết URL file di sản,
+  // tự tạo 1 mindmap RIÊNG của mình rồi nhét URL vào — với quét SỐNG (vòng 1) route sẽ thấy outsider
+  // "sở hữu" 1 bản ghi tham chiếu và cấp quyền tải ngay, dù outsider không phải chủ thật của file gốc.
+  const selfInserted = await req('POST', '/api/mindmaps', {
+    title: '[itest] outsider tự nhét tham chiếu SAU khi đã chụp snapshot',
+    data: { root: { id: 'r', text: '/api/mindmaps/files/legacy-post-snapshot-1.txt', children: [] } }
+  }, outsiderHeaders);
+  assert.equal(selfInserted.status, 201);
+
+  // Với snapshot bất biến: mindmap outsider vừa tạo không nằm trong bảng legacy_mindmap_file_owners
+  // (được chụp TRƯỚC khi mindmap này tồn tại) -> route không bao giờ nhìn thấy nó, outsider vẫn 403.
+  assert.equal((await fetch(url, { headers: outsiderHeaders })).status, 403, 'tự nhét tham chiếu SAU thời điểm chụp không còn tác dụng chiếm quyền nữa (lỗ hổng đã đóng)');
+  // Chủ thật (owner, đã có trong snapshot từ trước) vẫn tải được bình thường — fix không ảnh hưởng
+  // tới quyền của chủ thật.
+  assert.equal((await fetch(url, { headers: ownerHeaders })).status, 200, 'chủ thật (đã snapshot từ trước) vẫn tải được bình thường');
 });

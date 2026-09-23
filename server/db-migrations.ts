@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
+import { captureLegacyMindmapFileOwnersSnapshot } from './lib/legacy-mindmap-file-owners.js';
 
 // Migration lịch sử, tách khỏi server/db.ts (kế hoạch Council run 022dd1e5, xem
 // docs/exchanges/2026-09-12.md) — giữ NGUYÊN VĂN nội dung và thứ tự thực thi. Tách theo TRỤC
@@ -606,6 +607,15 @@ export function runSlice4Migrations(db: DatabaseSync, context: DbMigrationContex
 // thuộc các phase khác nhau bị trộn lẫn (lộn xộn so với thứ tự cây trước đây).
 // Tính lại execution_order theo thứ tự duyệt cây (DFS, theo sort_order rồi id) cho
 // từng project -> mặc định khớp đúng thứ tự hiển thị cũ. Chạy một lần (user_version).
+// Council review vòng 2 Lát 5 — chụp snapshot BẤT BIẾN "file di sản <-> mindmap sở hữu thật" ĐÚNG 1
+// LẦN (xem server/lib/legacy-mindmap-file-owners.ts để biết vì sao phải là snapshot thay vì quét
+// sống). Dùng lại ĐÚNG cơ chế "chạy 1 lần" đã có ở hàm này (PRAGMA user_version) thay vì phát minh
+// cách mới — version sau LUÔN lớn hơn version trước, kiểm tra tuần tự nên DB mới tinh sẽ chạy lần
+// lượt version 1 rồi version 2 trong cùng 1 lượt gọi. Không được gộp lại thành 1 khối "chạy nếu <
+// version mới nhất" vì mỗi khối có logic khác nhau — tách riêng theo đúng version để rõ ràng cái nào
+// đã chạy.
+const LEGACY_MINDMAP_FILE_OWNER_SNAPSHOT_VERSION = 2;
+
 export function runVersionedMigrations(db: DatabaseSync, context: DbMigrationContext): void {
   const EXECUTION_ORDER_FIX_VERSION = 1;
   const dbUserVersion = (db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version;
@@ -656,5 +666,25 @@ export function runVersionedMigrations(db: DatabaseSync, context: DbMigrationCon
       }
     });
     db.exec(`PRAGMA user_version = ${EXECUTION_ORDER_FIX_VERSION}`);
+  }
+
+  // Đọc lại user_version (khối trên có thể vừa đổi) — chụp snapshot chủ sở hữu file di sản ĐÚNG 1 LẦN
+  // trong toàn bộ vòng đời DB. Bọc trong withTransaction để không rơi vào nửa vời nếu crash giữa chừng
+  // (hoặc chụp thiếu vài dòng, hoặc PRAGMA user_version không kịp cập nhật -> lần boot sau chụp lại từ
+  // đầu, INSERT OR IGNORE tự tránh trùng dòng cho phần đã ghi được ở lượt trước).
+  const versionBeforeSnapshot = (db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version;
+  if (versionBeforeSnapshot < LEGACY_MINDMAP_FILE_OWNER_SNAPSHOT_VERSION) {
+    let insertedCount = 0;
+    context.withTransaction(() => {
+      insertedCount = captureLegacyMindmapFileOwnersSnapshot(db);
+    });
+    db.exec(`PRAGMA user_version = ${LEGACY_MINDMAP_FILE_OWNER_SNAPSHOT_VERSION}`);
+    // Chỉ log khi THẬT SỰ chụp được gì (khớp quy ước các migration khác trong file này: DB rỗng/mới
+    // tinh thì im lặng) — DB test/dev mới tinh không có mindmap nào tham chiếu file di sản sẽ không in
+    // gì, tránh làm bẩn stdout của các test spawn tiến trình con parse JSON từ stdout (vd
+    // test/integration/redmine-secret-key-loss.test.ts).
+    if (insertedCount > 0) {
+      console.log(`[db] Da chup snapshot legacy_mindmap_file_owners: ${insertedCount} cap (file_name, mindmap_id) (Council review vong 2 Lat 5) - route /mindmaps/files khong con quet song mindmaps.data nua`);
+    }
   }
 }

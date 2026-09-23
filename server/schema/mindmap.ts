@@ -46,5 +46,22 @@ export function applyMindmapSchema(db: DatabaseSync): void {
     );
     CREATE INDEX IF NOT EXISTS idx_mindmap_attachments_mindmap ON mindmap_attachments(mindmap_id);
     CREATE INDEX IF NOT EXISTS idx_mindmap_attachments_status_created ON mindmap_attachments(status, created_at);
+
+    -- Council review vòng 2 Lát 5 — snapshot BẤT BIẾN "file di sản <-> mindmap sở hữu thật", thay hẳn
+    -- việc route /mindmaps/files/:name quét SỐNG cột mindmaps.data mỗi lần tải (lỗ hổng thật: actor tự
+    -- nhét URL file di sản vào data của 1 mindmap RIÊNG do actor tạo là tự cấp quyền cho chính mình).
+    -- Ghi ĐÚNG 1 LẦN bởi captureLegacyMindmapFileOwnersSnapshot() (server/lib/legacy-mindmap-file-
+    -- owners.ts), gọi từ server/db-migrations.ts (runVersionedMigrations, gate PRAGMA user_version) —
+    -- tham chiếu actor tự thêm vào mindmaps.data SAU thời điểm chụp KHÔNG bao giờ xuất hiện ở đây, nên
+    -- không còn tác dụng chiếm quyền. PRIMARY KEY (file_name, mindmap_id) + INSERT OR IGNORE khi ghi ->
+    -- không có đường "sửa lại"/ghi đè dòng đã có. ON DELETE CASCADE: xoá mindmap thì dọn theo, không để
+    -- lại tham chiếu treo tới mindmap không còn tồn tại.
+    CREATE TABLE IF NOT EXISTS legacy_mindmap_file_owners (
+      file_name TEXT NOT NULL,
+      mindmap_id INTEGER NOT NULL REFERENCES mindmaps(id) ON DELETE CASCADE,
+      captured_at TEXT NOT NULL,
+      PRIMARY KEY (file_name, mindmap_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_legacy_mindmap_file_owners_file ON legacy_mindmap_file_owners(file_name);
   `);
 }

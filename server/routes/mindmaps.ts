@@ -383,60 +383,54 @@ router.delete('/mindmaps/attachments/:attachmentId', requireSession, requireActi
   res.json({ ok: true });
 });
 
-// Cùng regex mà server/lib/mindmap-gc.ts (bản CŨ, đã xoá ở Lát 5 — xem lịch sử git trước Lát 5) từng
-// dùng để dò URL file đính kèm cũ nhúng tự do trong cột mindmaps.data — tái dùng NGUYÊN VĂN logic dò
-// URL đó (Council review vòng 1 Lát 5 yêu cầu, không viết lại từ đầu) để xác định mindmap nào đang
-// tham chiếu một file di sản cụ thể.
-const LEGACY_FILE_URL_RE = /\/api\/mindmaps\/files\/([^"'\s]+)/g;
-
-// Tìm mọi mindmap còn tham chiếu tới storedName trong cột data. Bình thường chỉ có đúng 1 mindmap sở
-// hữu; nếu >1 (vd dữ liệu bị copy/paste trùng URL) trả về cả tập, route gọi hàm này tự quyết cách xử lý
-// (cấp quyền nếu actor đọc được ÍT NHẤT MỘT bản ghi trong tập — không có căn cứ nào để chọn đúng 1
-// trong nhiều bản ghi làm "chủ thật sự", nên không tự bịa quy tắc chọn 1).
-function findMindmapsReferencingLegacyFile(storedName: string): MindmapRow[] {
-  const rows = db.prepare('SELECT * FROM mindmaps').all() as unknown as MindmapRow[];
-  const matches: MindmapRow[] = [];
-  for (const row of rows) {
-    const raw = String(row.data ?? '');
-    for (const match of raw.matchAll(LEGACY_FILE_URL_RE)) {
-      let decoded: string;
-      try {
-        decoded = decodeURIComponent(match[1]);
-      } catch {
-        continue; // URL không decode được -> bỏ qua match này, không đoán (giống mindmap-gc.ts cũ)
-      }
-      if (decoded === storedName) {
-        matches.push(row);
-        break;
-      }
-    }
-  }
-  return matches;
+// Council review vòng 2 Lát 5 — ĐÃ BỎ quét SỐNG cột mindmaps.data ở route dưới đây (bản vòng 1 quét
+// mỗi lần tải, xem lịch sử git trước run Council `a44549fb`/review vòng 2). Lỗ hổng thật: cột `data`
+// do actor tự ghi tự do qua POST/PUT /mindmaps (không kiểm nội dung chuỗi bên trong) — actor biết được
+// URL file di sản (rò rỉ qua chat/log/ảnh chụp) có thể tự nhét URL đó vào `data` của một mindmap RIÊNG
+// do chính actor tạo, quét sống sẽ thấy actor "sở hữu" 1 bản ghi tham chiếu và cấp quyền tải dù actor
+// không phải chủ thật. Sửa: chủ sở hữu tra từ bảng snapshot BẤT BIẾN legacy_mindmap_file_owners (chụp
+// ĐÚNG 1 LẦN lúc khởi động DB — xem captureLegacyMindmapFileOwnersSnapshot() ở
+// server/lib/legacy-mindmap-file-owners.ts, gọi từ server/db-migrations.ts runVersionedMigrations).
+// Tham chiếu actor tự thêm vào mindmaps.data SAU thời điểm chụp không bao giờ vào bảng này -> không
+// còn cách nào tự chiếm quyền qua đường này nữa. canRead() vẫn tính lại từ trạng thái SỐNG của mindmap
+// (owner/visibility/shared_team_id) như trước — CHỈ tập "mindmap nào được coi là chủ sở hữu của file
+// này" là đóng băng, không phải quyền đọc của mindmap đó.
+function findSnapshottedOwnersForLegacyFile(storedName: string): MindmapRow[] {
+  const ownerIds = db.prepare('SELECT mindmap_id FROM legacy_mindmap_file_owners WHERE file_name = ?').all(storedName) as { mindmap_id: number }[];
+  if (ownerIds.length === 0) return [];
+  const placeholders = ownerIds.map(() => '?').join(',');
+  return db.prepare(`SELECT * FROM mindmaps WHERE id IN (${placeholders})`).all(...ownerIds.map((o) => o.mindmap_id)) as unknown as MindmapRow[];
 }
 
 // ── Đường DI SẢN (trước Lát 5) — CHỈ còn phục vụ lại file đã tải trước khi có mindmap_attachments,
-// không nhận upload mới. Quyền tải: dò trong mindmaps.data xem mindmap nào tham chiếu file này (đúng
-// cách mindmap-gc.ts cũ dò để GC), rồi áp ĐÚNG quyền đọc như route
+// không nhận upload mới. Quyền tải: tra bảng snapshot chủ sở hữu (xem comment ở
+// findSnapshottedOwnersForLegacyFile phía trên), rồi áp ĐÚNG quyền đọc như route
 // /mindmaps/attachments/:attachmentId/download (requireBrowseGate + canRead — owner hoặc cùng team +
-// visibility 'shared'). Không tìm thấy mindmap nào tham chiếu (file mồ côi thật sự, vd JSON đã bị sửa
-// xoá tham chiếu) thì KHÔNG chặn được theo sở hữu — giữ hành vi cũ làm phương án cuối (chỉ cần đăng
-// nhập), nhưng log cảnh báo rõ để sau này biết còn bao nhiêu file mồ côi thật (Council review vòng 1
-// Lát 5).
+// visibility 'shared'). Không có dòng nào trong snapshot cho file này (file mồ côi thật sự tại thời
+// điểm chụp) thì KHÔNG chặn được theo sở hữu — giữ hành vi cũ làm phương án cuối (chỉ cần đăng nhập),
+// nhưng log cảnh báo rõ để sau này biết còn bao nhiêu file mồ côi thật (Council review vòng 1 Lát 5,
+// giữ nguyên qua vòng 2 — không đổi phần này).
 router.get('/mindmaps/files/:name', requireSession, requireActiveAccount, (req, res) => {
   const stored = path.basename(String(req.params.name));
   const full = path.join(filesDir, stored);
   if (!full.startsWith(filesDir) || !fs.existsSync(full)) return res.status(404).json({ message: 'Không tìm thấy file' });
 
-  const owners = findMindmapsReferencingLegacyFile(stored);
+  const owners = findSnapshottedOwnersForLegacyFile(stored);
   if (owners.length > 0) {
     const actor = requireBrowseGate(req);
     const canAccess = owners.some((row) => canRead(actor, row));
     if (!canAccess) throw new HttpError(403, 'Bạn không có quyền tải file này', 'ROLE_FORBIDDEN');
     if (owners.length > 1) {
-      console.warn(`[mindmap-legacy-file] file "${stored}" được ${owners.length} mindmap tham chiếu (id: ${owners.map((r) => r.id).join(', ')}) — đã cấp quyền vì actor đọc được ít nhất một trong số đó.`);
+      console.warn(`[mindmap-legacy-file] file "${stored}" có ${owners.length} mindmap sở hữu trong snapshot (id: ${owners.map((r) => r.id).join(', ')}) — đã cấp quyền cho user ${actor.userId} vì đọc được ít nhất một trong số đó.`);
+      // Nhánh "nhiều chủ sở hữu" hiếm và đáng ghi lại: không có căn cứ chọn đúng 1 trong nhiều bản ghi
+      // làm "chủ thật sự" (Council review vòng 1), nên audit lại actor nào được cấp quyền qua nhánh
+      // này và qua đúng mindmap nào trong tập, để có thể tra soát thủ công về sau nếu cần.
+      writeAudit(actor.userId, null, 'mindmap_legacy_file.multi_owner_grant', `mindmap_legacy_file:${stored}`, {
+        ownerMindmapIds: owners.map((r) => r.id),
+      });
     }
   } else {
-    console.warn(`[mindmap-legacy-file] không tìm thấy mindmap nào còn tham chiếu file "${stored}" — coi là file mồ côi thật, chỉ áp dụng yêu cầu đăng nhập (hạn chế đã biết của dữ liệu lịch sử).`);
+    console.warn(`[mindmap-legacy-file] file "${stored}" không có trong snapshot chủ sở hữu (mồ côi thật, hoặc chưa từng được tham chiếu tại thời điểm chụp) — coi là file mồ côi, chỉ áp dụng yêu cầu đăng nhập (hạn chế đã biết của dữ liệu lịch sử).`);
   }
 
   const display = stored.includes('__') ? stored.slice(stored.indexOf('__') + 2) : stored;
