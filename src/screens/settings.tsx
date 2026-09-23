@@ -230,23 +230,24 @@ function ManHinhQuanLyPic() {
   );
 }
 
-interface RedmineConfig { baseUrl: string; coKey: boolean; keyMask: string; }
+interface RedmineConfig { baseUrl: string; hasKey: boolean; keyMask: string; }
 
-// Cấu hình Redmine: nhập URL + API key, lưu vào DB local (không nằm trong source code).
-// Có nút Test kết nối để xác nhận key gọi được API trước khi dùng lấy data.
+// CR-20260913 Lát 5 (FR-33): công ty chỉ có MỘT Redmine — URL cấu hình cấp hệ thống, chỉ Admin sửa
+// được (route riêng PUT /api/admin/redmine-url, KHÔNG đặt trong màn Cài đặt của Member — tách hẳn
+// theo đúng yêu cầu CR). Mỗi người tự nhập API KEY RIÊNG của mình (GET|PUT|DELETE /api/me/redmine) —
+// không còn khoá dùng chung cho cả app. Màn này giờ chỉ còn hiển thị URL (đọc, không sửa) + quản lý
+// key của chính người đang đăng nhập.
 function ManHinhCauHinhRedmine() {
   const toast = useToast();
   const [cfg, setCfg] = useState<RedmineConfig | null>(null);
-  const [baseUrl, setBaseUrl] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   async function tai() {
     try {
-      const c = await api<RedmineConfig>('/api/redmine/config');
+      const c = await api<RedmineConfig>('/api/me/redmine');
       setCfg(c);
-      setBaseUrl(c.baseUrl);
       setError('');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Không tải được cấu hình');
@@ -255,18 +256,17 @@ function ManHinhCauHinhRedmine() {
   useEffect(() => { void tai(); }, []);
 
   async function luu() {
-    if (!baseUrl.trim()) { setError('URL Redmine là bắt buộc'); return; }
+    if (!apiKey.trim()) { setError('API key là bắt buộc'); return; }
     setBusy(true);
     setError('');
     try {
-      const c = await api<RedmineConfig>('/api/redmine/config', {
+      const c = await api<RedmineConfig>('/api/me/redmine', {
         method: 'PUT',
-        body: JSON.stringify({ baseUrl: baseUrl.trim(), apiKey: apiKey.trim() || undefined })
+        body: JSON.stringify({ apiKey: apiKey.trim() })
       });
       setCfg(c);
-      setBaseUrl(c.baseUrl);
       setApiKey('');
-      toast('Đã lưu cấu hình Redmine');
+      toast('Đã lưu API key Redmine của bạn');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Lưu thất bại');
     } finally {
@@ -278,7 +278,7 @@ function ManHinhCauHinhRedmine() {
     setBusy(true);
     setError('');
     try {
-      const r = await api<{ ten?: string; login?: string; userId?: number }>('/api/redmine/test', { method: 'POST' });
+      const r = await api<{ ten?: string; login?: string; userId?: number }>('/api/me/redmine/test', { method: 'POST' });
       toast(`Kết nối OK — ${r.ten || r.login} (id ${r.userId})`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Test kết nối thất bại');
@@ -291,7 +291,7 @@ function ManHinhCauHinhRedmine() {
     setBusy(true);
     setError('');
     try {
-      await api('/api/redmine/config/key', { method: 'DELETE' });
+      await api('/api/me/redmine/key', { method: 'DELETE' });
       await tai();
       toast('Đã xóa API key');
     } catch (e) {
@@ -304,34 +304,27 @@ function ManHinhCauHinhRedmine() {
   return (
     <div className="flex max-w-xl flex-col gap-4">
       <div className="rounded-md border bg-amber-50 p-3 text-xs text-amber-800">
-        API key chỉ lưu trong DB cục bộ trên máy này, <strong>không</strong> nằm trong source code.
-        Key có quyền đúng bằng tài khoản của bạn (xem ticket trong các project bạn là thành viên).
+        API key chỉ dùng riêng cho tài khoản của bạn, không ai khác đọc được (kể cả người trong cùng
+        team). Sửa URL Redmine hệ thống là việc của Admin, không nằm ở màn này.
       </div>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-slate-600">URL Redmine</span>
-        <input
-          className="rounded-md border px-3 py-2 text-sm"
-          placeholder="redmine.famishare.jp"
-          value={baseUrl}
-          onChange={(e) => setBaseUrl(e.target.value)}
-        />
+        <span className="font-medium text-slate-600">URL Redmine (do Admin cấu hình)</span>
+        <input className="rounded-md border bg-slate-50 px-3 py-2 text-sm text-slate-500" value={cfg?.baseUrl || '(chưa cấu hình)'} disabled />
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-slate-600">API key</span>
+        <span className="font-medium text-slate-600">API key của bạn</span>
         <input
           type="password"
           className="rounded-md border px-3 py-2 text-sm"
-          placeholder={cfg?.coKey ? `Đang lưu: ${cfg.keyMask} — để trống nếu không đổi` : 'Dán API key Redmine vào đây'}
+          placeholder={cfg?.hasKey ? `Đang lưu: ${cfg.keyMask} — nhập để thay bằng key mới` : 'Dán API key Redmine của bạn vào đây'}
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
           autoComplete="off"
         />
-        {cfg?.coKey && (
-          <span className="text-xs text-slate-500">
-            Đã có key ({cfg.keyMask}). Để trống ô trên khi lưu nếu chỉ muốn đổi URL.
-          </span>
+        {cfg?.hasKey && (
+          <span className="text-xs text-slate-500">Đã có key ({cfg.keyMask}).</span>
         )}
       </label>
 
@@ -342,7 +335,7 @@ function ManHinhCauHinhRedmine() {
           type="button"
           className="rounded-md bg-teal-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
           onClick={luu}
-          disabled={busy}
+          disabled={busy || !apiKey.trim()}
         >
           Lưu
         </button>
@@ -350,11 +343,11 @@ function ManHinhCauHinhRedmine() {
           type="button"
           className="rounded-md border bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
           onClick={test}
-          disabled={busy || !cfg?.coKey}
+          disabled={busy || !cfg?.hasKey}
         >
           Test kết nối
         </button>
-        {cfg?.coKey && (
+        {cfg?.hasKey && (
           <button
             type="button"
             className="rounded-md border border-rose-200 bg-white px-3 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50"

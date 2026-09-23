@@ -46,8 +46,11 @@ interface MindNode {
   svcIcon?: string;        // slug logo hạ tầng (AWS/GCP/Docker…) trong kho icon
   children: MindNode[];
 }
-interface MapInfo { id: number; title: string; createdAt: string; updatedAt: string }
+// CR-20260913 Lát 5 (FR-32): thêm ownerUserId/visibility/sharedTeamId — sơ đồ giờ có chủ sở hữu và
+// công tắc riêng tư/chia sẻ theo team (chỉ owner mới sửa được, kể cả khi đang chia sẻ).
+interface MapInfo { id: number; title: string; ownerUserId: number | null; visibility: 'private' | 'team'; sharedTeamId: number | null; createdAt: string; updatedAt: string }
 interface MapFull extends MapInfo { data: string }
+interface MyTeamInfo { id: number; name: string; role: 'leader' | 'member' }
 // Nét viết tay bằng chuột (toạ độ theo không gian nội dung, chưa nhân scale).
 interface Stroke { color: string; width: number; pts: { x: number; y: number }[] }
 const PEN_COLORS = ['#ef4444', '#1e293b', '#0d9488', '#22c55e', '#f97316'];
@@ -401,6 +404,11 @@ export function ManHinhMindMap({ toast, guardRef }: { toast?: ToastFn; guardRef?
   const [dangTaiDS, setDangTaiDS] = useState(true);
   const [mapId, setMapId] = useState<number | null>(null);
   const [title, setTitle] = useState('');
+  // FR-32: công tắc riêng tư/chia sẻ — chỉ hiện/đổi được khi sơ đồ đang mở thuộc CHÍNH mình (owner).
+  const [visibility, setVisibility] = useState<'private' | 'team'>('private');
+  const [sharedTeamId, setSharedTeamId] = useState<number | null>(null);
+  const [isOwner, setIsOwner] = useState(true);
+  const [myTeams, setMyTeams] = useState<MyTeamInfo[]>([]);
   const [renamingId, setRenamingId] = useState<number | null>(null); // đổi tên sơ đồ trong sidebar
   const [renameText, setRenameText] = useState('');
   const [root, setRoot] = useState<MindNode | null>(null);
@@ -458,6 +466,20 @@ export function ManHinhMindMap({ toast, guardRef }: { toast?: ToastFn; guardRef?
   }, []);
   useEffect(() => { taiDanhSach(); }, [taiDanhSach]);
 
+  // FR-32: cần biết "mình là ai" (so với ownerUserId của sơ đồ đang mở) và "mình thuộc team nào" (để
+  // chọn team chia sẻ) — gọi 1 lần lúc mount, không phụ thuộc ngữ cảnh team đang chọn ở màn khác.
+  const [myUserId, setMyUserId] = useState<number | null>(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const me = await api<{ user: { id: number } }>('/api/auth/me');
+        setMyUserId(me.user.id);
+        const teams = await api<{ teams: MyTeamInfo[] }>('/api/me/teams');
+        setMyTeams(teams.teams);
+      } catch { /* chưa đăng nhập hoặc lỗi tạm thời — công tắc chia sẻ sẽ tự ẩn (isOwner mặc định true, an toàn) */ }
+    })();
+  }, []);
+
   const moMap = useCallback(async (id: number) => {
     try {
       const full = await api<MapFull>(`/api/mindmaps/${id}`);
@@ -466,10 +488,23 @@ export function ManHinhMindMap({ toast, guardRef }: { toast?: ToastFn; guardRef?
       const r = bocSuperRoot((parsed && typeof parsed === 'object' && (parsed as { root?: unknown }).root) ? chuanHoa((parsed as { root: unknown }).root) : rootMoi());
       const dr = (parsed as { drawings?: unknown }).drawings;
       setMapId(full.id); setTitle(full.title); setRoot(r); setSelectedId(r.children[0]?.id ?? null);
+      setVisibility(full.visibility); setSharedTeamId(full.sharedTeamId);
+      setIsOwner(myUserId == null || full.ownerUserId == null || full.ownerUserId === myUserId);
       setDrawings(Array.isArray(dr) ? (dr as Stroke[]).filter((s) => s && Array.isArray(s.pts)) : []);
       setEditingId(null); setTrangThaiLuu('idle'); setScale(1); setPast([]); setFuture([]); setPopover(null); setPenMode(false);
     } catch (e) { setLoi(e instanceof Error ? e.message : 'Lỗi mở sơ đồ'); }
-  }, []);
+  }, [myUserId]);
+
+  // FR-32: đổi công tắc riêng tư/chia sẻ — CHỈ owner gọi được (route tự chặn 403 nếu không phải),
+  // nên chỉ hiện control này khi isOwner. sharedTeamId=null nghĩa là "chọn 1 team" chưa xong.
+  const doiChiaSe = useCallback(async (nextVisibility: 'private' | 'team', nextTeamId: number | null) => {
+    if (mapId == null) return;
+    try {
+      await api(`/api/mindmaps/${mapId}`, { method: 'PUT', body: JSON.stringify({ visibility: nextVisibility, sharedTeamId: nextTeamId }) });
+      setVisibility(nextVisibility); setSharedTeamId(nextTeamId);
+      toast?.(nextVisibility === 'team' ? 'Đã chia sẻ với team' : 'Đã chuyển về riêng tư');
+    } catch (err) { setLoi(err instanceof Error ? err.message : 'Lỗi đổi chế độ chia sẻ'); }
+  }, [mapId, toast]);
 
   const taoMap = useCallback(async () => {
     try {
@@ -477,6 +512,7 @@ export function ManHinhMindMap({ toast, guardRef }: { toast?: ToastFn; guardRef?
       const created = await api<MapFull>('/api/mindmaps', { method: 'POST', body: JSON.stringify({ title: 'Sơ đồ mới', data: { root: r } }) });
       await taiDanhSach();
       setMapId(created.id); setTitle(created.title); setRoot(r); setSelectedId(r.children[0]?.id ?? null);
+      setVisibility('private'); setSharedTeamId(null); setIsOwner(true);
       setDrawings([]); setPenMode(false);
       setEditingId(null); setTrangThaiLuu('idle'); setScale(1); setPast([]); setFuture([]);
       // Mở ngay ô đặt tên cho sơ đồ vừa tạo.
@@ -504,14 +540,17 @@ export function ManHinhMindMap({ toast, guardRef }: { toast?: ToastFn; guardRef?
   }, [mapId, taiDanhSach]);
 
   // ── Lưu thủ công (Ctrl+S) — KHÔNG tự lưu liên tục để giảm tải ──
+  // FR-32: sơ đồ đang chia sẻ mà mình KHÔNG PHẢI owner -> chỉ xem, không gọi PUT (server cũng chặn
+  // 403 nhưng chặn sớm ở đây để không hiện lỗi khó hiểu khi người xem lỡ tay sửa rồi bấm lưu).
   const luuMap = useCallback(async () => {
     if (!root || mapId == null) return;
+    if (!isOwner) { toast?.('Sơ đồ này đang chia sẻ — chỉ người tạo mới sửa được', 'error'); return; }
     setTrangThaiLuu('saving');
     try {
       await api(`/api/mindmaps/${mapId}`, { method: 'PUT', body: JSON.stringify({ data: { root, drawings } }) });
       setTrangThaiLuu('saved'); toast?.('Đã lưu'); taiDanhSach();
     } catch (e) { setLoi(e instanceof Error ? e.message : 'Lỗi lưu'); setTrangThaiLuu('dirty'); toast?.('Lỗi khi lưu', 'error'); }
-  }, [root, drawings, mapId, toast, taiDanhSach]);
+  }, [root, drawings, mapId, isOwner, toast, taiDanhSach]);
 
   // Phơi trạng thái dirty + hàm lưu cho cha (để chặn khi chuyển tab).
   useEffect(() => { if (guardRef) guardRef.current = { dirty: trangThaiLuu === 'dirty', luu: luuMap }; });
@@ -753,23 +792,26 @@ export function ManHinhMindMap({ toast, guardRef }: { toast?: ToastFn; guardRef?
   }, [editingId, editText]);
 
   // ── Đính file ──
+  // CR-20260913 Lát 5 (FR-32a/FR-43): upload đổi từ JSON base64 (nguyên khối vào RAM) sang
+  // multipart/form-data streaming, gắn với ĐÚNG sơ đồ đang mở (route mới yêu cầu mindmapId trong
+  // path + chỉ owner mới upload được — xem server/routes/mindmaps.ts). Dùng `fetch` trực tiếp (không
+  // qua api<T>()) vì multipart KHÔNG được set Content-Type thủ công (trình duyệt tự sinh boundary).
   const onChonFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = ''; // cho phép chọn lại cùng file
-    if (!file || !selectedId) return;
+    if (!file || !selectedId || mapId == null) return;
     setUploading(true);
     try {
-      const dataBase64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result || ''));
-        reader.onerror = () => reject(new Error('Không đọc được file'));
-        reader.readAsDataURL(file);
-      });
-      const saved = await api<FileAtt>('/api/mindmaps/upload', { method: 'POST', body: JSON.stringify({ name: file.name, dataBase64 }) });
+      const formData = new FormData();
+      formData.append('file', file, file.name);
+      const res = await fetch(`/api/mindmaps/${mapId}/attachments`, { method: 'POST', body: formData });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.message || `Tải file thất bại (${res.status})`);
+      const saved: FileAtt = { name: String(body.originalName || file.name), url: String(body.downloadUrl) };
       capNhatRoot((r) => datThuocTinh(r, selectedId, { files: [...(timNode(r, selectedId)?.files ?? []), saved] }));
     } catch (err) { setLoi(err instanceof Error ? err.message : 'Lỗi đính file'); }
     finally { setUploading(false); }
-  }, [selectedId, capNhatRoot]);
+  }, [selectedId, mapId, capNhatRoot]);
   const goBoFile = useCallback((url: string) => {
     if (!selectedId) return;
     capNhatRoot((r) => {
@@ -1025,7 +1067,23 @@ export function ManHinhMindMap({ toast, guardRef }: { toast?: ToastFn; guardRef?
           </button>
           {root ? (
             <>
-              <input className="mm-title-input" value={title} onChange={(e) => doiTitle(e.target.value)} placeholder="Tên sơ đồ" />
+              <input className="mm-title-input" value={title} onChange={(e) => doiTitle(e.target.value)} placeholder="Tên sơ đồ" disabled={!isOwner} />
+              {isOwner && (
+                <select
+                  className="mm-btn mm-btn-sm"
+                  title="Riêng tư: chỉ mình bạn thấy. Chia sẻ: cả team xem được, nhưng chỉ bạn sửa được."
+                  value={visibility === 'team' && sharedTeamId != null ? `team:${sharedTeamId}` : 'private'}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === 'private') doiChiaSe('private', null);
+                    else doiChiaSe('team', Number(v.slice('team:'.length)));
+                  }}
+                >
+                  <option value="private">🔒 Riêng tư</option>
+                  {myTeams.map((t) => <option key={t.id} value={`team:${t.id}`}>👥 Chia sẻ với {t.name}</option>)}
+                </select>
+              )}
+              {!isOwner && visibility === 'team' && <span className="mm-muted" title="Chỉ người tạo mới sửa được sơ đồ chia sẻ">🔒 Chỉ xem (sơ đồ chia sẻ)</span>}
               <div className="mm-toolbar-spacer" />
               <button className="mm-btn mm-btn-sm mm-btn-export" title="Xuất Markdown / Mermaid để prompt cho AI" onClick={() => { setXuat('md'); setDaCopy(false); }}><Download size={14} /> Export</button>
             </>
