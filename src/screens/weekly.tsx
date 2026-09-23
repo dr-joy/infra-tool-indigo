@@ -279,17 +279,25 @@ export function ManHinhBaoCaoTuan() {
     if (moChonTuan) currentWeekRowRef.current?.scrollIntoView({ block: 'center' });
   }, [moChonTuan]);
 
-  async function taiHistory() {
+  // aliveRef: cờ huỷ (cancellation guard, giống pattern `alive` ở personal-task.tsx) — chỉ dùng khi
+  // gọi TỪ effect nạp theo activeTeamId bên dưới. Đổi team nhanh khiến response cũ có thể set state
+  // SAU khi đã hiển thị team mới; effect cleanup đặt aliveRef.current = false để response trễ tự bỏ
+  // qua (Council review Lát 7 giai đoạn 1). Nơi khác gọi 2 hàm này không truyền aliveRef -> giữ
+  // nguyên hành vi cũ.
+  async function taiHistory(aliveRef?: { current: boolean }) {
     if (activeTeamId == null) return;
     try {
-      setHistory(await apiTeam<ReportHistoryItem[]>(activeTeamId, '/api/weeks/report-history'));
+      const data = await apiTeam<ReportHistoryItem[]>(activeTeamId, '/api/weeks/report-history');
+      if (aliveRef && !aliveRef.current) return;
+      setHistory(data);
     } catch { /* ignore */ }
   }
 
-  async function taiWeekGoals(week: string) {
+  async function taiWeekGoals(week: string, aliveRef?: { current: boolean }) {
     if (!week || activeTeamId == null) return;
     try {
       const res = await apiTeam<WeekGoalsResponse>(activeTeamId, `/api/weeks/${week}/goals`);
+      if (aliveRef && !aliveRef.current) return;
       setWeekGoals(res.goals);
       setPrevEvaluated(res.prevEvaluated);
     } catch { /* ignore */ }
@@ -328,20 +336,25 @@ export function ManHinhBaoCaoTuan() {
 
   useEffect(() => {
     if (activeTeamId == null) return;
+    const aliveRef = { current: true };
     (async () => {
       try {
         const meta = await apiTeam<{ currentWeek: string; kinds: ReportKindInfo[] }>(activeTeamId, '/api/weeks/report-kinds');
+        if (!aliveRef.current) return;
         setKinds(meta.kinds);
         if (meta.kinds.length > 0) setKind(meta.kinds[0].id);
         setCurrentWeek(meta.currentWeek);
         setWeekStart(meta.currentWeek);
-        await taiHistory();
-        await taiWeekGoals(meta.currentWeek);
+        await taiHistory(aliveRef);
+        await taiWeekGoals(meta.currentWeek, aliveRef);
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Lỗi tải dữ liệu');
+        if (aliveRef.current) setError(e instanceof Error ? e.message : 'Lỗi tải dữ liệu');
       }
     })();
     // Đổi team ở bộ chọn (FR-13) phải tự nạp lại toàn bộ màn Báo cáo tuần, KHÔNG tải lại trang.
+    // aliveRef bị dọn khi effect cleanup chạy (đổi team lần nữa/unmount) -> response trễ của team cũ
+    // (report-kinds/history/goals) bị bỏ, không ghi đè lên dữ liệu team đang xem.
+    return () => { aliveRef.current = false; };
   }, [activeTeamId]);
 
   async function generateDraft(week = weekStart, k = kind) {
@@ -948,20 +961,29 @@ function PopupTaoBaoCao({ weekStart, onClose, onDone }: { weekStart: string; onC
     });
   }
 
-  async function loadPlan() {
+  // aliveRef: cờ huỷ — wizard này cũng đọc activeTeamId riêng, đổi team trong lúc wizard đang mở
+  // (nếu bộ chọn team vẫn bấm được) phải bỏ response trễ của team cũ, không áp kế hoạch sai team lên
+  // form (Council review Lát 7 giai đoạn 1).
+  async function loadPlan(aliveRef?: { current: boolean }) {
     if (activeTeamId == null) return;
     setLoading(true);
     try {
       const p = await apiTeam<ReportPlanView>(activeTeamId, `/api/weeks/${weekStart}/plan`);
+      if (aliveRef && !aliveRef.current) return;
       applyPlan(p, true);
     } catch (e) {
+      if (aliveRef && !aliveRef.current) return;
       setError(e instanceof Error ? e.message : 'Lỗi tải kế hoạch');
     } finally {
-      setLoading(false);
+      if (!aliveRef || aliveRef.current) setLoading(false);
     }
   }
 
-  useEffect(() => { loadPlan(); }, [activeTeamId]);
+  useEffect(() => {
+    const aliveRef = { current: true };
+    void loadPlan(aliveRef);
+    return () => { aliveRef.current = false; };
+  }, [activeTeamId]);
 
   const prevWeekStart = isoAddDays(weekStart, -7);
 

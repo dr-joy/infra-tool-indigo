@@ -101,4 +101,30 @@ describe('apiTeam — tự gắn teamId (FR-13)', () => {
     expect(err.status).toBe(400);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
+
+  // Điểm phụ Council nêu (Lát 7 giai đoạn 1): AUTH_ERROR_EVENT phải mang theo teamId của request gây
+  // lỗi, để nơi nhận (auth-context.tsx) phân biệt được lỗi của team đã rời khỏi với lỗi của team đang
+  // xem hiện tại.
+  it('lỗi từ apiTeam() gắn teamId của chính request đó vào ApiError', async () => {
+    mockFetch(403, { message: 'Không còn là thành viên', code: 'NOT_TEAM_MEMBER' }, false);
+    const err = await apiTeam(7, '/api/projects').catch((e) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err.teamId).toBe(7);
+  });
+
+  it('sự kiện AUTH_ERROR_EVENT phát ra từ apiTeam() cũng mang theo teamId', async () => {
+    mockFetch(403, { message: 'Không còn là thành viên', code: 'NOT_TEAM_MEMBER' }, false);
+    const handler = vi.fn();
+    window.addEventListener(AUTH_ERROR_EVENT, handler);
+    await apiTeam(9, '/api/projects').catch(() => {});
+    window.removeEventListener(AUTH_ERROR_EVENT, handler);
+    const detail = (handler.mock.calls[0][0] as CustomEvent<ApiError>).detail;
+    expect(detail.teamId).toBe(9);
+  });
+
+  it('lỗi từ api() trần (không qua apiTeam) KHÔNG có teamId', async () => {
+    mockFetch(403, { message: 'Không còn là thành viên', code: 'NOT_TEAM_MEMBER' }, false);
+    const err = await api('/api/x').catch((e) => e);
+    expect(err.teamId).toBeUndefined();
+  });
 });

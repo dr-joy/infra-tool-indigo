@@ -21,15 +21,27 @@ export function PicProvider({ children }: { children: React.ReactNode }) {
   const [pics, setPics] = useState<string[]>([]);
   const [picColors, setPicColors] = useState<Record<string, string>>({});
   const activeTeamId = useActiveTeamId();
-  const reloadPics = useCallback(async () => {
+  // aliveRef: cờ huỷ (cancellation guard) — chỉ dùng khi gọi TỪ effect nạp theo activeTeamId bên
+  // dưới. Đổi team nhanh (A -> B trước khi response của A về) khiến danh sách PIC của A có thể set
+  // state SAU khi đã hiển thị team B (dropdown PIC/màu Gantt sai team); effect cleanup đặt
+  // aliveRef.current = false để response trễ tự bỏ qua (Council review Lát 7 giai đoạn 1). Nơi khác
+  // gọi reloadPics() (sau thêm/sửa/xoá PIC ở settings.tsx) không truyền aliveRef -> giữ nguyên hành
+  // vi cũ; kiểu tham số optional để reloadPics vẫn khớp type `() => Promise<void>` đã export qua
+  // context.
+  const reloadPics = useCallback(async (aliveRef?: { current: boolean }) => {
     if (activeTeamId == null) { setPics([]); setPicColors({}); return; }
     try {
       const data = await apiTeam<PicItem[]>(activeTeamId, '/api/pics');
+      if (aliveRef && !aliveRef.current) return;
       setPics(data.map((p) => p.name));
       setPicColors(Object.fromEntries(data.filter((p) => p.color).map((p) => [p.name, p.color as string])));
     } catch { /* server chưa sẵn sàng hoặc chưa chọn được team thì giữ danh sách rỗng */ }
   }, [activeTeamId]);
-  useEffect(() => { void reloadPics(); }, [reloadPics]);
+  useEffect(() => {
+    const aliveRef = { current: true };
+    void reloadPics(aliveRef);
+    return () => { aliveRef.current = false; };
+  }, [reloadPics]);
   return <PicContext.Provider value={{ pics, picColors, reloadPics }}>{children}</PicContext.Provider>;
 }
 

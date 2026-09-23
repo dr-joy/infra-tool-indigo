@@ -248,40 +248,52 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
     };
   }, [projectTasks]);
 
-  async function taiProjects() {
+  // aliveRef: cờ huỷ (cancellation guard) — chỉ dùng khi gọi TỪ effect nạp theo activeTeamId bên
+  // dưới. Đổi team nhanh (A -> B trước khi response của A về) khiến response cũ của A có thể set
+  // state SAU khi đã hiển thị team B; effect cleanup đặt aliveRef.current = false để response trễ tự
+  // bỏ qua, không ghi đè dữ liệu team đang xem (Council review Lát 7 giai đoạn 1, race condition khi
+  // đổi team nhanh). Các nơi khác gọi 2 hàm này (nút bấm, sự kiện quick-add...) không truyền aliveRef
+  // nên hành vi giữ nguyên như trước.
+  async function taiProjects(aliveRef?: { current: boolean }) {
     if (activeTeamId == null) return;
     setDangTaiProject(true);
     try {
       const data = await apiTeam<ProjectItem[]>(activeTeamId, '/api/projects');
+      if (aliveRef && !aliveRef.current) return;
       setProjects(data);
       setProjectDangChon((current) => current && data.some((project) => project.id === current) ? current : data[0]?.id || '');
       setProjectError('');
     } catch (error) {
+      if (aliveRef && !aliveRef.current) return;
       setProjectError(error instanceof Error ? error.message : t('err.project_list'));
     } finally {
-      setDangTaiProject(false);
+      if (!aliveRef || aliveRef.current) setDangTaiProject(false);
     }
   }
 
   // Badge 🎯 = mục tiêu của tuần có mục tiêu mới nhất, chưa 100%.
   // Báo đỏ = carry-over chưa xử lý (không được duyệt tiếp, chưa reschedule).
-  async function taiBadgeIds() {
+  async function taiBadgeIds(aliveRef?: { current: boolean }) {
     if (activeTeamId == null) return;
     try {
       const [goalIds, riskIds] = await Promise.all([
         apiTeam<string[]>(activeTeamId, '/api/weeks/goal-badge-ids'),
         apiTeam<string[]>(activeTeamId, '/api/weeks/at-risk-ids')
       ]);
+      if (aliveRef && !aliveRef.current) return;
       setGoalTaskIds(new Set(goalIds));
       setAtRiskTaskIds(new Set(riskIds));
     } catch { /* ignore */ }
   }
 
   // Component này mount lại mỗi lần mở tab project nên badge luôn được làm mới. Thêm activeTeamId vào
-  // dependency (FR-13): đổi team ở bộ chọn phải tự nạp lại, KHÔNG tải lại trang.
+  // dependency (FR-13): đổi team ở bộ chọn phải tự nạp lại, KHÔNG tải lại trang. aliveRef bị dọn
+  // (false) khi effect cleanup chạy (đổi team lần nữa hoặc unmount) -> response trễ của team cũ bị bỏ.
   useEffect(() => {
-    taiProjects();
-    void taiBadgeIds();
+    const aliveRef = { current: true };
+    void taiProjects(aliveRef);
+    void taiBadgeIds(aliveRef);
+    return () => { aliveRef.current = false; };
   }, [activeTeamId]);
 
   useEffect(() => {

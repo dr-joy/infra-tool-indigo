@@ -35,16 +35,27 @@ function ManHinhQuanLyPic() {
   }
 
   // CR-20260913 (§6.2, server/routes/pics.ts): bảng pics đã theo team -> GET bắt buộc teamId (FR-13).
-  async function taiDanhSach() {
+  // aliveRef: cờ huỷ — chỉ dùng khi gọi TỪ effect nạp theo activeTeamId bên dưới. Đổi team nhanh
+  // khiến response cũ có thể set state SAU khi đã hiển thị team mới; effect cleanup đặt
+  // aliveRef.current = false để response trễ tự bỏ qua (Council review Lát 7 giai đoạn 1). Các nơi
+  // khác gọi hàm này (sau thêm/sửa/xoá PIC) không truyền aliveRef -> giữ nguyên hành vi cũ.
+  async function taiDanhSach(aliveRef?: { current: boolean }) {
     if (activeTeamId == null) { setItems([]); return; }
     try {
-      setItems(await apiTeam<PicItem[]>(activeTeamId, '/api/pics'));
+      const data = await apiTeam<PicItem[]>(activeTeamId, '/api/pics');
+      if (aliveRef && !aliveRef.current) return;
+      setItems(data);
       setError('');
     } catch (e) {
+      if (aliveRef && !aliveRef.current) return;
       setError(loiThanThien(e));
     }
   }
-  useEffect(() => { void taiDanhSach(); }, [activeTeamId]);
+  useEffect(() => {
+    const aliveRef = { current: true };
+    void taiDanhSach(aliveRef);
+    return () => { aliveRef.current = false; };
+  }, [activeTeamId]);
 
   async function capNhatXong() {
     await taiDanhSach();

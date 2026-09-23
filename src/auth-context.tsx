@@ -215,6 +215,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // logged_out/disabled không cần `actor` cũ. ACCOUNT_PENDING không có rủi ro này (route
   // GET /api/auth/me chỉ qua requireSession, không bao giờ tự trả ACCOUNT_PENDING) nên vẫn reload()
   // bình thường để lấy lại joinRequest cho đúng màn.
+  // Điểm phụ Council nêu (Lát 7 giai đoạn 1, mức thấp — chỉ gây hiểu lầm thông báo, không rò dữ
+  // liệu): AUTH_ERROR_EVENT là sự kiện toàn cục, không tự mang teamId của request gốc. Nếu response
+  // lỗi (NOT_TEAM_MEMBER/ROLE_FORBIDDEN) của team A về SAU khi người dùng đã đổi sang team B, popup
+  // "mất quyền" có thể hiện sai ngữ cảnh (nói "không còn là thành viên team này" trong khi đang xem
+  // team B). activeTeamIdRef giữ activeTeamId mới nhất (cập nhật mỗi render, không đợi effect chạy
+  // lại) để so sánh với error.teamId (api.ts gắn vào từ apiTeam()) ngay tại thời điểm sự kiện tới.
+  const activeTeamIdRef = useRef(activeTeamId);
+  activeTeamIdRef.current = activeTeamId;
+
   useEffect(() => {
     function onAuthError(event: Event) {
       const error = (event as CustomEvent<ApiError>).detail;
@@ -223,6 +232,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error.code === 'ACCOUNT_DISABLED') { setPhase('disabled'); return; }
       if (error.code === 'ACCOUNT_PENDING') { void reload(); return; }
       if (error.code === 'NOT_TEAM_MEMBER' || error.code === 'ROLE_FORBIDDEN') {
+        // error.teamId chỉ có khi lỗi tới từ apiTeam(); lỗi không mang teamId (vd api() trần) vẫn
+        // hiện popup như trước — không đủ căn cứ để biết là stale hay không nên giữ hành vi an toàn cũ.
+        if (error.teamId != null && error.teamId !== activeTeamIdRef.current) return;
         setPermissionLostError(error);
       }
     }

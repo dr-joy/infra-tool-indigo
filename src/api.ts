@@ -3,12 +3,17 @@ export class ApiError extends Error {
   status: number;
   code?: string;
   details?: unknown;
-  constructor(status: number, message: string, code?: string, details?: unknown) {
+  // teamId của request gây ra lỗi này (chỉ gắn khi gọi qua apiTeam()) — dùng để nơi nhận
+  // AUTH_ERROR_EVENT (src/auth-context.tsx) phân biệt lỗi của team đang xem hiện tại với lỗi trễ của
+  // một team đã rời đi (xem ghi chú tại nơi dispatch sự kiện bên dưới).
+  teamId?: number;
+  constructor(status: number, message: string, code?: string, details?: unknown, teamId?: number) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
     this.details = details;
+    this.teamId = teamId;
   }
 }
 
@@ -20,7 +25,9 @@ const AUTH_ERROR_CODES = new Set([
   'SESSION_REQUIRED', 'ACCOUNT_DISABLED', 'ACCOUNT_PENDING', 'NOT_TEAM_MEMBER', 'ROLE_FORBIDDEN'
 ]);
 
-export async function api<T>(url: string, options?: RequestInit): Promise<T> {
+// requestTeamId: chỉ gắn khi lệnh gọi đi qua apiTeam() bên dưới — gắn vào ApiError.teamId để nơi
+// nhận AUTH_ERROR_EVENT biết lỗi này phát sinh từ request của team nào (xem ApiError.teamId).
+export async function api<T>(url: string, options?: RequestInit, requestTeamId?: number): Promise<T> {
   const response = await fetch(url, {
     headers: { 'Content-Type': 'application/json' },
     ...options
@@ -29,7 +36,7 @@ export async function api<T>(url: string, options?: RequestInit): Promise<T> {
     const text = await response.text();
     let body: { message?: string; code?: string; details?: unknown } | null = null;
     try { body = JSON.parse(text); } catch { /* body không phải JSON */ }
-    const error = new ApiError(response.status, body?.message || text || `HTTP ${response.status}`, body?.code, body?.details);
+    const error = new ApiError(response.status, body?.message || text || `HTTP ${response.status}`, body?.code, body?.details, requestTeamId);
     if (error.code && AUTH_ERROR_CODES.has(error.code) && typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent<ApiError>(AUTH_ERROR_EVENT, { detail: error }));
     }
@@ -50,7 +57,7 @@ export function apiTeam<T>(teamId: number | null, url: string, options?: Request
   const method = (options?.method || 'GET').toUpperCase();
   if (method === 'GET' || method === 'HEAD') {
     const sep = url.includes('?') ? '&' : '?';
-    return api<T>(`${url}${sep}teamId=${teamId}`, options);
+    return api<T>(`${url}${sep}teamId=${teamId}`, options, teamId);
   }
   let bodyObj: Record<string, unknown> = {};
   if (typeof options?.body === 'string' && options.body.length > 0) {
@@ -60,5 +67,5 @@ export function apiTeam<T>(teamId: number | null, url: string, options?: Request
     } catch { /* body không phải JSON (vd FormData đã stringify sai) — không đụng vào, gửi teamId qua query thay */ }
   }
   bodyObj.teamId = teamId;
-  return api<T>(url, { ...options, body: JSON.stringify(bodyObj) });
+  return api<T>(url, { ...options, body: JSON.stringify(bodyObj) }, teamId);
 }
