@@ -15,6 +15,10 @@ const ManHinhMindMap = lazy(() => import('./mind-map').then((m) => ({ default: m
 // Tab Admin (CR-20260913 Giai đoạn 2, Lát 8) — chỉ Admin mới thấy (lọc ở tabsChinhChoActor bên dưới),
 // nên cũng lazy-load giống 3 tab kia: đa số user không phải Admin, không cần tải bundle này bao giờ.
 const ManHinhAdmin = lazy(() => import('./screens/admin').then((m) => ({ default: m.ManHinhAdmin })));
+// Tab Quản lý team (Lát 9) — hiện cho MỌI actor đã active (không gate theo vai trò, khác tab Admin):
+// mọi người đều thuộc ít nhất 1 team, Member xem tab Thành viên/Nhật ký được (FR-11a/quyết định 19/09),
+// chỉ Leader mới thấy nút thêm/bớt (tự kiểm bên trong màn, không phải ở đây).
+const ManHinhQuanLyTeam = lazy(() => import('./screens/team-management').then((m) => ({ default: m.ManHinhQuanLyTeam })));
 import { useGlobalShortcuts } from './shortcuts';
 import { InfoTip } from './ui';
 import {
@@ -75,6 +79,8 @@ const tabsChinh: { key: TabChinh; i18nKey: TranslationKey }[] = [
   { key: 'luyen_de', i18nKey: 'tab.luyen_de' },
   { key: 'so_do', i18nKey: 'tab.so_do' },
   { key: 'quan_ly_pic', i18nKey: 'tab.pics' },
+  // Lát 9 — hiện cho MỌI actor active (không gate, xem ghi chú ở khai báo ManHinhQuanLyTeam trên).
+  { key: 'quan_ly_team', i18nKey: 'tab.team' },
   // CR-20260913 Giai đoạn 2 (Lát 8) — chỉ hiện cho Admin (systemRole==='admin'), lọc ở
   // tabsHienThi bên trong App(), không xoá khỏi mảng gốc để chỗ khác (phím tắt, ?tab= URL) vẫn
   // nhận diện được key này.
@@ -218,6 +224,12 @@ export function App() {
         {tabDangMo === 'admin' && laAdmin && (
           <Suspense fallback={<div className="p-6 text-sm">{t('loading.data')}</div>}>
             <ManHinhAdmin />
+          </Suspense>
+        )}
+
+        {tabDangMo === 'quan_ly_team' && (
+          <Suspense fallback={<div className="p-6 text-sm">{t('loading.data')}</div>}>
+            <ManHinhQuanLyTeam />
           </Suspense>
         )}
       </div>

@@ -215,6 +215,38 @@ router.post('/teams/:teamId/members', requireSession, requireActiveAccount, (req
   }
 });
 
+// ── GET /teams/:teamId/member-candidates?email= — Leader tra 1 email ra userId trước khi thêm (FR-12) ──
+// Route 'create' bên dưới chỉ nhận userId số, không có ô tự do — Leader cần cách tra cứu này. Chỉ khớp
+// người ĐÃ TỪNG đăng nhập (tồn tại trong bảng users) — không phải danh bạ công ty (Q13 vẫn hoãn, xem
+// docs/exchanges/2026-09-21.md). Trả về null (không phải 404) khi không khớp — "không tìm thấy" là kết
+// quả hợp lệ của một lượt tra cứu, không phải lỗi.
+router.get('/teams/:teamId/member-candidates', requireSession, requireActiveAccount, (req, res) => {
+  const teamId = Number(req.params.teamId);
+  const email = typeof req.query.email === 'string' ? req.query.email.trim() : '';
+  if (!Number.isInteger(teamId)) return res.status(400).json({ message: 'teamId không hợp lệ' });
+  if (!email) return res.status(400).json({ message: 'email là bắt buộc' });
+  authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'team_member', action: 'lookup', scope: { teamId } });
+  const user = db.prepare('SELECT id, email, display_name, avatar FROM users WHERE email = ?').get(email) as
+    { id: number; email: string; display_name: string; avatar: string | null } | undefined;
+  res.json({ user: user || null });
+});
+
+// ── GET /teams/:teamId/members/:userId/pending-task-count — cảnh báo trước khi bớt (FR-12a) ────────
+// Đếm task project CHƯA XONG (tien_do < 100) của 1 thành viên trong ĐÚNG team này — không phải Task cá
+// nhân (personal_task là dữ liệu riêng tư của chủ sở hữu, Leader không có quyền xem/đếm — FR-14/FR-31).
+router.get('/teams/:teamId/members/:userId/pending-task-count', requireSession, requireActiveAccount, (req, res) => {
+  const teamId = Number(req.params.teamId);
+  const userId = Number(req.params.userId);
+  if (!Number.isInteger(teamId) || !Number.isInteger(userId)) return res.status(400).json({ message: 'Tham số không hợp lệ' });
+  authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'team_member', action: 'pending_task_count', scope: { teamId } });
+  const row = db.prepare(`
+    SELECT COUNT(DISTINCT pt.id) AS count
+    FROM project_task_assignments pta JOIN project_tasks pt ON pt.id = pta.project_task_id
+    WHERE pta.user_id = ? AND pt.team_id = ? AND pt.tien_do < 100
+  `).get(userId, teamId) as { count: number };
+  res.json({ count: row.count });
+});
+
 router.delete('/teams/:teamId/members/:userId', requireSession, requireActiveAccount, (req, res) => {
   const teamId = Number(req.params.teamId);
   const userId = Number(req.params.userId);

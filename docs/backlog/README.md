@@ -127,10 +127,31 @@ tích hợp mới. 458 test backend (456 cũ + 2 mới) + 10 test client mới (
 `npm run check` xanh (trừ gate Exe — chưa `npm run package`). **Chưa qua Council/Codex review — cần
 review trước khi coi là chốt, giống mọi lát trước.**
 
-**CÒN LẠI cho Giai đoạn 2-3:** màn Quản lý team Leader (3 tab — Lát 9), màn Lịch release chung + đăng
-ký lịch Release team-scoped ở UI (route BE Lát 6 đã sẵn, FE chưa dựng — Lát 10), các popup còn lại
-(cảnh báo bớt thành viên FR-12a, yêu cầu mở khoá FR-26 — cả hai thuộc Lát 9/10, "tạo team" đã xong ở
-Lát 8 qua `AdminTeams`).
+**Lát 9 Giai đoạn 2 XONG (23/09) — màn Quản lý team.** 1 màn `src/screens/team-management.tsx`
+(`ManHinhQuanLyTeam`), tab mới trong nav chính hiện cho MỌI actor active (không gate như tab Admin —
+mọi người thuộc ≥1 team, Member xem Thành viên/Nhật ký được theo đúng quyết định Leader 19/09, chỉ
+Leader thấy nút thêm/bớt). 3 tab: Tổng quan (tên/mô tả team, vai trò actor, Leader hiện tại, số thành
+viên — dùng lại dữ liệu đã có sẵn từ `myTeams`+roster, không cần route Admin-only mới), Thành viên
+(thêm/bớt, FR-12), Nhật ký (FR-11a, projection `team_detail` đầy đủ actor+target+payload).
+
+**Phát hiện + tự vá 2 khoảng trống thật khi code:** (1) không route nào cho Leader tra 1 email ra
+userId trước khi thêm thành viên (`POST .../members` chỉ nhận userId số) — thêm `GET
+/teams/:teamId/member-candidates?email=` (Leader-only, chỉ khớp người đã tồn tại trong bảng `users`,
+trả `user:null` khi không khớp thay vì 404 — "không tìm thấy" là kết quả hợp lệ của 1 lượt tra cứu);
+(2) FR-12a (cảnh báo số task chưa xong trước khi bớt) chưa có route đếm — thêm `GET
+/teams/:teamId/members/:userId/pending-task-count` (đếm `project_task_assignments` JOIN
+`project_tasks` theo `tien_do<100`, KHÔNG đụng Task cá nhân vì đó là dữ liệu riêng tư chủ sở hữu,
+FR-14/FR-31). Cả 2 route mới đều `policyKind:'team_feature'`, action riêng trong resource
+`team_member` (`lookup`, `pending_task_count`), roles `['leader']`, `scope.teamId` thật.
+
+458 test backend (16/16 pass riêng `teams.test.ts`, gồm 4 test mới của Lát 8+9) + 5 test client mới
+(`test/client/team-management.test.tsx`), `npm run check` xanh (trừ gate Exe). **Chưa qua Council/Codex
+review.**
+
+**CÒN LẠI cho Giai đoạn 2-3:** màn Lịch release chung + đăng ký lịch Release team-scoped ở UI (route BE
+Lát 6 đã sẵn, FE chưa dựng — Lát 10, phần lớn nhất còn lại: FR-23/24/25/26/27/28a — board xem lịch
+chung, form đăng ký/sửa lịch khẩn cấp, hiển thị+ép xung đột, luồng khoá/mở khoá đầy đủ, huỷ đợt, ấn
+định ngày định kỳ, tab cá nhân release nối vào lịch chính thức của team).
 
 **Đã merge vào `master` + push `indigo`, đã dọn nhánh.**
 

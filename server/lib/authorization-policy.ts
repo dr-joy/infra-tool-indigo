@@ -63,7 +63,14 @@ export const AUTHORIZATION_POLICY: Record<string, Record<string, PolicyEntry>> =
     list: { feature: null, roles: ['leader', 'member'] },
     list_own: { feature: null, roles: ['user', 'admin'] }, // không có scope.teamId — mọi actor đã đăng nhập
     create: { feature: null, roles: ['leader'] },
-    delete: { feature: null, roles: ['leader'] }
+    delete: { feature: null, roles: ['leader'] },
+    // Giai đoạn 2 FE (màn Quản lý team, Lát 9, FR-12/FR-12a) — Leader cần: (1) tra 1 email ra userId để
+    // thêm thành viên (route 'create' chỉ nhận userId, không có ô tự do; FR-12 chỉ cho thêm người ĐÃ
+    // TỪNG đăng nhập, tra cứu này chỉ khớp đúng bảng users, không phải danh bạ công ty — Q13 vẫn hoãn,
+    // xem exchange 2026-09-21); (2) đếm số task project CHƯA XONG của 1 thành viên trước khi bớt, hiện
+    // cảnh báo có thông tin (không chặn cứng).
+    lookup: { feature: null, roles: ['leader'] },
+    pending_task_count: { feature: null, roles: ['leader'] }
   },
 
   // Lát 4 mới — Project & Gantt (CR §3.1/AC-7/AC-8, docs/exchanges/2026-09-13.md mục 3.1). "Sửa task

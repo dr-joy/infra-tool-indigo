@@ -299,3 +299,59 @@ test('POST /teams/:teamId/members: thêm người CHƯA từng đăng nhập -> 
   const res = await fetch(`${base}/api/teams/${teamId}/members`, { method: 'POST', headers: H(leaderSession), body: JSON.stringify({ userId: 999999 }) });
   assert.equal(res.status, 404);
 });
+
+test('GET /teams/:teamId/member-candidates: Leader tra email ra userId (FR-12); không khớp -> user:null (không phải 404); Member bị ROLE_FORBIDDEN', async () => {
+  const adminSession = await loginAsAdmin();
+  const teamId = await makeTeam(adminSession, 'Team Lookup');
+  const { session: leaderSession } = await joinAndApprove('lookup-leader@drjoy.jp', 'Leader Lookup', teamId, 'leader', adminSession);
+  const { session: memberSession } = await joinAndApprove('lookup-member@drjoy.jp', 'Member Lookup', teamId, 'member', adminSession);
+  const { userId: targetId } = await (async () => {
+    const s = await loginAs('lookup-target@drjoy.jp', 'Mục tiêu tra cứu');
+    const me = await (await fetch(`${base}/api/auth/me`, { headers: H(s) })).json();
+    return { userId: me.user.id };
+  })();
+
+  const found = await (await fetch(`${base}/api/teams/${teamId}/member-candidates?email=lookup-target@drjoy.jp`, { headers: H(leaderSession) })).json();
+  assert.equal(found.user.id, targetId);
+
+  const notFound = await (await fetch(`${base}/api/teams/${teamId}/member-candidates?email=khong-ton-tai@drjoy.jp`, { headers: H(leaderSession) })).json();
+  assert.equal(notFound.user, null);
+
+  const asMember = await fetch(`${base}/api/teams/${teamId}/member-candidates?email=lookup-target@drjoy.jp`, { headers: H(memberSession) });
+  assert.equal(asMember.status, 403);
+  assert.equal((await asMember.json()).code, 'ROLE_FORBIDDEN');
+});
+
+test('GET /teams/:teamId/members/:userId/pending-task-count: đếm đúng task project CHƯA XONG của 1 thành viên (FR-12a)', async () => {
+  const adminSession = await loginAsAdmin();
+  const teamId = await makeTeam(adminSession, 'Team Pending Count');
+  const { session: leaderSession, userId: leaderId } = await joinAndApprove('pending-leader@drjoy.jp', 'Leader Pending', teamId, 'leader', adminSession);
+  const { userId: memberId } = await joinAndApprove('pending-member@drjoy.jp', 'Member Pending', teamId, 'member', adminSession);
+
+  const now = new Date().toISOString();
+  const projectId = Number(db.prepare(`
+    INSERT INTO projects (ten_project, pic, team_id, ngay_bat_dau, sort_order, is_system, created_at, updated_at)
+    VALUES ('Project test', '', ?, ?, 0, 0, ?, ?)
+  `).run(teamId, now.slice(0, 10), now, now).lastInsertRowid);
+  function makeTask(tienDo: number): number {
+    return Number(db.prepare(`
+      INSERT INTO project_tasks (project_id, team_id, level, tieu_de, ngay_bat_dau_du_kien, ngay_ket_thuc_du_kien, tien_do, created_at, updated_at)
+      VALUES (?, ?, 1, 'Task', ?, ?, ?, ?, ?)
+    `).run(projectId, teamId, now.slice(0, 10), now.slice(0, 10), tienDo, now, now).lastInsertRowid);
+  }
+  function assign(taskId: number, userId: number) {
+    db.prepare(`
+      INSERT INTO project_task_assignments (project_task_id, user_id, start_date, end_date) VALUES (?, ?, ?, ?)
+    `).run(taskId, userId, now.slice(0, 10), now.slice(0, 10));
+  }
+  const chuaXong1 = makeTask(50);
+  const chuaXong2 = makeTask(0);
+  const daXong = makeTask(100);
+  assign(chuaXong1, memberId);
+  assign(chuaXong2, memberId);
+  assign(daXong, memberId);
+  assign(chuaXong1, leaderId); // task chưa xong của Leader — không được tính vào count của member
+
+  const res = await (await fetch(`${base}/api/teams/${teamId}/members/${memberId}/pending-task-count`, { headers: H(leaderSession) })).json();
+  assert.equal(res.count, 2, 'chỉ đếm 2 task CHƯA XONG của memberId, không tính task đã xong hay task của người khác');
+});
