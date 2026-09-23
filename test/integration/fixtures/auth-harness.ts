@@ -20,7 +20,11 @@ export interface MockAuthServer {
 
 // Dựng 1 server giả đóng vai auth.drjoy.vn thật: JWKS (RS256), /auth/token/exchange (đổi code lấy
 // access_token JWT tự ký + refresh_token giả), /users/me (trả email/tên đã "issue" cho đúng token đó).
-export async function createMockAuthServer(): Promise<MockAuthServer> {
+// `fixedPort` (mặc định: OS tự cấp, cổng ngẫu nhiên) — chỉ dùng khi test cần `authBaseUrl` (issuer)
+// ỔN ĐỊNH giữa nhiều lần khởi động tiến trình con riêng biệt (vd redmine-secret-key-child.mjs, xem
+// comment ở đó) — vì (issuer, subject) là khoá định danh user thật, cổng đổi giữa 2 lần chạy sẽ tạo
+// ra 2 "issuer" khác nhau, tức 2 user khác nhau trong DB, dù cùng subject/email.
+export async function createMockAuthServer(fixedPort?: number): Promise<MockAuthServer> {
   const keyPair = await generateKeyPair('RS256');
   const jwk = { ...(await exportJWK(keyPair.publicKey)), kid: 'kid-1', alg: 'RS256', use: 'sig' };
   const jwksBody = { keys: [jwk] };
@@ -59,7 +63,7 @@ export async function createMockAuthServer(): Promise<MockAuthServer> {
     res.end();
   });
   const authBaseUrl = await new Promise<string>((resolve) => {
-    authServer.listen(0, '127.0.0.1', () => {
+    authServer.listen(fixedPort ?? 0, '127.0.0.1', () => {
       const addr = authServer.address();
       const port = typeof addr === 'object' && addr ? addr.port : 0;
       resolve(`http://127.0.0.1:${port}`);
@@ -145,8 +149,12 @@ export function makeOnboardingHelpers(getBase: () => string, flow: LoginFlow) {
     if (!res.ok) throw new Error(`setFeatureVisibility(${feature}=${level}) thất bại: ${res.status}`);
   }
 
-  async function joinAndApprove(email: string, name: string, teamId: number, role: 'leader' | 'member', adminSession: string): Promise<OnboardedActor> {
-    const session = await flow.loginAs(email, name);
+  // `subOverride` — mặc định để trống (mỗi lần gọi tự tăng số đếm nội bộ của mock auth server, đủ
+  // dùng cho hầu hết test). Chỉ cần truyền tường minh khi test cần danh tính (issuer, subject) ỔN
+  // ĐỊNH xuyên suốt NHIỀU tiến trình con riêng biệt (vd redmine-secret-key-child.mjs) — số đếm mặc
+  // định KHÔNG ổn định giữa các tiến trình vì mỗi tiến trình có mock auth server + số đếm riêng.
+  async function joinAndApprove(email: string, name: string, teamId: number, role: 'leader' | 'member', adminSession: string, subOverride?: string): Promise<OnboardedActor> {
+    const session = await flow.loginAs(email, name, subOverride);
     const me = await (await fetch(`${getBase()}/api/auth/me`, { headers: flow.H(session) })).json() as { user: { id: number } };
     await fetch(`${getBase()}/api/onboarding/join-request`, { method: 'POST', headers: flow.H(session), body: JSON.stringify({ teamId, role }) });
     const list = await (await fetch(`${getBase()}/api/admin/join-requests`, { headers: flow.H(adminSession) })).json() as { joinRequests: { id: number; user_id: number; row_version: number }[] };

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import { spawn, exec } from 'node:child_process';
 import { isSea } from './paths.js';
 import { app } from './app.js';
-import { runMindmapGc } from './lib/mindmap-gc.js';
+import { purgeStalePendingAttachments } from './routes/mindmaps.js';
 import { shutdownState } from './lib/shutdown-state.js';
 
 const PORT = Number(process.env.PORT || 4000);
@@ -63,8 +63,9 @@ process.on('unhandledRejection', (reason) => {
 const server = app.listen(PORT, HOST, () => {
   console.log(`App running at http://localhost:${PORT}`);
   // GC file đính kèm mindmap: chỉ chạy 1 lần lúc khởi động (không định kỳ) — gọi ở đây (không ở
-  // app.ts) để test tích hợp import app.ts không bị ảnh hưởng.
-  runMindmapGc();
+  // app.ts) để test tích hợp import app.ts không bị ảnh hưởng. Lát 5 (FR-32a): quét theo CỘT status
+  // (mindmap_attachments.status = 'pending' quá 24h), không còn dò URL trong JSON như GC cũ.
+  purgeStalePendingAttachments();
   // Mốc nhận diện bản server đang chạy (để chắc chắn đã restart đúng code mới).
   console.log('[server] features: luyen-de, gantt-phan-cong-giai-doan v2');
   // Tự mở trình duyệt khi khởi động qua launcher (đặt OPEN_BROWSER=1).

@@ -104,38 +104,55 @@ function authorizeTeamFeature(input: AuthorizeInput): AuthorizationDecision {
   return { viewerTeamId: teamId ?? null, effectiveRole };
 }
 
-// policyKind: 'personal_task' (FR-14, FR-31 — chưa có route Lát 3 nào gọi, Task cá nhân thuộc Lát 5;
-// implement đủ ngay theo đúng câu chữ CR đã chốt để Lát 5 chỉ cần gọi, không sửa core).
+// policyKind: 'personal_task' (FR-14, FR-31, và Lát 5 FR-32 dùng lại nguyên khối này cho Mind Map —
+// CÙNG MỘT hình dạng "chỉ chủ sở hữu thao tác + phải thuộc ≥1 team đang Bật đúng feature này"). Lát 3
+// hardcode `feature = 'personal_task'`; Lát 5 tổng quát hoá đọc `feature` từ chính khai báo
+// AUTHORIZATION_POLICY[resource][action] (field đã có sẵn cho MỌI policyKind, không phải field mới) —
+// KHÔNG đổi hành vi của personal_task (policy của nó vẫn khai `feature: 'personal_task'` y hệt cũ),
+// chỉ bỏ hardcode để resource khác (vd 'mind_map') dùng lại đúng khuôn ownerId mà không phải thêm
+// policyKind mới hay sửa route gọi thẳng hàm nội bộ nào khác (giữ đúng MỘT cổng vào của FR-40).
 function authorizePersonalTask(input: AuthorizeInput): AuthorizationDecision {
-  const { actor, scope } = input;
+  const { actor, resource, action, scope } = input;
+  const policy = AUTHORIZATION_POLICY[resource]?.[action];
+  const feature = policy?.feature;
+  if (!feature) {
+    throw new HttpError(403, `Chưa khai báo luật phân quyền cho ${resource}.${action}`, 'ROLE_FORBIDDEN');
+  }
   if (scope.ownerId !== actor.userId) {
-    throw new HttpError(403, 'Chỉ chủ sở hữu mới thao tác được task cá nhân này', 'ROLE_FORBIDDEN');
+    throw new HttpError(403, 'Chỉ chủ sở hữu mới thao tác được đối tượng này', 'ROLE_FORBIDDEN');
   }
   const teamIds = actor.memberships.map((m) => m.teamId);
   if (teamIds.length > 0) {
     const placeholders = teamIds.map(() => '?').join(',');
     const row = db.prepare(
-      `SELECT 1 FROM team_feature_visibility WHERE feature = 'personal_task' AND level = 'on' AND team_id IN (${placeholders})`
-    ).get(...teamIds);
+      `SELECT 1 FROM team_feature_visibility WHERE feature = ? AND level = 'on' AND team_id IN (${placeholders})`
+    ).get(feature, ...teamIds);
     if (row) return { viewerTeamId: null, effectiveRole: null, ownerOnly: true };
   }
-  throw new HttpError(403, 'Bạn chưa thuộc team nào đang Bật Task cá nhân', 'FEATURE_DISABLED');
+  throw new HttpError(403, 'Bạn chưa thuộc team nào đang Bật chức năng này', 'FEATURE_DISABLED');
 }
 
-// policyKind: 'cross_team_release' (FR-24 — chưa có route Lát 3 nào gọi, lịch Release liên team thuộc
-// Lát 6). Không phải allow/deny theo team đích — mọi Member/Leader của MỘT team đang Bật Release đều
-// đọc được toàn bộ lịch chung, khác biệt chỉ ở field trả về (route tự áp `projection`).
+// policyKind: 'cross_team_release' (FR-24, và Lát 5 FR-32 dùng lại cho gate "đang thuộc ≥1 team Bật
+// Mind Map" trước khi route tự lọc theo từng dòng riêng — cùng lý do tổng quát hoá như trên: đọc
+// `feature` từ policy thay vì hardcode 'release'). Không phải allow/deny theo team đích — mọi
+// Member/Leader của MỘT team đang Bật đúng feature đều qua được gate này, khác biệt chỉ ở field/dòng
+// nào route tự trả về sau đó (route tự áp `projection`/tự lọc theo từng bản ghi).
 function authorizeCrossTeamRelease(input: AuthorizeInput): AuthorizationDecision {
-  const { actor } = input;
+  const { actor, resource, action } = input;
+  const policy = AUTHORIZATION_POLICY[resource]?.[action];
+  const feature = policy?.feature;
+  if (!feature) {
+    throw new HttpError(403, `Chưa khai báo luật phân quyền cho ${resource}.${action}`, 'ROLE_FORBIDDEN');
+  }
   const teamIds = actor.memberships.map((m) => m.teamId);
   if (teamIds.length > 0) {
     const placeholders = teamIds.map(() => '?').join(',');
     const row = db.prepare(
-      `SELECT 1 FROM team_feature_visibility WHERE feature = 'release' AND level = 'on' AND team_id IN (${placeholders})`
-    ).get(...teamIds);
+      `SELECT 1 FROM team_feature_visibility WHERE feature = ? AND level = 'on' AND team_id IN (${placeholders})`
+    ).get(feature, ...teamIds);
     if (row) return { viewerTeamId: null, effectiveRole: null, projection: 'schedule_board' };
   }
-  throw new HttpError(403, 'Bạn chưa thuộc team nào đang Bật Release', 'FEATURE_DISABLED');
+  throw new HttpError(403, 'Bạn chưa thuộc team nào đang Bật chức năng này', 'FEATURE_DISABLED');
 }
 
 // policyKind: 'audit' (FR-11a) — Admin đọc toàn cục (metadata), Leader/Member chỉ đọc đúng team mình

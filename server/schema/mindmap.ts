@@ -20,5 +20,31 @@ export function applyMindmapSchema(db: DatabaseSync): void {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+
+    -- Lát 5 (CR §6.3, FR-32a/FR-43) — bản ghi riêng cho từng file đính kèm (thay hẳn cơ chế cũ chỉ
+    -- lưu URL tự do trong JSON). Quyền tải LUÔN join trạng thái SỐNG của mindmaps (owner_user_id/
+    -- visibility/shared_team_id) tại thời điểm tải, KHÔNG lưu cứng quyền ở đây — đổi sơ đồ từ chia sẻ
+    -- sang riêng tư phải thu hồi quyền tải ngay (khớp FR-32). team_id ở dưới CHỈ là metadata lúc
+    -- upload (phục vụ audit/thống kê), KHÔNG phải nguồn quyền.
+    CREATE TABLE IF NOT EXISTS mindmap_attachments (
+      id TEXT PRIMARY KEY,
+      mindmap_id INTEGER NOT NULL REFERENCES mindmaps(id) ON DELETE CASCADE,
+      owner_user_id INTEGER REFERENCES users(id),
+      team_id INTEGER REFERENCES teams(id),
+      original_name TEXT NOT NULL,
+      storage_key TEXT NOT NULL UNIQUE,
+      extension TEXT NOT NULL,
+      declared_mime TEXT NOT NULL,
+      detected_mime TEXT,
+      byte_size INTEGER NOT NULL CHECK (byte_size > 0),
+      sha256 TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'ready', 'quarantined', 'deleted')),
+      created_at TEXT NOT NULL,
+      ready_at TEXT,
+      deleted_at TEXT,
+      created_by INTEGER REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_mindmap_attachments_mindmap ON mindmap_attachments(mindmap_id);
+    CREATE INDEX IF NOT EXISTS idx_mindmap_attachments_status_created ON mindmap_attachments(status, created_at);
   `);
 }
