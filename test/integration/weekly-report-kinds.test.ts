@@ -162,12 +162,94 @@ test('POST /weeks/:weekStart/dm-report kèm reportKindId -> LƯU LẠI risk, đ�
   // "Risk Project" ở đây không có mục tiêu tuần 2026-09-21 nên KHÔNG xuất hiện trong `text` (đúng
   // hành vi render đã có từ trước Lát 5, không phải lỗi của việc lưu Risk). Điều Lát 5 thêm là Risk
   // được LƯU LẠI độc lập với việc project có xuất hiện trong text hay không — kiểm bằng GET /risks.
+  //
+  // Council review 2026-09-23 (lỗ hổng #2): dòng Risk này đã tồn tại (tạo ở test PUT /risks phía
+  // trên) nên giờ upsertProjectRisks() đòi đúng `rowVersion` hiện tại (optimistic concurrency) —
+  // đọc lại trước khi ghi, giống hệt cách client thật phải làm.
+  const before = await req('GET', `/api/weeks/2026-09-21/risks?teamId=${teamA}&reportKindId=${dmKindRowId}`);
   const dm = await req('POST', '/api/weeks/2026-09-21/dm-report', {
     teamId: teamA, reportKindId: dmKindRowId,
-    risks: [{ projectId: String(riskProjectId), risk: 'Risk mới từ dm-report', mitigation: 'Biện pháp mới' }]
+    risks: [{ projectId: String(riskProjectId), risk: 'Risk mới từ dm-report', mitigation: 'Biện pháp mới', rowVersion: before.json[0].rowVersion }]
   });
   assert.equal(dm.status, 200, JSON.stringify(dm.json));
 
   const getAfter = await req('GET', `/api/weeks/2026-09-21/risks?teamId=${teamA}&reportKindId=${dmKindRowId}`);
   assert.equal(getAfter.json[0].risk, 'Risk mới từ dm-report');
+});
+
+// ── Council review 2026-09-23 — 2 lỗ hổng thật trong FR-22 ─────────────────────────────────────────
+// #1: POST /dm-report chỉ đòi quyền `render` (Leader+Member) nhưng khi có `reportKindId` lại gọi thẳng
+// upsertProjectRisks() — hàm ghi Leader-only mà PUT /risks dùng -> Member bị chặn ở PUT /risks nhưng
+// ghi được qua ngả này. Đã sửa: route tự kiểm thêm quyền `upsert` khi có `reportKindId`, chọn PHƯƠNG ÁN
+// (a) — chặn 403 ngay, không âm thầm bỏ qua phần lưu.
+test('SEC: Member gọi POST /dm-report kèm reportKindId + risks (cửa hậu ghi Risk) -> 403, không ghi đè được', async () => {
+  const r = await req('POST', '/api/weeks/2026-09-21/dm-report', {
+    teamId: teamA, reportKindId: dmKindRowId,
+    risks: [{ projectId: String(riskProjectId), risk: 'Member co ghi de qua dm-report', mitigation: 'x' }]
+  }, memberAHeaders);
+  assert.equal(r.status, 403, JSON.stringify(r.json));
+
+  const getAfter = await req('GET', `/api/weeks/2026-09-21/risks?teamId=${teamA}&reportKindId=${dmKindRowId}`);
+  assert.notEqual(getAfter.json[0].risk, 'Member co ghi de qua dm-report', 'Risk trong DB không được đổi qua cửa hậu');
+});
+
+test('POST /weeks/:weekStart/dm-report: Member KHÔNG gửi reportKindId vẫn render (xem) bình thường', async () => {
+  const r = await req('POST', '/api/weeks/2026-09-21/dm-report', {
+    teamId: teamA,
+    risks: [{ projectId: String(riskProjectId), risk: 'preview only', mitigation: 'preview only' }]
+  }, memberAHeaders);
+  assert.equal(r.status, 200, JSON.stringify(r.json));
+
+  const getAfter = await req('GET', `/api/weeks/2026-09-21/risks?teamId=${teamA}&reportKindId=${dmKindRowId}`);
+  assert.notEqual(getAfter.json[0].risk, 'preview only', 'render không kèm reportKindId thì không được ghi vào DB');
+});
+
+// #2: upsertProjectRisks() không thực thi optimistic concurrency dù bảng có row_version — 2 lượt ghi
+// liên tiếp ghi đè âm thầm không 409. Đã sửa: upsert giờ kèm `WHERE row_version = ?` (client thiếu
+// rowVersion coi như -1, không khớp bất kỳ dòng đã tồn tại nào — cùng quy ước `?? -1` của PATCH
+// /weeks/report-kinds/:id), gói cả lô trong withTransaction().
+test('PUT /weeks/:weekStart/risks: rowVersion cũ (đã lệch, người khác vừa sửa) -> 409, không ghi đè âm thầm', async () => {
+  const before = await req('GET', `/api/weeks/2026-09-21/risks?teamId=${teamA}&reportKindId=${dmKindRowId}`);
+  const staleVersion = before.json[0].rowVersion as number;
+
+  const first = await req('PUT', '/api/weeks/2026-09-21/risks', {
+    teamId: teamA, reportKindId: dmKindRowId,
+    risks: [{ projectId: riskProjectId, risk: 'Sua lan 1 (dung rowVersion)', mitigation: 'bp1', rowVersion: staleVersion }]
+  });
+  assert.equal(first.status, 200, JSON.stringify(first.json));
+  assert.equal(first.json[0].risk, 'Sua lan 1 (dung rowVersion)');
+  assert.ok(first.json[0].rowVersion > staleVersion, 'row_version phải tăng sau khi ghi thành công');
+
+  // Lượt 2 dùng lại đúng `staleVersion` cũ (đã lệch vì lượt 1 vừa tăng lên) -> phải 409, không được âm
+  // thầm ghi đè nội dung của lượt 1.
+  const second = await req('PUT', '/api/weeks/2026-09-21/risks', {
+    teamId: teamA, reportKindId: dmKindRowId,
+    risks: [{ projectId: riskProjectId, risk: 'Ghi de am tham (rowVersion cu)', mitigation: 'bp2', rowVersion: staleVersion }]
+  });
+  assert.equal(second.status, 409, JSON.stringify(second.json));
+  assert.equal(second.json.code, 'VERSION_CONFLICT');
+  assert.deepEqual(second.json.conflicts, [riskProjectId]);
+
+  const after = await req('GET', `/api/weeks/2026-09-21/risks?teamId=${teamA}&reportKindId=${dmKindRowId}`);
+  assert.equal(after.json[0].risk, 'Sua lan 1 (dung rowVersion)', 'nội dung của lượt 1 phải còn nguyên, không bị lượt 2 ghi đè');
+});
+
+test('PUT /weeks/:weekStart/risks: thiếu rowVersion cho dòng ĐÃ TỒN TẠI -> coi như -1, luôn 409 (buộc phải GET lại trước khi ghi)', async () => {
+  const r = await req('PUT', '/api/weeks/2026-09-21/risks', {
+    teamId: teamA, reportKindId: dmKindRowId,
+    risks: [{ projectId: riskProjectId, risk: 'Khong gui rowVersion', mitigation: 'x' }]
+  });
+  assert.equal(r.status, 409, JSON.stringify(r.json));
+  assert.equal(r.json.code, 'VERSION_CONFLICT');
+});
+
+// ── Phụ: is_active (ngừng dùng) chặn TẠO MỚI báo cáo, không phá lịch sử cũ ─────────────────────────
+// weekly_report_kinds.is_active ghi rõ ý định "ngừng dùng không phá lịch sử" — kind 'khac' của teamA
+// đã bị tắt (isActive=false) ở test PATCH phía trên; dùng lại đúng dòng đó để kiểm điểm TẠO MỚI
+// (POST /report-history) phải chặn, không cần tạo thêm kind mới.
+test('POST /weeks/:weekStart/report-history: loại báo cáo đã is_active=false -> 400, không tạo được báo cáo mới', async () => {
+  const r = await req('POST', '/api/weeks/2026-09-28/report-history', {
+    teamId: teamA, kind: 'khac', content: '[itest] noi dung bao cao loai da tat'
+  });
+  assert.equal(r.status, 400, JSON.stringify(r.json));
 });
