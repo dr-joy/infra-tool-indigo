@@ -271,3 +271,17 @@ export function parseEmergencyPersonalLocale(releaseMonth: string): EmergencyTem
 export function likeEscape(value: string): string {
   return value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
 }
+
+// ── Task cá nhân ĐỊNH KỲ (FR-28a nhánh "Định kỳ") — khoá nhóm theo (cycle_id, owner_user_id) TRỰC
+// TIẾP, không suy từ tháng dương lịch. CR §6.3 "Cảnh báo kỹ thuật" (dòng ~1513): 2 release_cycles
+// kind='regular' cùng tháng dương lịch cùng mở (đã cho phép) không được lẫn task cá nhân của nhau nếu
+// dùng chung 1 khoá `release_month`. Route MỚI (server/routes/release-schedule.ts,
+// POST /release/schedule/personal-regular-tasks) dùng khoá này ngay từ đầu — không suy từ
+// `releaseDate.slice(0,7)` như nhánh cũ (server/routes/schedules.ts, NGOÀI PHẠM VI đổi ở đây, xem báo
+// cáo bàn giao Lát 6 phần "định kỳ"). Vẫn tái dùng cột `tasks.release_month` như một khoá batch dạng
+// chuỗi chung (đúng khuôn `emergencyPersonalReleaseMonthKey` ở trên) — không thêm cột mới, không cần
+// migration schema. Không bắt đầu bằng `emergency:` nên `taskSourceClass()` (FE) vẫn tô màu tím release
+// định kỳ như cũ (src/screens/personal-task.tsx:62-66).
+export function regularPersonalReleaseMonthKey(cycleId: number, ownerUserId: number): string {
+  return `regular:cycle${cycleId}:user${ownerUserId}`;
+}

@@ -10,9 +10,10 @@ import {
   parseWallClock, wallClockDateKey, computeDeployDemoAt, findOrCreateEmergencyCycle,
   reconcileConflictsForCycle, forceRegistrationTimes, renderEmergencyPersonalTask,
   emergencyPersonalReleaseMonthKey, emergencyPersonalReleaseMonthPrefix, parseEmergencyPersonalLocale,
-  likeEscape, type EmergencyRegistrationAnchors, type EmergencyDefinitionForGenerate
+  likeEscape, regularPersonalReleaseMonthKey, type EmergencyRegistrationAnchors, type EmergencyDefinitionForGenerate
 } from '../lib/release-schedule.js';
 import type { EmergencyTemplateLocale } from '../lib/emergency-template-render.js';
+import { buildDefinitionTargetPayload, type ReleaseTaskDefinitionRow } from '../lib/release-render.js';
 
 // CR-20260913 Lát 6 — Release nhiều team: FR-23a (đăng ký/sửa lịch khẩn cấp của team mình), FR-24
 // (lịch chung, lọc field), FR-25 (xung đột + ép giờ chung), FR-26 (khoá/mở/đồng bộ task cá nhân),
@@ -596,6 +597,91 @@ router.post('/release/schedule/personal-emergency-tasks', requireSession, requir
     res.status(201).json(summary);
   } catch (error) {
     sendRouteError(res, error, 'Không thể sinh task cá nhân khẩn cấp');
+  }
+});
+
+// ── FR-23b/FR-24 — liệt kê các đợt release ĐỊNH KỲ đang mở để chọn (CR §6.3 vòng làm rõ thứ 4: CHO
+// PHÉP nhiều dòng kind='regular' status='open' song song — người dùng phải tự chọn đúng đợt, không
+// suy đoán 1 đợt duy nhất). Sắp theo `regular_release_date` gần nhất trước. Dùng lại đúng gate
+// 'cross_team_release'/'release_schedule'.'read' của FR-24 (mọi Member/Leader của 1 team đang Bật
+// Release đều xem được — đây là lịch dùng chung toàn hệ thống, không lọc field theo team sở hữu như
+// lịch khẩn cấp vì không có khái niệm "team sở hữu" cho định kỳ).
+router.get('/release/schedule/regular-cycles', requireSession, requireActiveAccount, (req, res) => {
+  try {
+    const actor = actorFromRequest(req);
+    authorize({ actor, policyKind: 'cross_team_release', resource: 'release_schedule', action: 'read', scope: {} });
+    const cycles = db.prepare(`
+      SELECT id, release_key, regular_release_date FROM release_cycles
+      WHERE kind = 'regular' AND status = 'open' ORDER BY regular_release_date ASC
+    `).all() as { id: number; release_key: string; regular_release_date: string }[];
+    res.json(cycles.map((c) => ({ id: c.id, releaseKey: c.release_key, regularReleaseDate: c.regular_release_date })));
+  } catch (error) {
+    sendRouteError(res, error, 'Không thể tải danh sách đợt release định kỳ');
+  }
+});
+
+// ── FR-28a nhánh "Định kỳ" — mỗi Member/Leader tự áp dụng template/definition ĐỊNH KỲ CỦA MÌNH cho 1
+// đợt release_cycles kind='regular' ĐANG MỞ do actor tự chọn (KHÔNG cho tự nhập ngày — CR §6.3: "người
+// dùng không tự nhập ngày"). Ngày cụ thể của từng task tự tính từ `regular_release_date` của cycle đã
+// chọn qua ĐÚNG `buildDefinitionTargetPayload()`/`tinhNgayRelease()` có sẵn (server/lib/release-render.ts,
+// dùng chung với nhánh sync cũ ở schedules.ts) — không viết lại thuật toán tính ngày.
+//
+// Khoá nhóm dùng `regularPersonalReleaseMonthKey(cycleId, ownerUserId)` (gắn TRỰC TIẾP theo cycle_id,
+// không suy từ tháng dương lịch) — giải đúng cảnh báo kỹ thuật CR §6.3 dòng ~1513 cho ĐƯỜNG MỚI này.
+router.post('/release/schedule/personal-regular-tasks', requireSession, requireActiveAccount, (req, res) => {
+  try {
+    const actor = actorFromRequest(req);
+    authorize({ actor, policyKind: 'personal_task', resource: 'release_task_definition_personal', action: 'own', scope: { ownerId: actor.userId } });
+
+    const body = req.body as { teamId?: number; cycleId?: number };
+    const teamId = parseIntIdOrThrow(body.teamId, 'teamId');
+    const cycleId = parseIntIdOrThrow(body.cycleId, 'cycleId');
+    if (!actor.memberships.some((m) => m.teamId === teamId)) {
+      throw new HttpError(403, 'Bạn không phải thành viên của team này', 'NOT_TEAM_MEMBER');
+    }
+    const autogen = db.prepare('SELECT enabled FROM team_release_task_autogen_settings WHERE team_id = ?').get(teamId) as { enabled: number } | undefined;
+    if (!autogen || !autogen.enabled) throw new HttpError(403, 'Admin chưa bật Tab cá nhân cho team này', 'FEATURE_DISABLED');
+
+    // Chỉ chấp nhận cycle ĐANG MỞ do actor CHỌN ĐÚNG — chọn id không tồn tại/không phải regular/đã đóng
+    // đều 404 rõ ràng, không tự suy đoán/rơi về đợt khác (CR §6.3: "phải CHỌN ĐÚNG đợt").
+    const cycle = db.prepare(`SELECT id, regular_release_date FROM release_cycles WHERE id = ? AND kind = 'regular' AND status = 'open'`)
+      .get(cycleId) as { id: number; regular_release_date: string } | undefined;
+    if (!cycle) throw new HttpError(404, 'Không tìm thấy đợt release định kỳ đang mở này — chọn lại đợt', 'REGULAR_CYCLE_NOT_FOUND');
+
+    const definitions = db.prepare('SELECT * FROM release_task_definitions WHERE owner_user_id = ?')
+      .all(actor.userId) as unknown as ReleaseTaskDefinitionRow[];
+    const templates = new Map((db.prepare('SELECT id, content FROM release_templates WHERE owner_user_id = ?').all(actor.userId) as { id: string; content: string }[])
+      .map((t) => [t.id, t.content]));
+
+    const releaseMonth = regularPersonalReleaseMonthKey(cycle.id, actor.userId);
+    const now = new Date().toISOString();
+
+    const summary = withTransaction(() => {
+      let created = 0;
+      let skippedExisting = 0;
+      for (const def of definitions) {
+        const templateContent = def.template_id ? (templates.get(String(def.template_id)) ?? null) : null;
+        const target = buildDefinitionTargetPayload(def, cycle.regular_release_date, templateContent);
+        const exists = db.prepare('SELECT id FROM tasks WHERE release_month = ? AND origin_ref = ?').get(releaseMonth, def.id);
+        if (exists) { skippedExisting++; continue; }
+        db.prepare(`
+          INSERT INTO tasks (
+            ten_task, ghi_chu, loai_task, do_uu_tien, trang_thai, ngay_tao, gio_bat_dau, gio_ket_thuc,
+            lap_lai_kieu, ngay_trong_thang, thu_trong_tuan, ngay_cu_the, release_month, release_date, task_links,
+            origin_ref, reply_to_ref, owner_user_id
+          ) VALUES (?, ?, 'dinh_ky', NULL, 'chua_thuc_hien', ?, ?, ?, NULL, NULL, NULL, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          target.tenTask, target.ghiChu ?? '', now, target.gioBatDau, target.gioKetThuc, target.ngayCuThe,
+          releaseMonth, target.ngayCuThe, target.linksJson, def.id, target.replyToRef, actor.userId
+        );
+        created++;
+      }
+      writeAudit(actor.userId, teamId, 'personal_regular_task.generate', `release_cycle:${cycleId}`, { created, skippedExisting });
+      return { created, skippedExisting };
+    });
+    res.status(201).json(summary);
+  } catch (error) {
+    sendRouteError(res, error, 'Không thể sinh task cá nhân định kỳ');
   }
 });
 

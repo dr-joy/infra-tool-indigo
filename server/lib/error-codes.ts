@@ -94,5 +94,9 @@ export const ERROR_CODE_REGISTRY: Record<string, ErrorCodeEntry> = {
   RELEASE_REGISTRATION_EXISTS: {
     status: 409,
     note: 'CR-20260913 Lát 6 (FR-23a/FR-25): team đã có đăng ký lịch khẩn cấp cho đúng cycle đó (UNIQUE (cycle_id, team_id))'
+  },
+  REGULAR_CYCLE_NOT_FOUND: {
+    status: 404,
+    note: 'CR-20260913 Lát 6 (FR-28a nhánh Định kỳ): cycleId gửi lên không khớp release_cycles kind=regular status=open nào — chọn lại đợt, không tự đoán'
   }
 };
