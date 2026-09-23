@@ -39,6 +39,11 @@ export function PicProvider({ children }: { children: React.ReactNode }) {
   }, [activeTeamId]);
   useEffect(() => {
     const aliveRef = { current: true };
+    // Reset ngay: pics/picColors không có gate loading riêng ở nơi tiêu thụ (dropdown PIC, màu
+    // Gantt...), nên nếu không reset thì dữ liệu team cũ vẫn hiện tới khi fetch team mới xong (Council
+    // review Lát 7 giai đoạn 1, vòng 2 — điểm "dữ liệu team cũ hiện thoáng qua").
+    setPics([]);
+    setPicColors({});
     void reloadPics(aliveRef);
     return () => { aliveRef.current = false; };
   }, [reloadPics]);

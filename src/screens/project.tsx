@@ -291,19 +291,39 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
   // (false) khi effect cleanup chạy (đổi team lần nữa hoặc unmount) -> response trễ của team cũ bị bỏ.
   useEffect(() => {
     const aliveRef = { current: true };
+    // Reset ngay để không hiện project/badge của team cũ trong lúc team mới đang tải: projects.map()
+    // ở sidebar và goalTaskIds/atRiskTaskIds không có gate riêng theo dangTaiProject, nên nếu không
+    // reset thì dữ liệu team cũ vẫn hiện tới khi fetch team mới xong (Council review Lát 7 giai đoạn
+    // 1, vòng 2 — điểm "dữ liệu team cũ hiện thoáng qua").
+    setProjects([]);
+    setGoalTaskIds(new Set());
+    setAtRiskTaskIds(new Set());
     void taiProjects(aliveRef);
     void taiBadgeIds(aliveRef);
     return () => { aliveRef.current = false; };
   }, [activeTeamId]);
 
+  // Thêm activeTeamId vào dependency (Council review Lát 7 giai đoạn 1, vòng 2): trước đây effect
+  // này chỉ phụ thuộc [projectDangChon] nên đổi team nhanh trong lúc đang mở chi tiết 1 project KHÔNG
+  // làm effect này chạy lại/cleanup -> response taiProjectTasks cũ (gọi lúc còn ở team trước) có thể
+  // set state SAU khi đã ở team mới. aliveRef bị dọn (false) khi effect cleanup chạy (đổi
+  // project/team lần nữa hoặc unmount) -> response trễ tự bỏ qua, khớp pattern taiProjects/taiBadgeIds
+  // ở trên.
   useEffect(() => {
     if (!projectDangChon) {
       setProjectTasks([]);
       setProjectTaskError('');
       return;
     }
-    taiProjectTasks(projectDangChon);
-  }, [projectDangChon]);
+    const aliveRef = { current: true };
+    // Reset ngay: ProjectTaskTree (dưới) chỉ ẩn theo dangTaiProjectTask khi projectTasks ĐANG rỗng
+    // (`dangTaiProjectTask && projectTasks.length === 0`), nên nếu không reset thì cây task của
+    // project/team cũ vẫn hiện dưới tiêu đề project mới tới khi fetch xong.
+    setProjectTasks([]);
+    setProjectTaskError('');
+    void taiProjectTasks(projectDangChon, aliveRef);
+    return () => { aliveRef.current = false; };
+  }, [projectDangChon, activeTeamId]);
 
   async function taoProject(project: ProjectCreateBody) {
     if (activeTeamId == null) throw new Error('Chưa chọn team hiện tại');
@@ -409,16 +429,30 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
     void sapXepProjects(nextProjectIds);
   }
 
-  async function taiProjectTasks(projectId: string) {
+  // aliveRef: cờ huỷ (cancellation guard) — chỉ dùng khi gọi TỪ effect nạp theo [projectDangChon,
+  // activeTeamId] bên trên. Đổi team nhanh trong lúc đang mở chi tiết 1 project khiến response cũ có
+  // thể set state SAU khi đã ở team mới; effect cleanup đặt aliveRef.current = false để response trễ
+  // tự bỏ qua (Council review Lát 7 giai đoạn 1, vòng 2). Các nơi khác gọi hàm này (sau tạo/sửa/xoá
+  // task, sau đổi assignment trên Gantt tổng...) không truyền aliveRef -> giữ nguyên hành vi cũ, vì đó
+  // là thao tác người dùng chủ động, đã chắc chắn đang ở đúng project/team lúc bấm.
+  // Đổi sang apiTeam() (thay vì api() trần như trước) để lỗi quyền (NOT_TEAM_MEMBER/ROLE_FORBIDDEN)
+  // mang được ApiError.teamId — AuthProvider (auth-context.tsx) dựa vào đó để nhận ra lỗi trễ của
+  // team đã rời đi, không hiện nhầm popup "mất quyền". Route GET /projects/:id/tasks tự suy team từ
+  // bản ghi project (không đọc query teamId, xem server/routes/projects.ts) nên teamId gắn thêm ở đây
+  // chỉ phục vụ đúng mục đích gắn nhãn lỗi phía client, không đổi hành vi server.
+  async function taiProjectTasks(projectId: string, aliveRef?: { current: boolean }) {
+    if (activeTeamId == null) return;
     setDangTaiProjectTask(true);
     try {
-      const data = await api<ProjectTaskItem[]>(`/api/projects/${projectId}/tasks`);
+      const data = await apiTeam<ProjectTaskItem[]>(activeTeamId, `/api/projects/${projectId}/tasks`);
+      if (aliveRef && !aliveRef.current) return;
       setProjectTasks(data);
       setProjectTaskError('');
     } catch (error) {
+      if (aliveRef && !aliveRef.current) return;
       setProjectTaskError(error instanceof Error ? error.message : t('err.project_tasks'));
     } finally {
-      setDangTaiProjectTask(false);
+      if (!aliveRef || aliveRef.current) setDangTaiProjectTask(false);
     }
   }
 

@@ -242,3 +242,125 @@ describe('Race condition khi đổi team nhanh (Council review Lát 7 giai đo�
     expect(screen.getByText('PIC QA moi')).toBeInTheDocument();
   });
 });
+
+// Council review Lát 7 giai đoạn 1, vòng 2 (run b9b0b8a7): 2 điểm nhẹ hơn còn sót lại sau bản vá race
+// condition đầu tiên ở trên — (1) taiProjectTasks() trong project.tsx chưa có cancellation guard vì
+// effect gọi nó chỉ phụ thuộc [projectDangChon], KHÔNG phụ thuộc activeTeamId; (2) aliveRef chỉ chặn
+// response cũ ghi đè SAU khi đã chuyển team, nhưng không xoá dữ liệu đang hiển thị NGAY lúc bắt đầu
+// chuyển -> có khoảng ngắn user thấy dữ liệu team cũ dưới nhãn team mới.
+describe('Race condition khi đổi team nhanh — vòng 2 (Council review Lát 7 giai đoạn 1, run b9b0b8a7)', () => {
+  beforeEach(() => window.localStorage.clear());
+
+  // /api/projects trả CÙNG 1 project (p1) cho cả 2 team -> projectDangChon KHÔNG đổi khi đổi team,
+  // cô lập đúng race ở tầng taiProjectTasks (không lẫn với race của taiProjects đã test ở describe
+  // trên, vốn dùng 2 project id khác nhau). /api/projects/p1/tasks mới là route trả khác nhau theo
+  // team: team 1 (đang xem lúc đầu) CHẬM, team 2 (đổi tới) NHANH.
+  function mockProjectTasksRace() {
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), 'http://localhost');
+      if (url.pathname === '/api/auth/me') {
+        return jsonResponse({ user: { id: 1, email: 'a@drjoy.jp', displayName: 'X', avatar: null, status: 'active', systemRole: 'user', memberships: [{ teamId: 1, role: 'leader' }, { teamId: 2, role: 'member' }] } });
+      }
+      if (url.pathname === '/api/me/teams') {
+        return jsonResponse({ teams: [{ id: 1, name: 'Dev13', description: null, role: 'leader' }, { id: 2, name: 'QA', description: null, role: 'member' }] });
+      }
+      if (url.pathname === '/api/notifications') return jsonResponse({ notifications: [] });
+      if (url.pathname === '/api/projects') {
+        return jsonResponse([{ id: 'p1', ten: 'Project chung', pic: '', ngayBatDau: '2026-01-01', moTa: '', sortOrder: 1, closedAt: null, pendingAt: null, isSystem: false }]);
+      }
+      if (url.pathname === '/api/projects/p1/tasks') {
+        const teamId = url.searchParams.get('teamId');
+        const taskBody = (tieuDe: string) => [{
+          id: 't1', projectId: 'p1', parentId: null, level: 1, tieuDe, ghiChu: '',
+          ngayBatDauDuKien: '2026-01-01', ngayKetThucDuKien: '2026-01-02', estimateHours: 8,
+          tienDo: 0, assignee: '', sortOrder: 1, executionOrder: 1, links: []
+        }];
+        if (teamId === '1') { await delay(60); return jsonResponse(taskBody('Task team Dev13 (cu)')); }
+        if (teamId === '2') return jsonResponse(taskBody('Task team QA (moi)'));
+      }
+      if (/^\/api\/weeks\/[^/]+\/goals$/.test(url.pathname)) return jsonResponse({ hasGoals: false, prevEvaluated: false, goals: [] });
+      return jsonResponse([]);
+    }) as unknown as typeof fetch;
+  }
+
+  it('ManHinhProject: taiProjectTasks — đổi team trong lúc đang mở chi tiết project không bị response tasks cũ (của team trước) ghi đè', async () => {
+    mockProjectTasksRace();
+
+    render(
+      <LangProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <PicProvider>
+              <ActiveTeamProbe />
+              <SwitchTeamButton toTeamId={2} />
+              <ManHinhProject />
+            </PicProvider>
+          </ToastProvider>
+        </AuthProvider>
+      </LangProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('active-team-probe').textContent).toBe('1'));
+    // Đợi request tasks CHẬM của team 1 thực sự đã bắt đầu (project p1 đã được chọn, đang tải task) —
+    // trước khi có bản vá này, effect nạp task chỉ phụ thuộc [projectDangChon] nên đổi team ở bước sau
+    // không hề huỷ hay nạp lại request này.
+    await waitFor(() => expect(screen.getByText('Đang tải task...')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('switch-to-2'));
+
+    await waitFor(() => expect(screen.getByText('Task team QA (moi)')).toBeInTheDocument());
+    // Đợi lâu hơn độ trễ 60ms của response team 1 để nếu KHÔNG có aliveRef guard thì nó đã kịp ghi đè.
+    await delay(120);
+    expect(screen.queryByText('Task team Dev13 (cu)')).not.toBeInTheDocument();
+    expect(screen.getByText('Task team QA (moi)')).toBeInTheDocument();
+  });
+
+  it('ManHinhProject: đổi team xoá ngay project/task của team cũ, không đợi tới lúc response team mới về mới hết hiện', async () => {
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), 'http://localhost');
+      if (url.pathname === '/api/auth/me') {
+        return jsonResponse({ user: { id: 1, email: 'a@drjoy.jp', displayName: 'X', avatar: null, status: 'active', systemRole: 'user', memberships: [{ teamId: 1, role: 'leader' }, { teamId: 2, role: 'member' }] } });
+      }
+      if (url.pathname === '/api/me/teams') {
+        return jsonResponse({ teams: [{ id: 1, name: 'Dev13', description: null, role: 'leader' }, { id: 2, name: 'QA', description: null, role: 'member' }] });
+      }
+      if (url.pathname === '/api/notifications') return jsonResponse({ notifications: [] });
+      const teamId = url.searchParams.get('teamId');
+      if (url.pathname === '/api/projects') {
+        if (teamId === '1') return jsonResponse([{ id: 'p1', ten: 'Du an team Dev13 (cu)', pic: '', ngayBatDau: '2026-01-01', moTa: '', sortOrder: 1, closedAt: null, pendingAt: null, isSystem: false }]);
+        if (teamId === '2') { await delay(80); return jsonResponse([{ id: 'p2', ten: 'Du an team QA (moi)', pic: '', ngayBatDau: '2026-01-01', moTa: '', sortOrder: 1, closedAt: null, pendingAt: null, isSystem: false }]); }
+      }
+      if (url.pathname === '/api/projects/p1/tasks') return jsonResponse([]);
+      if (/^\/api\/weeks\/[^/]+\/goals$/.test(url.pathname)) return jsonResponse({ hasGoals: false, prevEvaluated: false, goals: [] });
+      return jsonResponse([]);
+    }) as unknown as typeof fetch;
+
+    render(
+      <LangProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <PicProvider>
+              <ActiveTeamProbe />
+              <SwitchTeamButton toTeamId={2} />
+              <ManHinhProject />
+            </PicProvider>
+          </ToastProvider>
+        </AuthProvider>
+      </LangProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('active-team-probe').textContent).toBe('1'));
+    await waitFor(() => expect(screen.getAllByText('Du an team Dev13 (cu)').length).toBeGreaterThan(0));
+
+    fireEvent.click(screen.getByText('switch-to-2'));
+
+    // Response team 2 còn đang delay 80ms lúc này -> kiểm NGAY (không đợi network) rằng dữ liệu team A
+    // cũ đã bị xoá khỏi màn hình, KHÔNG phải đợi tới lúc response team mới về mới hết hiện (đây là
+    // điểm "dữ liệu team cũ hiện thoáng qua" — khác test race ở trên vốn chỉ kiểm response cũ không ghi
+    // đè SAU khi đã có dữ liệu team mới).
+    expect(screen.queryAllByText('Du an team Dev13 (cu)')).toHaveLength(0);
+    expect(screen.queryAllByText('Du an team QA (moi)')).toHaveLength(0);
+
+    await waitFor(() => expect(screen.getAllByText('Du an team QA (moi)').length).toBeGreaterThan(0));
+  });
+});

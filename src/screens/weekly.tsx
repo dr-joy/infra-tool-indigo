@@ -337,6 +337,13 @@ export function ManHinhBaoCaoTuan() {
   useEffect(() => {
     if (activeTeamId == null) return;
     const aliveRef = { current: true };
+    // Reset weekStart ngay để rơi vào nhánh "loading.data" (return sớm khi !weekStart, xem phía dưới
+    // component) — không có gate nào khác che kinds/historyThisWeek/weekGoalGroups, nên nếu không
+    // reset thì cả màn Báo cáo tuần của team cũ vẫn hiện nguyên tới khi fetch team mới xong (Council
+    // review Lát 7 giai đoạn 1, vòng 2 — điểm "dữ liệu team cũ hiện thoáng qua"). weekStart không nằm
+    // trong dependency của effect nào khác (chỉ historyThisWeek dùng qua useMemo) nên reset ở đây an
+    // toàn, không gây vòng lặp render.
+    setWeekStart('');
     (async () => {
       try {
         const meta = await apiTeam<{ currentWeek: string; kinds: ReportKindInfo[] }>(activeTeamId, '/api/weeks/report-kinds');
@@ -505,7 +512,11 @@ export function ManHinhBaoCaoTuan() {
   }
 
   if (!weekStart) {
-    return <section className="flex-1 p-4 text-sm text-slate-500">{t('loading.data')}</section>;
+    // weekStart bị reset về '' ngay khi đổi team (xem effect [activeTeamId] phía trên) để không hiện
+    // dữ liệu team cũ trong lúc team mới đang tải. Nếu fetch team mới lỗi, weekStart không được phục
+    // hồi (dữ liệu team cũ không còn đáng tin) -> hiện lỗi ở đây thay vì kẹt mãi ở "Đang tải dữ liệu"
+    // (error state vẫn giữ nguyên message từ effect đó).
+    return <section className="flex-1 p-4 text-sm text-slate-500">{error || t('loading.data')}</section>;
   }
 
   return (
