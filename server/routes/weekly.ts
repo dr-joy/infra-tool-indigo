@@ -7,7 +7,8 @@ import { isValidProjectTaskProgress } from '../types.js';
 import {
   buildReportPlan, renderReport, renderDmReport, mondayOf, addDays, toISODate,
   validEvalStatuses, taskOverlapsWeek, buildWeekData, buildTaskNumbers, type EvalStatus,
-  listReportKinds, findReportKindById, upsertProjectRisks, listProjectRisks, VALID_RENDER_MODES,
+  listReportKinds, findReportKindById, findReportKindByCode, upsertProjectRisks, listProjectRisks, VALID_RENDER_MODES,
+  RiskVersionConflictError,
 } from '../lib/weekly-report.js';
 import { buildDmReportWorkbook } from '../lib/weekly-report-excel.js';
 import { requireSession, requireActiveAccount, actorFromRequest } from '../lib/auth-middleware.js';
@@ -157,7 +158,7 @@ router.get('/weeks/:weekStart/risks', requireSession, requireActiveAccount, (req
 router.put('/weeks/:weekStart/risks', requireSession, requireActiveAccount, (req, res) => {
   const weekStart = normWeek(req.params.weekStart);
   if (!weekStart) return res.status(400).json({ message: 'Tuần không hợp lệ' });
-  const body = req.body as { teamId?: number | string; reportKindId?: string; risks?: { projectId?: string | number; risk?: string; mitigation?: string }[] };
+  const body = req.body as { teamId?: number | string; reportKindId?: string; risks?: { projectId?: string | number; risk?: string; mitigation?: string; rowVersion?: number }[] };
   const teamId = parseTeamIdParam(body.teamId);
   const actor = actorFromRequest(req);
   authorize({ actor, policyKind: 'team_feature', resource: 'weekly_project_risk', action: 'upsert', scope: { teamId } });
@@ -166,11 +167,15 @@ router.put('/weeks/:weekStart/risks', requireSession, requireActiveAccount, (req
   const kind = findReportKindById(teamId, reportKindId);
   if (!kind) return res.status(400).json({ message: 'reportKindId không hợp lệ' });
   const risks = (Array.isArray(body.risks) ? body.risks : [])
-    .map((r) => ({ projectId: Number(r.projectId), risk: String(r.risk || ''), mitigation: String(r.mitigation || '') }))
+    .map((r) => ({
+      projectId: Number(r.projectId), risk: String(r.risk || ''), mitigation: String(r.mitigation || ''),
+      rowVersion: r.rowVersion == null ? undefined : Number(r.rowVersion),
+    }))
     .filter((r) => Number.isInteger(r.projectId));
 
   // Trigger DB (schema/weekly-report.ts) đã chặn project_id không thuộc đúng team_id — bắt lỗi đó
-  // thành 400 rõ ràng thay vì vỡ 500.
+  // thành 400 rõ ràng thay vì vỡ 500. RiskVersionConflictError (optimistic concurrency, xem
+  // upsertProjectRisks()) -> 409 kèm danh sách projectId xung đột để client tải lại đúng dòng đó.
   try {
     upsertProjectRisks(teamId, weekStart, reportKindId, risks, actor.userId);
     writeAudit(actor.userId, teamId, 'weekly_project_risk.upsert', `weekly_project_risks:${weekStart}:${reportKindId}`, { weekStart, reportKindId, count: risks.length });
@@ -178,6 +183,9 @@ router.put('/weeks/:weekStart/risks', requireSession, requireActiveAccount, (req
       id: r.id, projectId: String(r.project_id), risk: r.risk, mitigation: r.mitigation, rowVersion: r.row_version,
     })));
   } catch (error) {
+    if (error instanceof RiskVersionConflictError) {
+      return res.status(409).json({ message: 'Có Risk vừa bị người khác sửa, vui lòng tải lại', code: 'VERSION_CONFLICT', conflicts: error.conflicts });
+    }
     if (error instanceof Error && /phai thuoc cung team_id/.test(error.message)) {
       return res.status(400).json({ message: 'Có project không thuộc team này' });
     }
@@ -277,8 +285,15 @@ router.post('/weeks/:weekStart/report-history', requireSession, requireActiveAcc
   // CR-20260913 Lát 5 (FR-22): danh sách hợp lệ giờ đọc từ cấu hình CỦA TEAM (weekly_report_kinds),
   // không còn 2 giá trị ghi cứng — `kind` khớp theo `code`, không phân biệt hoa/thường (giống unique
   // index của bảng).
-  if (!listReportKinds(teamId).some((k) => k.code.toLowerCase() === kind.toLowerCase())) {
+  const kindRow = findReportKindByCode(teamId, kind);
+  if (!kindRow) {
     return res.status(400).json({ message: 'Loại báo cáo không hợp lệ' });
+  }
+  // Schema (`weekly_report_kinds.is_active`) ghi rõ ý định "ngừng dùng không phá lịch sử" — điểm TẠO
+  // MỚI (phê duyệt/finalize) phải chặn loại đã tắt; báo cáo CŨ đã có trong history vẫn đọc/xem lại
+  // bình thường (không đụng route GET/DELETE history).
+  if (!kindRow.is_active) {
+    return res.status(400).json({ message: 'Loại báo cáo này đã ngừng dùng, không tạo được báo cáo mới bằng loại này' });
   }
   if (!content) return res.status(400).json({ message: 'Nội dung báo cáo trống' });
 
@@ -498,12 +513,22 @@ router.get('/weeks/:weekStart/text', requireSession, requireActiveAccount, (req,
 // trong lần gọi này) — giữ tương thích ngược: không gửi `reportKindId` vẫn render được như cũ, chỉ
 // không lưu lại. Bucket "Khác" (`projectId` rỗng) KHÔNG lưu được vào bảng này (project_id NOT NULL
 // theo schema) — vẫn render bình thường, chỉ không có lịch sử xem lại cho đúng bucket đó.
+//
+// SEC (Council review sau FR-22, 2026-09-23): route này chỉ đòi quyền `render` (Leader+Member) vì bản
+// thân việc RENDER báo cáo là hành động Member được phép (CR §... "Member chỉ xem"). Nhưng khi có
+// `reportKindId`, route gọi thẳng upsertProjectRisks() — ĐÚNG hàm ghi mà PUT /weeks/:weekStart/risks
+// dùng, và route đó đòi quyền `upsert` (Leader-only). Không kiểm thêm ở đây thì Member bị chặn ở PUT
+// /risks nhưng vẫn ghi/ghi đè được Risk qua ngả này — cửa hậu. Quyết định đã chọn (không có gợi ý rõ
+// hơn trong CR): PHƯƠNG ÁN (a) — Member gửi `reportKindId` (bất kể `risks` có phần tử ghi được hay
+// không) bị chặn 403 NGAY, không âm thầm bỏ qua phần lưu rồi vẫn render — actor biết ngay hành vi bị
+// chặn thay vì đoán tại sao Risk không được lưu. Member vẫn render báo cáo bình thường khi KHÔNG gửi
+// `reportKindId`.
 router.post('/weeks/:weekStart/dm-report', requireSession, requireActiveAccount, (req, res) => {
   const weekStart = normWeek(req.params.weekStart);
   if (!weekStart) return res.status(400).json({ message: 'Tuần không hợp lệ' });
   const body = req.body as {
     teamId?: number | string; reportKindId?: string;
-    risks?: { projectId?: string | number | null; risk?: string; mitigation?: string }[];
+    risks?: { projectId?: string | number | null; risk?: string; mitigation?: string; rowVersion?: number }[];
   };
   const teamId = parseTeamIdParam(body.teamId);
   const actor = actorFromRequest(req);
@@ -512,18 +537,25 @@ router.post('/weeks/:weekStart/dm-report', requireSession, requireActiveAccount,
     projectId: r.projectId == null || r.projectId === '' ? null : String(r.projectId),
     risk: String(r.risk || ''),
     mitigation: String(r.mitigation || ''),
+    rowVersion: r.rowVersion == null ? undefined : Number(r.rowVersion),
   })) : [];
 
   if (body.reportKindId) {
+    // Cửa hậu ghi Risk (xem ghi chú SEC ở trên) — bắt buộc đúng quyền `upsert` (Leader-only) TRƯỚC khi
+    // đụng tới upsertProjectRisks(), không dựa vào quyền `render` chung đã kiểm ở trên.
+    authorize({ actor, policyKind: 'team_feature', resource: 'weekly_project_risk', action: 'upsert', scope: { teamId } });
     const kind = findReportKindById(teamId, body.reportKindId);
     if (!kind) return res.status(400).json({ message: 'reportKindId không hợp lệ' });
     const persistable = risks
       .filter((r) => r.projectId != null)
-      .map((r) => ({ projectId: Number(r.projectId), risk: r.risk, mitigation: r.mitigation }))
+      .map((r) => ({ projectId: Number(r.projectId), risk: r.risk, mitigation: r.mitigation, rowVersion: r.rowVersion }))
       .filter((r) => Number.isInteger(r.projectId));
     try {
       upsertProjectRisks(teamId, weekStart, body.reportKindId, persistable, actor.userId);
     } catch (error) {
+      if (error instanceof RiskVersionConflictError) {
+        return res.status(409).json({ message: 'Có Risk vừa bị người khác sửa, vui lòng tải lại', code: 'VERSION_CONFLICT', conflicts: error.conflicts });
+      }
       if (error instanceof Error && /phai thuoc cung team_id/.test(error.message)) {
         return res.status(400).json({ message: 'Có project không thuộc team này' });
       }

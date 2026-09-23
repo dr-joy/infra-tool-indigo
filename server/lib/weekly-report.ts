@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { db } from '../db.js';
+import { db, withTransaction } from '../db.js';
 // Tiện ích ngày thuần (mondayOf/addDays/toISODate/taskOverlapsWeek) dùng chung nhiều tính năng —
 // tách sang server/lib/date.ts (kế hoạch Council run 022dd1e5, xem docs/exchanges/2026-09-12.md),
 // re-export tại đây để các nơi đang import từ file này không phải sửa lại đường dẫn.
@@ -538,24 +538,56 @@ export function listProjectRisks(teamId: number, weekStart: string, reportKindId
   `).all(teamId, weekStart, reportKindId) as unknown as ProjectRiskRow[];
 }
 
+// Ném ra khi 1 hoặc nhiều dòng Risk trong lô có `rowVersion` client gửi lên lệch với bản mới nhất
+// trong DB (người khác đã sửa trước) — route bắt lỗi này để trả 409 kèm danh sách projectId xung đột,
+// giống code 'VERSION_CONFLICT' đã dùng ở PATCH /weeks/report-kinds/:id.
+export class RiskVersionConflictError extends Error {
+  conflicts: number[];
+  constructor(conflicts: number[]) {
+    super('weekly_project_risks: row_version conflict');
+    this.name = 'RiskVersionConflictError';
+    this.conflicts = conflicts;
+  }
+}
+
 // Upsert TỪNG dòng theo unique (team_id, week_start, report_kind_id, project_id) — không xoá dòng
 // vắng mặt trong `risks` truyền vào (client có thể chỉ gửi project đang có nội dung, không phải toàn
 // bộ danh sách project của team).
+//
+// Optimistic concurrency (bổ sung cùng đợt soát lỗ hổng #2 FR-22): mỗi dòng risk ĐÃ TỒN TẠI phải kèm
+// đúng `rowVersion` đọc được từ GET/PUT gần nhất (client bỏ trống -> coi như -1, không khớp bất kỳ
+// row_version thật nào >= 1, buộc phải tải lại trước khi ghi — cùng quy ước `body.rowVersion ?? -1`
+// đã dùng ở PATCH /weeks/report-kinds/:id). Dòng CHƯA TỒN TẠI (insert lần đầu) không bị ảnh hưởng —
+// mệnh đề `WHERE` chỉ áp cho nhánh DO UPDATE, nhánh INSERT không có gì để đối chiếu.
+//
+// Toàn bộ lô chạy trong 1 transaction (withTransaction() có sẵn, dùng khắp code base) — 1 dòng bị
+// trigger DB từ chối (sai team) hoặc lệch rowVersion sẽ cuộn ngược TOÀN BỘ lô, không để lại ghi nửa
+// vời khi API trả lỗi.
 export function upsertProjectRisks(
   teamId: number, weekStart: string, reportKindId: string,
-  risks: { projectId: number; risk: string; mitigation: string }[], updatedBy: number
+  risks: { projectId: number; risk: string; mitigation: string; rowVersion?: number }[], updatedBy: number
 ): void {
-  const now = new Date().toISOString();
-  const upsert = db.prepare(`
-    INSERT INTO weekly_project_risks (id, team_id, week_start, report_kind_id, project_id, risk, mitigation, row_version, created_by, updated_by, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
-    ON CONFLICT(team_id, week_start, report_kind_id, project_id) DO UPDATE SET
-      risk = excluded.risk, mitigation = excluded.mitigation, row_version = row_version + 1,
-      updated_by = excluded.updated_by, updated_at = excluded.updated_at
-  `);
-  for (const r of risks) {
-    upsert.run(randomUUID(), teamId, weekStart, reportKindId, r.projectId, r.risk || '', r.mitigation || '', updatedBy, updatedBy, now, now);
-  }
+  withTransaction(() => {
+    const now = new Date().toISOString();
+    const upsert = db.prepare(`
+      INSERT INTO weekly_project_risks (id, team_id, week_start, report_kind_id, project_id, risk, mitigation, row_version, created_by, updated_by, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
+      ON CONFLICT(team_id, week_start, report_kind_id, project_id) DO UPDATE SET
+        risk = excluded.risk, mitigation = excluded.mitigation, row_version = row_version + 1,
+        updated_by = excluded.updated_by, updated_at = excluded.updated_at
+      WHERE weekly_project_risks.row_version = ?
+    `);
+    const conflicts: number[] = [];
+    for (const r of risks) {
+      const expectedVersion = r.rowVersion ?? -1;
+      const result = upsert.run(
+        randomUUID(), teamId, weekStart, reportKindId, r.projectId, r.risk || '', r.mitigation || '',
+        updatedBy, updatedBy, now, now, expectedVersion,
+      );
+      if (result.changes === 0) conflicts.push(r.projectId);
+    }
+    if (conflicts.length > 0) throw new RiskVersionConflictError(conflicts);
+  });
 }
 
 // ── Báo cáo DM kèm Risk ───────────────────────────────────────────────────────────
