@@ -329,8 +329,22 @@ test('FR-26: gửi yêu cầu mở khoá -> Leader điều phối duyệt -> m�
   const unlockReq = await req('POST', `/api/release/schedule/registrations/${regA.json.id}/unlock-requests`, { kind: 'edit', reason: 'cần đổi giờ' }, leaderAHeaders);
   assert.equal(unlockReq.status, 201, JSON.stringify(unlockReq.json));
 
+  const pending = await req('GET', '/api/release/schedule/unlock-requests', undefined, coordHeaders);
+  assert.equal(pending.status, 200);
+  const found = pending.json.find((r: any) => r.id === unlockReq.json.id);
+  assert.ok(found, 'yêu cầu vừa gửi phải xuất hiện trong danh sách chờ duyệt của Leader điều phối');
+  assert.equal(found.kind, 'edit');
+  assert.equal(found.reason, 'cần đổi giờ');
+  assert.equal(found.teamId, teamA);
+
+  const pendingAsNonCoordinator = await req('GET', '/api/release/schedule/unlock-requests', undefined, leaderAHeaders);
+  assert.equal(pendingAsNonCoordinator.status, 403, 'chỉ Leader team điều phối mới xem được danh sách này');
+
   const approve = await req('POST', `/api/release/schedule/unlock-requests/${unlockReq.json.id}/approve`, {}, coordHeaders);
   assert.equal(approve.status, 200);
+
+  const pendingAfterApprove = await req('GET', '/api/release/schedule/unlock-requests', undefined, coordHeaders);
+  assert.ok(!pendingAfterApprove.json.some((r: any) => r.id === unlockReq.json.id), 'yêu cầu đã duyệt không còn hiện trong danh sách chờ');
 
   const regBAfterOpen = await req('GET', '/api/release/schedule-board', undefined, leaderBHeaders);
   const cycleAfterOpen = (regBAfterOpen.json.cycles as any[]).find((c) => c.id === cycleId);

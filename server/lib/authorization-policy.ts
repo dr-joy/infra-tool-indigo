@@ -201,7 +201,11 @@ export const AUTHORIZATION_POLICY: Record<string, Record<string, PolicyEntry>> =
     set_regular_date: { feature: null, roles: ['leader'] },
     force_time: { feature: null, roles: ['leader'] },
     lock_cycle: { feature: null, roles: ['leader'] },
-    approve_unlock: { feature: null, roles: ['leader'] }
+    approve_unlock: { feature: null, roles: ['leader'] },
+    // Giai đoạn 2 FE (Lát 10) — trước khi duyệt (approve_unlock) Leader điều phối cần BIẾT có yêu cầu
+    // nào đang chờ (route tạo yêu cầu không trả lại danh sách cho ai khác xem, và audit_log không ghi
+    // ID của chính request đó, chỉ ghi registration bị ảnh hưởng) — thêm hành động đọc riêng.
+    list_unlock_requests: { feature: null, roles: ['leader'] }
   },
 
   // Lát 6 (FR-28a) — Admin bật/tắt riêng "Tab cá nhân" cho từng team phát triển. Toàn cục, giống

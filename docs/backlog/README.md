@@ -148,10 +148,38 @@ FR-14/FR-31). Cả 2 route mới đều `policyKind:'team_feature'`, action riê
 (`test/client/team-management.test.tsx`), `npm run check` xanh (trừ gate Exe). **Chưa qua Council/Codex
 review.**
 
-**CÒN LẠI cho Giai đoạn 2-3:** màn Lịch release chung + đăng ký lịch Release team-scoped ở UI (route BE
-Lát 6 đã sẵn, FE chưa dựng — Lát 10, phần lớn nhất còn lại: FR-23/24/25/26/27/28a — board xem lịch
-chung, form đăng ký/sửa lịch khẩn cấp, hiển thị+ép xung đột, luồng khoá/mở khoá đầy đủ, huỷ đợt, ấn
-định ngày định kỳ, tab cá nhân release nối vào lịch chính thức của team).
+**Lát 10 Giai đoạn 2 XONG (23/09) — Lịch release chung.** 1 màn mới `src/screens/release-calendar.tsx`
+(`ManHinhLichReleaseChung`), nối vào tab "Lên lịch" đã có qua 1 khu vực mới ("Lịch chung"/"Cá nhân",
+state độc lập với `releaseType` cũ — KHÔNG thêm giá trị thứ 3 vào type `ReleaseType` vốn đã dùng ở nhiều
+nơi khác với giả định chỉ 2 giá trị). Đủ FR-24 (board xem chung, lọc field theo team sở hữu), FR-23a
+(đăng ký/sửa lịch khẩn cấp — đủ trường: giờ deploy staging/release, demo tự tính 16:00, hệ thống/nền
+tảng checkbox, ticket dạng tag, link Nhật HOẶC lý do), FR-25 (hiện xung đột + ép giờ chung), FR-26
+(khoá cả đợt, gửi yêu cầu mở khoá/huỷ, Leader điều phối duyệt), FR-27 (huỷ trực tiếp/qua yêu cầu),
+FR-23b (ấn định ngày định kỳ). Route BE dùng nguyên vẹn từ Lát 6, không sửa hành vi cũ.
+
+**Phát hiện + tự vá 2 khoảng trống thật khi code:** (1) không có cách nào cho FE biết team nào là "team
+điều phối" để ẩn/hiện đúng nút — thêm field `coordinatorTeamId` vào response CÓ SẴN của `GET
+/schedule-board` (không phải route mới, không đổi hợp đồng cũ, chỉ cộng thêm 1 field); (2) không có
+route liệt kê yêu cầu mở khoá đang chờ (route tạo yêu cầu không trả cho ai khác xem, audit log không
+ghi ID của chính request) — thêm `GET /release/schedule/unlock-requests` (Leader điều phối-only, action
+riêng `release_coordinator.list_unlock_requests`).
+
+**Tự bắt 1 bug thật lúc viết test** (không phải Council — chưa qua review lát này): fetch danh sách yêu
+cầu chờ duyệt ban đầu chụp `myTeams` qua closure ngay lúc mount-effect chạy lần đầu — nếu AuthProvider
+chưa kịp resolve `reload()` thì `myTeams` rỗng, bỏ sót fetch. Tách thành effect riêng phụ thuộc
+`[board?.coordinatorTeamId, myTeams]`, tự chạy lại khi 2 giá trị này đổi — đúng hơn về mặt kỹ thuật dù
+production không lộ bug này (AuthShell đã gate render tới khi `myTeams` chắc chắn sẵn sàng).
+
+Backend: +2 test tích hợp mới (`release-schedule.test.ts`, liệt kê + phân quyền + tự động biến mất sau
+khi duyệt). Frontend: 10 test client mới (`test/client/release-calendar.test.tsx`), phủ cả 6 FR ở trên.
+`npm run check` xanh (trừ gate Exe). **Chưa qua Council/Codex review.**
+
+**CHƯA LÀM (để lại, không phải quên):** FR-28a phần nối "Tab cá nhân" (`LayoutReleaseKhanCap`/
+`LayoutReleaseDinhKy` trong `release.tsx`, đã có sẵn từ trước) vào lịch CHÍNH THỨC của team qua 2 route
+đã có (`POST /release/schedule/personal-emergency-tasks`, `.../personal-regular-tasks`) — cố ý hoãn lại
+vì đây là 1 phần khác biệt rõ (nút "áp dụng checklist cá nhân theo lịch team"), không ảnh hưởng tới 6 FR
+đã xong ở trên; là việc còn lại duy nhất được biết trước khi Giai đoạn 2-3 coi là xong hoàn toàn.
+Popup "cảnh báo bớt thành viên"/"tạo team"/"yêu cầu mở khoá" đã xong ở Lát 8/9/10.
 
 **Đã merge vào `master` + push `indigo`, đã dọn nhánh.**
 

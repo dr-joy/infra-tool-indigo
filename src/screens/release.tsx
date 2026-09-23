@@ -16,6 +16,7 @@ import { api, ApiError } from '../api';
 import { Modal } from '../components/Modal';
 import { CopyNoteButton, TaskLinkIcon, TaskLinkBadges, TaskLinkEditor, SortIcon } from '../components/task-atoms';
 import { usePics, useToast } from '../context';
+import { ManHinhLichReleaseChung } from './release-calendar';
 import {
   taoNgayTuInput, localDateInputValue, mondayOfWeek, congNgayInput, congThangInput, currentVietnamDateInputValue,
   dinhDangNgay, dinhDangNgayDayDu, addDays, timeToMinutes, minutesToTime, snapMinutes, clamp,
@@ -558,8 +559,16 @@ export function emergencyFixedReleaseTaskPayloads(
 
 
 
+// Lát 10 (CR-20260913 Giai đoạn 2) — thêm khu vực "Lịch chung" (team-scoped: đăng ký/khoá/xung đột,
+// FR-23a/24/25/26/27/28a-nối) TÁCH RIÊNG khỏi 2 khu "Cá nhân" cũ (quản lý template/task CỦA TỪNG
+// người, không gắn 1 team cụ thể — giữ nguyên `ReleaseType` 2 giá trị cũ, không nhét thêm giá trị thứ
+// 3 vào type đó vì nó đã dùng ở nhiều nơi khác với giả định chỉ 2 giá trị). `khuVuc` là state MỚI,
+// độc lập với `releaseType`.
+type KhuVucLenLich = 'ca_nhan' | 'lich_chung';
+
 export function ManHinhLenLich({ onTasksCreated }: { onTasksCreated: (date?: string) => Promise<void> }) {
   const { t } = useLang();
+  const [khuVuc, setKhuVuc] = useState<KhuVucLenLich>('ca_nhan');
   const [releaseType, setReleaseType] = useState<ReleaseType>('khan_cap');
 
   return (
@@ -572,27 +581,52 @@ export function ManHinhLenLich({ onTasksCreated }: { onTasksCreated: (date?: str
           </p>
         </div>
         <div className="release-type-field">
-          <span className="release-type-label">{t('release.type')}</span>
+          <span className="release-type-label">Khu vực</span>
           <div className="release-type-options">
             <button
               type="button"
-              className={`release-type-button ${releaseType === 'khan_cap' ? 'release-type-button-active' : ''}`}
-              onClick={() => setReleaseType('khan_cap')}
+              className={`release-type-button ${khuVuc === 'lich_chung' ? 'release-type-button-active' : ''}`}
+              onClick={() => setKhuVuc('lich_chung')}
             >
-              {t('release.emergency')}
+              Lịch chung
             </button>
             <button
               type="button"
-              className={`release-type-button ${releaseType === 'dinh_ky' ? 'release-type-button-active' : ''}`}
-              onClick={() => setReleaseType('dinh_ky')}
+              className={`release-type-button ${khuVuc === 'ca_nhan' ? 'release-type-button-active' : ''}`}
+              onClick={() => setKhuVuc('ca_nhan')}
             >
-              {t('release.regular')}
+              Cá nhân
             </button>
           </div>
         </div>
+        {khuVuc === 'ca_nhan' && (
+          <div className="release-type-field">
+            <span className="release-type-label">{t('release.type')}</span>
+            <div className="release-type-options">
+              <button
+                type="button"
+                className={`release-type-button ${releaseType === 'khan_cap' ? 'release-type-button-active' : ''}`}
+                onClick={() => setReleaseType('khan_cap')}
+              >
+                {t('release.emergency')}
+              </button>
+              <button
+                type="button"
+                className={`release-type-button ${releaseType === 'dinh_ky' ? 'release-type-button-active' : ''}`}
+                onClick={() => setReleaseType('dinh_ky')}
+              >
+                {t('release.regular')}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {releaseType === 'dinh_ky' ? <LayoutReleaseDinhKy onTasksCreated={onTasksCreated} /> : <LayoutReleaseKhanCap onTasksCreated={onTasksCreated} />}
+      {khuVuc === 'lich_chung' ? (
+        <ManHinhLichReleaseChung />
+      ) : (
+        releaseType === 'dinh_ky' ? <LayoutReleaseDinhKy onTasksCreated={onTasksCreated} /> : <LayoutReleaseKhanCap onTasksCreated={onTasksCreated} />
+      )}
     </section>
   );
 }

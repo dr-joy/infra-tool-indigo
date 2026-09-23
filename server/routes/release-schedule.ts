@@ -433,6 +433,26 @@ router.post('/release/schedule/registrations/:id/unlock-requests', requireSessio
   }
 });
 
+// Giai đoạn 2 FE (Lát 10) — liệt kê yêu cầu mở khoá/huỷ đang chờ, để Leader điều phối biết có gì cần
+// duyệt trước khi gọi route approve bên dưới (route tạo yêu cầu không trả danh sách cho ai khác xem).
+router.get('/release/schedule/unlock-requests', requireSession, requireActiveAccount, (req, res) => {
+  try {
+    const actor = actorFromRequest(req);
+    authorizeReleaseCoordinatorAction(actor, 'list_unlock_requests');
+    const rows = db.prepare(`
+      SELECT r.id, r.registration_id, r.kind, r.reason, r.created_at, t.team_id, t.cycle_id
+      FROM release_unlock_requests r JOIN team_release_registrations t ON t.id = r.registration_id
+      WHERE r.status = 'pending' ORDER BY r.created_at ASC
+    `).all() as { id: number; registration_id: number; kind: string; reason: string; created_at: string; team_id: number; cycle_id: number }[];
+    res.json(rows.map((r) => ({
+      id: r.id, registrationId: r.registration_id, kind: r.kind, reason: r.reason,
+      createdAt: r.created_at, teamId: r.team_id, cycleId: r.cycle_id
+    })));
+  } catch (error) {
+    sendRouteError(res, error, 'Không thể tải danh sách yêu cầu mở khoá');
+  }
+});
+
 // FR-26/FR-27 — Leader team điều phối duyệt 1 yêu cầu. kind=edit -> mở TOÀN BỘ cycle + tự đóng các
 // yêu cầu edit pending khác cùng cycle. kind=cancel -> chuyển thẳng registration đó sang cancelled.
 router.post('/release/schedule/unlock-requests/:id/approve', requireSession, requireActiveAccount, (req, res) => {
@@ -591,7 +611,11 @@ router.get('/release/schedule-board', requireSession, requireActiveAccount, (req
       return { id: cycle.id, releaseKey: cycle.release_key, status: cycle.status, lockedAt: cycle.locked_at, registrations, conflicts };
     }).filter((c) => c.registrations.length > 0);
 
-    res.json({ cycles: cycleBoards });
+    // Lát 10 FE (Giai đoạn 2): kèm luôn teamId của team điều phối trong response có sẵn này — thay vì
+    // thêm 1 route mới. Không phải dữ liệu nhạy cảm (ai cũng cần biết "gửi yêu cầu mở khoá tới đâu"),
+    // chỉ cần để FE tự ẩn/hiện nút khoá/duyệt/ép giờ/ấn định ngày định kỳ (server vẫn tự authorize()
+    // lại đầy đủ khi thật sự gọi các route đó — đây chỉ là gợi ý hiển thị, không phải nguồn phân quyền).
+    res.json({ cycles: cycleBoards, coordinatorTeamId: getReleaseCoordinatorTeamId() });
   } catch (error) {
     sendRouteError(res, error, 'Không thể tải lịch release chung');
   }
