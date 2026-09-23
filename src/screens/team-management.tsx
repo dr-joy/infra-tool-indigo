@@ -120,6 +120,14 @@ function TabThanhVien({ teamId, laLeader }: { teamId: number | null; laLeader: b
     setMembers([]);
     setError('');
     setLoading(true);
+    // Đóng luôn popup thêm/bớt thành viên nếu đổi team khi đang mở — Council review (run ba1e14ed) nêu
+    // rủi ro popup còn hiện dữ liệu team cũ trong lúc submit lại áp vào team mới. Đã tự kiểm chứng: popup
+    // dùng chung <Modal> (`fixed inset-0 z-50`) che kín cả `TeamSwitcher` ở header nên KHÔNG bấm đổi team
+    // được trong lúc popup mở qua thao tác chuột thường — không phải lỗ hổng đang khai thác được, nhưng
+    // đóng popup ở đây vẫn đúng cùng nguyên tắc "reset toàn bộ state phụ thuộc team" đã dùng cho
+    // members/error/loading ngay trên, phòng khi có đường khác đổi activeTeamId sau này (vd phím tắt).
+    setShowAdd(false);
+    setRemoveTarget(null);
     void tai(aliveRef);
     return () => { aliveRef.current = false; };
   }, [teamId]);

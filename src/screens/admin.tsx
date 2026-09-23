@@ -55,18 +55,26 @@ function AdminTeams() {
   const [editDesc, setEditDesc] = useState('');
   const [leaderPickerTeam, setLeaderPickerTeam] = useState<TeamRow | null>(null);
 
-  async function tai() {
+  async function tai(alive?: { current: boolean }) {
     try {
       const data = await api<{ teams: TeamRow[]; nextCursor: string | null }>('/api/admin/teams?limit=200');
+      if (alive && !alive.current) return;
       setTeams(data.teams);
       setError('');
     } catch (e) {
+      if (alive && !alive.current) return;
       setError(loiThanThien(e));
     } finally {
-      setLoading(false);
+      if (!alive || alive.current) setLoading(false);
     }
   }
-  useEffect(() => { void tai(); }, []);
+  // Cờ huỷ (cancellation guard) khi unmount giữa lúc đang tải — chuẩn Lát 7 (project.tsx). Không phải
+  // rủi ro lộ dữ liệu chéo team (Admin không phụ thuộc activeTeamId), chỉ tránh set-state sau unmount.
+  useEffect(() => {
+    const alive = { current: true };
+    void tai(alive);
+    return () => { alive.current = false; };
+  }, []);
 
   async function taoTeam() {
     const name = newName.trim();
@@ -235,22 +243,28 @@ function AdminFeatureVisibility() {
   const [loading, setLoading] = useState(true);
   const [busyKey, setBusyKey] = useState('');
 
-  async function tai() {
+  async function tai(alive?: { current: boolean }) {
     try {
       const [t, v] = await Promise.all([
         api<{ teams: TeamRow[] }>('/api/admin/teams?limit=200'),
         api<{ visibility: VisibilityRow[] }>('/api/admin/feature-visibility')
       ]);
+      if (alive && !alive.current) return;
       setTeams(t.teams);
       setRows(v.visibility);
       setError('');
     } catch (e) {
+      if (alive && !alive.current) return;
       setError(loiThanThien(e));
     } finally {
-      setLoading(false);
+      if (!alive || alive.current) setLoading(false);
     }
   }
-  useEffect(() => { void tai(); }, []);
+  useEffect(() => {
+    const alive = { current: true };
+    void tai(alive);
+    return () => { alive.current = false; };
+  }, []);
 
   async function toggle(teamId: number, feature: string) {
     const row = rows.find((r) => r.team_id === teamId && r.feature === feature);
@@ -329,24 +343,30 @@ function AdminReleaseConfig() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
-  async function tai() {
+  async function tai(alive?: { current: boolean }) {
     try {
       const [t, c, a] = await Promise.all([
         api<{ teams: TeamRow[] }>('/api/admin/teams?limit=200'),
         api<{ release_coordinator_team_id: number | null; row_version: number }>('/api/admin/release-coordinator'),
         api<{ settings: AutogenRow[] }>('/api/admin/release-task-autogen')
       ]);
+      if (alive && !alive.current) return;
       setTeams(t.teams);
       setCoord(c);
       setAutogen(a.settings);
       setError('');
     } catch (e) {
+      if (alive && !alive.current) return;
       setError(loiThanThien(e));
     } finally {
-      setLoading(false);
+      if (!alive || alive.current) setLoading(false);
     }
   }
-  useEffect(() => { void tai(); }, []);
+  useEffect(() => {
+    const alive = { current: true };
+    void tai(alive);
+    return () => { alive.current = false; };
+  }, []);
 
   async function doiDieuPhoi(teamId: number) {
     if (!coord) return;
@@ -445,22 +465,28 @@ function AdminJoinRequests() {
   const [overrideTeam, setOverrideTeam] = useState<Record<number, number>>({});
   const [overrideRole, setOverrideRole] = useState<Record<number, 'leader' | 'member'>>({});
 
-  async function tai() {
+  async function tai(alive?: { current: boolean }) {
     try {
       const [t, jr] = await Promise.all([
         api<{ teams: TeamRow[] }>('/api/admin/teams?limit=200'),
         api<{ joinRequests: JoinRequestRow[] }>('/api/admin/join-requests')
       ]);
+      if (alive && !alive.current) return;
       setTeams(t.teams);
       setItems(jr.joinRequests);
       setError('');
     } catch (e) {
+      if (alive && !alive.current) return;
       setError(loiThanThien(e));
     } finally {
-      setLoading(false);
+      if (!alive || alive.current) setLoading(false);
     }
   }
-  useEffect(() => { void tai(); }, []);
+  useEffect(() => {
+    const alive = { current: true };
+    void tai(alive);
+    return () => { alive.current = false; };
+  }, []);
 
   function tenTeam(id: number) { return teams.find((t) => t.id === id)?.name || `team #${id}`; }
 
@@ -550,18 +576,24 @@ function AdminUsers() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<number | null>(null);
 
-  async function tai() {
+  async function tai(alive?: { current: boolean }) {
     try {
       const data = await api<{ users: UserRow[] }>('/api/admin/users');
+      if (alive && !alive.current) return;
       setItems(data.users);
       setError('');
     } catch (e) {
+      if (alive && !alive.current) return;
       setError(loiThanThien(e));
     } finally {
-      setLoading(false);
+      if (!alive || alive.current) setLoading(false);
     }
   }
-  useEffect(() => { void tai(); }, []);
+  useEffect(() => {
+    const alive = { current: true };
+    void tai(alive);
+    return () => { alive.current = false; };
+  }, []);
 
   async function doiTrangThai(u: UserRow, status: 'active' | 'disabled') {
     setBusyId(u.id);
@@ -658,24 +690,30 @@ function AdminAudit() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
-  async function tai() {
+  async function tai(alive?: { current: boolean }) {
     try {
       const [t, u, a] = await Promise.all([
         api<{ teams: TeamRow[] }>('/api/admin/teams?limit=200'),
         api<{ users: UserRow[] }>('/api/admin/users'),
         api<{ entries: AuditEntryAdmin[]; nextCursor: string | null }>('/api/audit?limit=100')
       ]);
+      if (alive && !alive.current) return;
       setTeams(t.teams);
       setUsers(u.users);
       setEntries(a.entries);
       setError('');
     } catch (e) {
+      if (alive && !alive.current) return;
       setError(loiThanThien(e));
     } finally {
-      setLoading(false);
+      if (!alive || alive.current) setLoading(false);
     }
   }
-  useEffect(() => { void tai(); }, []);
+  useEffect(() => {
+    const alive = { current: true };
+    void tai(alive);
+    return () => { alive.current = false; };
+  }, []);
 
   function tenNguoi(id: number) { return users.find((u) => u.id === id)?.display_name || `user #${id}`; }
   function tenTeam(id: number | null) { return id == null ? '—' : teams.find((t) => t.id === id)?.name || `team #${id}`; }
@@ -723,15 +761,21 @@ function AdminRedmine() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  async function tai() {
+  async function tai(alive?: { current: boolean }) {
     try {
       const c = await api<{ baseUrl: string }>('/api/admin/redmine-url');
+      if (alive && !alive.current) return;
       setBaseUrl(c.baseUrl);
     } catch (e) {
+      if (alive && !alive.current) return;
       setError(loiThanThien(e));
     }
   }
-  useEffect(() => { void tai(); }, []);
+  useEffect(() => {
+    const alive = { current: true };
+    void tai(alive);
+    return () => { alive.current = false; };
+  }, []);
 
   async function luu() {
     setBusy(true);

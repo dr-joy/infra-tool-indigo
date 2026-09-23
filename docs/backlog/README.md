@@ -124,8 +124,9 @@ không có route nào cho Admin xem roster của 1 team để CHỌN Leader mớ
 không tự là thành viên — đúng FR-11). Thêm route hẹp `GET /admin/teams/:id/members` (resource riêng
 `team.list_members`, Admin-only, KHÔNG đụng `team_member.list` đang dùng cho Leader/Member) + 2 test
 tích hợp mới. 458 test backend (456 cũ + 2 mới) + 10 test client mới (`test/client/admin.test.tsx`),
-`npm run check` xanh (trừ gate Exe — chưa `npm run package`). **Chưa qua Council/Codex review — cần
-review trước khi coi là chốt, giống mọi lát trước.**
+`npm run check` xanh (trừ gate Exe — chưa `npm run package`). **Đã qua Council review (23/09, cùng đợt
+với Lát 9/10, xem ngay dưới) — thêm cờ huỷ (cancellation guard) cho cả 7 mục con, không có finding nào
+khác riêng cho Lát 8.**
 
 **Lát 9 Giai đoạn 2 XONG (23/09) — màn Quản lý team.** 1 màn `src/screens/team-management.tsx`
 (`ManHinhQuanLyTeam`), tab mới trong nav chính hiện cho MỌI actor active (không gate như tab Admin —
@@ -145,8 +146,16 @@ FR-14/FR-31). Cả 2 route mới đều `policyKind:'team_feature'`, action riê
 `team_member` (`lookup`, `pending_task_count`), roles `['leader']`, `scope.teamId` thật.
 
 458 test backend (16/16 pass riêng `teams.test.ts`, gồm 4 test mới của Lát 8+9) + 5 test client mới
-(`test/client/team-management.test.tsx`), `npm run check` xanh (trừ gate Exe). **Chưa qua Council/Codex
-review.**
+(`test/client/team-management.test.tsx`), `npm run check` xanh (trừ gate Exe). **Đã qua Council review
+(23/09, run `ba1e14ed`, Codex 2 lượt `invalid_turn_output` — Claude tự tổng hợp theo R-SCOPE-08, xem
+[exchange 2026-09-23](../exchanges/2026-09-23.md)) — tìm 2 finding chính: (1) route
+`GET /teams/:teamId/member-candidates?email=` có thể bị Leader bất kỳ dùng để tra display_name/avatar
+người ngoài team — đối chiếu lại Q13/FR-12, xác nhận KHÔNG phạm giới hạn đã chốt (chỉ khớp người đã từng
+đăng nhập, không gọi ra ngoài), chấp nhận như thiết kế; (2) popup thêm/bớt thành viên nhận `teamId` phản
+ứng theo `activeTeamId`, lý thuyết có thể áp nhầm team nếu đổi team lúc popup mở — Claude tự kiểm chứng
+bằng cách đọc code thật (`Modal` = `fixed inset-0 z-50` che kín `TeamSwitcher`, `activeTeamId` không có
+đường tự đổi lúc `phase==='active'`) và xác nhận KHÔNG reachable qua UI thật, nhưng vẫn thêm fix phòng thủ
+rẻ tiền (đóng popup khi đổi team) cho nhất quán. Cũng sửa thiếu cancellation guard ở board chính.**
 
 **Lát 10 Giai đoạn 2 XONG (23/09) — Lịch release chung.** 1 màn mới `src/screens/release-calendar.tsx`
 (`ManHinhLichReleaseChung`), nối vào tab "Lên lịch" đã có qua 1 khu vực mới ("Lịch chung"/"Cá nhân",
@@ -172,7 +181,10 @@ production không lộ bug này (AuthShell đã gate render tới khi `myTeams` 
 
 Backend: +2 test tích hợp mới (`release-schedule.test.ts`, liệt kê + phân quyền + tự động biến mất sau
 khi duyệt). Frontend: 10 test client mới (`test/client/release-calendar.test.tsx`), phủ cả 6 FR ở trên.
-`npm run check` xanh (trừ gate Exe). **Chưa qua Council/Codex review.**
+`npm run check` xanh (trừ gate Exe). **Đã qua Council review cùng đợt với Lát 8/9 (23/09, run `ba1e14ed`,
+xem chi tiết ở đoạn Lát 9 phía trên và [exchange 2026-09-23](../exchanges/2026-09-23.md))** — race
+đổi-team-khi-popup-mở ở `showForm`/`unlockTarget` cùng loại với Lát 9, xác nhận không reachable, đã thêm
+fix phòng thủ + cancellation guard cho board chính.
 
 **CHƯA LÀM (để lại, không phải quên):** FR-28a phần nối "Tab cá nhân" (`LayoutReleaseKhanCap`/
 `LayoutReleaseDinhKy` trong `release.tsx`, đã có sẵn từ trước) vào lịch CHÍNH THỨC của team qua 2 route

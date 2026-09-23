@@ -68,24 +68,32 @@ export function ManHinhLichReleaseChung() {
   const [pendingUnlockRequests, setPendingUnlockRequests] = useState<UnlockRequestRow[]>([]);
   const [busy, setBusy] = useState(false);
 
-  async function tai() {
+  async function tai(alive?: { current: boolean }) {
     try {
       const [b, t, rc] = await Promise.all([
         api<BoardResponse>('/api/release/schedule-board'),
         api<{ teams: TeamRow[] }>('/api/teams'),
         api<RegularCycleRow[]>('/api/release/schedule/regular-cycles')
       ]);
+      if (alive && !alive.current) return;
       setBoard(b);
       setTeams(t.teams);
       setRegularCycles(rc);
       setError('');
     } catch (e) {
+      if (alive && !alive.current) return;
       setError(loiThanThien(e));
     } finally {
-      setLoading(false);
+      if (!alive || alive.current) setLoading(false);
     }
   }
-  useEffect(() => { void tai(); }, []);
+  // Board KHÔNG phụ thuộc activeTeamId (dữ liệu toàn cục, lọc field theo team ở server) nên effect này
+  // chỉ chạy 1 lần lúc mount — cờ huỷ chỉ để tránh set-state sau unmount, không phải rủi ro lộ chéo team.
+  useEffect(() => {
+    const alive = { current: true };
+    void tai(alive);
+    return () => { alive.current = false; };
+  }, []);
 
   // Tách riêng khỏi tai() ở trên: dùng đúng myTeams/board hiện tại qua dependency, không chụp closure
   // của myTeams tại thời điểm effect mount đầu tiên chạy (myTeams có thể chưa kịp nạp xong lúc đó nếu
