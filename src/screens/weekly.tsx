@@ -344,6 +344,7 @@ export function ManHinhBaoCaoTuan() {
     // trong dependency của effect nào khác (chỉ historyThisWeek dùng qua useMemo) nên reset ở đây an
     // toàn, không gây vòng lặp render.
     setWeekStart('');
+    setError('');
     (async () => {
       try {
         const meta = await apiTeam<{ currentWeek: string; kinds: ReportKindInfo[] }>(activeTeamId, '/api/weeks/report-kinds');

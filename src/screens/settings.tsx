@@ -57,6 +57,7 @@ function ManHinhQuanLyPic() {
     // PIC của team cũ vẫn hiện tới khi fetch team mới xong (Council review Lát 7 giai đoạn 1, vòng 2
     // — điểm "dữ liệu team cũ hiện thoáng qua").
     setItems([]);
+    setError('');
     void taiDanhSach(aliveRef);
     return () => { aliveRef.current = false; };
   }, [activeTeamId]);
