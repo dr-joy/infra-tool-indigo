@@ -234,11 +234,17 @@ export function recurringMatchesDate(task: ReturnType<typeof mapTask>, date = ne
   });
 }
 
+// CR-20260913 Lát 6 (§6.3, FR-28a): 4 bảng release template/definition nay có owner_user_id/row_version
+// riêng theo từng User — thêm 2 field này vào output để FE biết ai sở hữu (hiển thị)/chống-mất-cập-nhật
+// (row_version chỉ tăng dần bookkeeping ở route, KHÔNG ép client gửi lại đúng giá trị mới bắt buộc —
+// out of scope đợt này, xem báo cáo bàn giao).
 export function mapReleaseTemplate(row: Record<string, unknown>) {
   return {
     id: String(row.id),
     name: String(row.name),
-    content: sanitizeReleaseTemplateContent(String(row.content))
+    content: sanitizeReleaseTemplateContent(String(row.content)),
+    ownerUserId: row.owner_user_id == null ? null : Number(row.owner_user_id),
+    rowVersion: Number(row.row_version || 1)
   };
 }
 
@@ -252,7 +258,9 @@ export function mapReleaseTaskDefinition(row: Record<string, unknown>) {
     templateId: row.template_id == null ? '' : String(row.template_id),
     links: parseTaskLinks(row.task_links),
     sortOrder: Number(row.sort_order || 0),
-    replyToDefinitionId: row.reply_to_definition_id == null ? null : String(row.reply_to_definition_id)
+    replyToDefinitionId: row.reply_to_definition_id == null ? null : String(row.reply_to_definition_id),
+    ownerUserId: row.owner_user_id == null ? null : Number(row.owner_user_id),
+    rowVersion: Number(row.row_version || 1)
   };
 }
 
@@ -270,6 +278,8 @@ export function mapEmergencyReleaseTaskDefinition(row: Record<string, unknown>) 
     templateId: row.template_id == null ? '' : String(row.template_id),
     links: parseTaskLinks(row.task_links),
     sortOrder: Number(row.sort_order || 0),
-    replyToDefinitionId: row.reply_to_definition_id == null ? null : String(row.reply_to_definition_id)
+    replyToDefinitionId: row.reply_to_definition_id == null ? null : String(row.reply_to_definition_id),
+    ownerUserId: row.owner_user_id == null ? null : Number(row.owner_user_id),
+    rowVersion: Number(row.row_version || 1)
   };
 }

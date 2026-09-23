@@ -7,6 +7,37 @@ import {
   buildDefinitionTargetPayload, diffTaskAgainstDefinition, buildReleaseUpdateStatement,
   compareReleaseTaskDefinitions, type ReleaseTaskDefinitionRow, type DefinitionTargetPayload, type TaskRowForDiff
 } from '../lib/release-render.js';
+import { requireSession, requireActiveAccount, actorFromRequest } from '../lib/auth-middleware.js';
+import { authorize } from '../lib/authorize.js';
+
+// CR-20260913 Lát 6 (§6.3) — retrofit auth: file này (release ĐỊNH KỲ hiện tại + nhánh khẩn cấp CŨ,
+// đơn-team, tiền Lát 6) trước đây KHÔNG hề qua requireSession/authorize() — cùng lớp lỗ hổng đã tìm ở
+// PIC (Council review run e6cd1c8c) và đã vá cho server/routes/release.ts (CRUD template/definition cá
+// nhân) — file này bị bỏ sót lúc đó, vá nốt ở đây. Mọi route dưới đây ghi/đọc bảng `tasks` (task cá
+// nhân, FR-14 "riêng tư TUYỆT ĐỐI") nên dùng ĐÚNG policyKind 'personal_task'/resource 'personal_task'
+// (y hệt server/routes/tasks.ts, KHÔNG dùng resource 'release_task_definition_personal' vì đối tượng
+// ghi ở đây là `tasks`, không phải bảng definition) + lọc `owner_user_id` ở MỌI truy vấn definition/task
+// — trước đây các route này hoàn toàn không lọc, nên user A generate/sync được cả definition/task của
+// user B (rò rỉ chéo).
+//
+// PHẠM VI KHÔNG ĐỔI ở đợt việc này (xem báo cáo bàn giao Lát 6): hợp đồng request/response của các route
+// (releaseDate/releaseMonth tự do, không đòi chọn `release_cycles`) giữ NGUYÊN — đây là quyết định có
+// cân nhắc, không phải sót việc. Cơ chế "khoá nhóm task cá nhân định kỳ theo cycle_id thật" mà CR §6.3
+// dòng ~1513 yêu cầu được hiện thực Ở ĐƯỜNG MỚI (server/routes/release-schedule.ts,
+// POST /release/schedule/personal-regular-tasks, dùng `regularPersonalReleaseMonthKey()`), không phải
+// bằng cách đổi hợp đồng của các route CŨ dưới đây — đổi hợp đồng cũ (bắt buộc chọn cycle đã đăng ký,
+// bỏ ô nhập ngày tự do) là thay đổi phá vỡ FE hiện tại (`src/screens/release.tsx` LayoutReleaseDinhKy`)
+// và phá toàn bộ bộ test tích hợp đã có (`test/integration/schedules-release.test.ts`,
+// `test/integration/tasks.test.ts`, `test/integration/reply-to-definition-authority.test.ts`) — một
+// quyết định sản phẩm/migration riêng, ngoài phạm vi được giao ở đây, nên CỐ Ý không tự làm mà chỉ vá
+// đúng lỗ hổng auth/ownership. Rủi ro còn lại (đã ghi rõ, không giấu): dùng route CŨ này để tự sinh task
+// cho 2 ngày release ĐỊNH KỲ khác nhau nhưng CÙNG tháng dương lịch vẫn có thể lẫn nhóm qua khoá
+// `release_month` (YYYY-MM) như trước — xem thêm ghi chú tại từng route bên dưới.
+function requireOwnPersonalTaskSchedule(req: Parameters<typeof actorFromRequest>[0]) {
+  const actor = actorFromRequest(req);
+  authorize({ actor, policyKind: 'personal_task', resource: 'personal_task', action: 'own', scope: { ownerId: actor.userId } });
+  return actor;
+}
 
 const router = Router();
 
@@ -46,24 +77,27 @@ interface WritePlanItem {
 }
 interface WriteSkip { originRef: string; title: string; reason: 'done' | 'canceled' | 'past' | 'unchanged' | 'missing'; }
 
-function loadTemplatesMap(): Map<string, string> {
-  const rows = db.prepare('SELECT id, content FROM release_templates').all() as { id: string; content: string }[];
+// Mọi hàm load* dưới đây lọc `owner_user_id = ownerUserId` — task cá nhân riêng tư TUYỆT ĐỐI (FR-14),
+// và definition (Lát 6, CR §6.3) nay cũng thuộc đúng 1 User, không chia sẻ.
+function loadTemplatesMap(ownerUserId: number): Map<string, string> {
+  const rows = db.prepare('SELECT id, content FROM release_templates WHERE owner_user_id = ?').all(ownerUserId) as { id: string; content: string }[];
   return new Map(rows.map((r) => [r.id, r.content]));
 }
 
-function loadDefinitions(definitionIds?: string[]): ReleaseTaskDefinitionRow[] {
+function loadDefinitions(ownerUserId: number, definitionIds?: string[]): ReleaseTaskDefinitionRow[] {
   if (definitionIds && definitionIds.length > 0) {
     const placeholders = definitionIds.map(() => '?').join(', ');
-    return db.prepare(`SELECT * FROM release_task_definitions WHERE id IN (${placeholders})`).all(...definitionIds) as unknown as ReleaseTaskDefinitionRow[];
+    return db.prepare(`SELECT * FROM release_task_definitions WHERE owner_user_id = ? AND id IN (${placeholders})`)
+      .all(ownerUserId, ...definitionIds) as unknown as ReleaseTaskDefinitionRow[];
   }
-  return db.prepare('SELECT * FROM release_task_definitions').all() as unknown as ReleaseTaskDefinitionRow[];
+  return db.prepare('SELECT * FROM release_task_definitions WHERE owner_user_id = ?').all(ownerUserId) as unknown as ReleaseTaskDefinitionRow[];
 }
 
 // MỘT lượt truy vấn cho toàn bộ task của đợt, key theo origin_ref (Codex §14 P2 #4 — tránh N+1
 // khi phân loại nhiều definition cùng lúc, dùng chung cho cả preview/apply lẫn drift FR-5).
-function loadTasksByOriginRef(releaseMonth: string): Map<string, Record<string, unknown>> {
-  const rows = db.prepare("SELECT * FROM tasks WHERE release_month = ? AND origin_ref IS NOT NULL AND origin_ref != ''")
-    .all(releaseMonth) as Record<string, unknown>[];
+function loadTasksByOriginRef(releaseMonth: string, ownerUserId: number): Map<string, Record<string, unknown>> {
+  const rows = db.prepare("SELECT * FROM tasks WHERE release_month = ? AND owner_user_id = ? AND origin_ref IS NOT NULL AND origin_ref != ''")
+    .all(releaseMonth, ownerUserId) as Record<string, unknown>[];
   const map = new Map<string, Record<string, unknown>>();
   for (const row of rows) map.set(String(row.origin_ref), row);
   return map;
@@ -76,11 +110,11 @@ function loadTasksByOriginRef(releaseMonth: string): Map<string, Record<string, 
 // theo ngày release của nó, không cần suy đoán "đợt đang mở là ngày nào").
 function planReleaseWrite(
   releaseMonth: string, definitionIds: string[] | undefined, now: Date,
-  opts: { allowInsert: boolean; releaseDateForInsert?: string }
+  opts: { allowInsert: boolean; releaseDateForInsert?: string }, ownerUserId: number
 ): { willUpdate: WritePlanItem[]; willInsert: WritePlanItem[]; skipped: WriteSkip[] } {
-  const definitions = [...loadDefinitions(definitionIds)].sort(compareReleaseTaskDefinitions);
-  const templates = loadTemplatesMap();
-  const tasksByOriginRef = loadTasksByOriginRef(releaseMonth);
+  const definitions = [...loadDefinitions(ownerUserId, definitionIds)].sort(compareReleaseTaskDefinitions);
+  const templates = loadTemplatesMap(ownerUserId);
+  const tasksByOriginRef = loadTasksByOriginRef(releaseMonth, ownerUserId);
   const willUpdate: WritePlanItem[] = [];
   const willInsert: WritePlanItem[] = [];
   const skipped: WriteSkip[] = [];
@@ -134,16 +168,16 @@ const INSERT_RELEASE_TASK = db.prepare(`
   INSERT INTO tasks (
     ten_task, ghi_chu, loai_task, do_uu_tien, trang_thai, ngay_tao, gio_bat_dau, gio_ket_thuc,
     lap_lai_kieu, ngay_trong_thang, thu_trong_tuan, ngay_cu_the, release_month, release_date, task_links,
-    origin_ref, reply_to_ref
+    origin_ref, reply_to_ref, owner_user_id
   )
-  VALUES (?, ?, 'dinh_ky', NULL, 'chua_thuc_hien', ?, ?, ?, NULL, NULL, NULL, ?, ?, ?, ?, ?, ?)
+  VALUES (?, ?, 'dinh_ky', NULL, 'chua_thuc_hien', ?, ?, ?, NULL, NULL, NULL, ?, ?, ?, ?, ?, ?, ?)
 `);
 
-function applyInsert(item: WritePlanItem, releaseMonth: string, now: string) {
+function applyInsert(item: WritePlanItem, releaseMonth: string, now: string, ownerUserId: number) {
   const t = item.target;
   INSERT_RELEASE_TASK.run(
     t.tenTask, t.ghiChu ?? '', now, t.gioBatDau, t.gioKetThuc, t.ngayCuThe,
-    releaseMonth, item.releaseDate, t.linksJson, item.originRef, t.replyToRef
+    releaseMonth, item.releaseDate, t.linksJson, item.originRef, t.replyToRef, ownerUserId
   );
 }
 
@@ -153,10 +187,11 @@ function validateReleaseMonth(body: ReleaseSyncBody) {
   return { releaseMonth, originRefs: Array.isArray(body.originRefs) ? body.originRefs.filter(Boolean) : undefined };
 }
 
-router.post('/schedules/release/sync-preview', (req, res) => {
+router.post('/schedules/release/sync-preview', requireSession, requireActiveAccount, (req, res) => {
   try {
+    const actor = requireOwnPersonalTaskSchedule(req);
     const { releaseMonth, originRefs } = validateReleaseMonth(req.body as ReleaseSyncBody);
-    const { willUpdate, skipped } = planReleaseWrite(releaseMonth, originRefs, new Date(), { allowInsert: false });
+    const { willUpdate, skipped } = planReleaseWrite(releaseMonth, originRefs, new Date(), { allowInsert: false }, actor.userId);
     res.json({
       willUpdate: willUpdate.map(({ taskId, originRef, title, changedFields }) => ({ taskId, originRef, title, changedFields })),
       skipped
@@ -166,14 +201,15 @@ router.post('/schedules/release/sync-preview', (req, res) => {
   }
 });
 
-router.post('/schedules/release/sync', (req, res) => {
+router.post('/schedules/release/sync', requireSession, requireActiveAccount, (req, res) => {
   try {
+    const actor = requireOwnPersonalTaskSchedule(req);
     const { releaseMonth, originRefs } = validateReleaseMonth(req.body as ReleaseSyncBody);
     // AC-10 (chống race preview<->apply): plan được tính LẠI từ đầu ngay trong request này, đọc
     // thẳng DB hiện tại — không nhận lại giá trị đã tính từ lượt preview trước đó. Cột nào không
     // đổi (vd. `ghi_chu` khi không có template) thì UPDATE không set cột đó (FR-4/FR-8), nên
     // không có bước "đọc giá trị cũ rồi ghi lại" nào có thể bị lệch vì user sửa giữa chừng.
-    const { willUpdate, skipped } = planReleaseWrite(releaseMonth, originRefs, new Date(), { allowInsert: false });
+    const { willUpdate, skipped } = planReleaseWrite(releaseMonth, originRefs, new Date(), { allowInsert: false }, actor.userId);
     db.exec('BEGIN TRANSACTION');
     try {
       for (const item of willUpdate) {
@@ -190,7 +226,8 @@ router.post('/schedules/release/sync', (req, res) => {
   }
 });
 
-router.post('/schedules/regular-release/tasks', (req, res) => {
+router.post('/schedules/regular-release/tasks', requireSession, requireActiveAccount, (req, res) => {
+  const actor = requireOwnPersonalTaskSchedule(req);
   const body = req.body as TaoReleaseTasksBody;
   if (!body.releaseDate || !/^\d{4}-\d{2}-\d{2}$/.test(body.releaseDate)) {
     return res.status(400).json({ message: 'Ngày release không hợp lệ' });
@@ -220,14 +257,17 @@ router.post('/schedules/regular-release/tasks', (req, res) => {
   const legacyDeleteWindowStart = toDateInput(new Date(releaseYear, releaseMonthNumber - 1, -34));
   // tz-ok: ngay-lich-round-trip
   const legacyDeleteWindowEnd = toDateInput(new Date(releaseYear, releaseMonthNumber, 35));
+  // owner_user_id: task cá nhân riêng tư TUYỆT ĐỐI (FR-14) — dữ liệu legacy (trước Lát 4) không có cột
+  // này nên owner_user_id luôn NULL, KHÔNG khớp actor.userId nào -> tự động không hiện/không khớp cho
+  // ai qua nhánh dưới đây, đúng nguyên tắc đã áp dụng nhất quán cho các bảng owner_user_id khác.
   const legacyWhere = legacyPlaceholders
-    ? ` OR (release_month IS NULL AND loai_task = 'dinh_ky' AND ngay_cu_the BETWEEN ? AND ? AND ten_task IN (${legacyPlaceholders}))`
+    ? ` OR (release_month IS NULL AND owner_user_id = ? AND loai_task = 'dinh_ky' AND ngay_cu_the BETWEEN ? AND ? AND ten_task IN (${legacyPlaceholders}))`
     : '';
   const legacyDeleteWhere = legacyPlaceholders
-    ? ` OR (release_month IS NULL AND loai_task = 'dinh_ky' AND ngay_cu_the BETWEEN ? AND ? AND ten_task IN (${legacyPlaceholders}))`
+    ? ` OR (release_month IS NULL AND owner_user_id = ? AND loai_task = 'dinh_ky' AND ngay_cu_the BETWEEN ? AND ? AND ten_task IN (${legacyPlaceholders}))`
     : '';
-  const existing = db.prepare(`SELECT COUNT(*) AS total FROM tasks WHERE release_month = ?${legacyWhere}`)
-    .get(releaseMonth, ...(legacyPlaceholders ? [legacyWindowStart, legacyWindowEnd, ...releaseTaskNames] : [])) as { total: number };
+  const existing = db.prepare(`SELECT COUNT(*) AS total FROM tasks WHERE release_month = ? AND owner_user_id = ?${legacyWhere}`)
+    .get(releaseMonth, actor.userId, ...(legacyPlaceholders ? [actor.userId, legacyWindowStart, legacyWindowEnd, ...releaseTaskNames] : [])) as { total: number };
   if (existing.total > 0 && !body.force) {
     return res.status(409).json({
       code: 'REGULAR_RELEASE_EXISTS',
@@ -240,9 +280,9 @@ router.post('/schedules/regular-release/tasks', (req, res) => {
     INSERT INTO tasks (
       ten_task, ghi_chu, loai_task, do_uu_tien, trang_thai, ngay_tao, gio_bat_dau, gio_ket_thuc,
       lap_lai_kieu, ngay_trong_thang, thu_trong_tuan, ngay_cu_the, release_month, release_date, task_links,
-      origin_ref, reply_to_ref
+      origin_ref, reply_to_ref, owner_user_id
     )
-    VALUES (?, ?, 'dinh_ky', NULL, 'chua_thuc_hien', ?, ?, ?, NULL, NULL, NULL, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, 'dinh_ky', NULL, 'chua_thuc_hien', ?, ?, ?, NULL, NULL, NULL, ?, ?, ?, ?, ?, ?, ?)
   `);
   const normalizeStart = (value: string) => toTime(Math.min(17 * 60 + 45, Math.max(7 * 60 + 30, toMinutes(value))));
   const now = new Date().toISOString();
@@ -252,15 +292,16 @@ router.post('/schedules/regular-release/tasks', (req, res) => {
   // FE gửi (trước đây ghi thẳng xuống DB, không đối chiếu — có thể là dữ liệu cũ/giả). Nạp trước 1
   // lượt toàn bộ definition được originRef nào đó trong lô này tham chiếu (tránh N+1), đồng thời phát
   // hiện SỚM originRef không resolve được để 409 + rollback TOÀN BỘ lô trước khi ghi bất kỳ dòng nào —
-  // nhất quán với cách emergency đã làm từ trước (tinhRevisionHashTuOriginRef bên dưới).
+  // nhất quán với cách emergency đã làm từ trước (tinhRevisionHashTuOriginRef bên dưới). Lọc thêm
+  // owner_user_id (Lát 6) — không cho actor tham chiếu definition của người khác.
   const originRefs = [...new Set(
     (body.tasks || []).map((t) => t.originRef?.trim()).filter((v): v is string => Boolean(v))
   )];
   const replyToByOriginRef = new Map<string, string | null>();
   if (originRefs.length > 0) {
     const originRefPlaceholders = originRefs.map(() => '?').join(', ');
-    const rows = db.prepare(`SELECT id, reply_to_definition_id FROM release_task_definitions WHERE id IN (${originRefPlaceholders})`)
-      .all(...originRefs) as { id: string; reply_to_definition_id: string | null }[];
+    const rows = db.prepare(`SELECT id, reply_to_definition_id FROM release_task_definitions WHERE owner_user_id = ? AND id IN (${originRefPlaceholders})`)
+      .all(actor.userId, ...originRefs) as { id: string; reply_to_definition_id: string | null }[];
     for (const row of rows) replyToByOriginRef.set(row.id, row.reply_to_definition_id);
   }
 
@@ -271,8 +312,8 @@ router.post('/schedules/regular-release/tasks', (req, res) => {
     // IM LẶNG mỗi lần bấm Lưu và chính là nguồn gây BUG-20260814. Không thuộc phạm vi FR-1/FR-2.
     // ten-task-match-ok: xoa-tao-lai-ca-dot-co-xac-nhan-nguoi-dung-qua-409-force
     if (body.force) {
-      db.prepare(`DELETE FROM tasks WHERE release_month = ?${legacyDeleteWhere}`)
-        .run(releaseMonth, ...(legacyPlaceholders ? [legacyDeleteWindowStart, legacyDeleteWindowEnd, ...releaseTaskNames] : []));
+      db.prepare(`DELETE FROM tasks WHERE release_month = ? AND owner_user_id = ?${legacyDeleteWhere}`)
+        .run(releaseMonth, actor.userId, ...(legacyPlaceholders ? [actor.userId, legacyDeleteWindowStart, legacyDeleteWindowEnd, ...releaseTaskNames] : []));
     }
     for (const task of body.tasks || []) {
       if (!task.tenTask?.trim() || !task.ngayCuThe || !/^\d{4}-\d{2}-\d{2}$/.test(task.ngayCuThe) || !task.gioBatDau || !timePattern.test(task.gioBatDau)) {
@@ -290,7 +331,7 @@ router.post('/schedules/regular-release/tasks', (req, res) => {
         }
         replyToRef = replyToByOriginRef.get(originRef) ?? null;
       }
-      insert.run(task.tenTask.trim(), task.ghiChu?.trim() || '', now, normalizedStart, toTime(end), task.ngayCuThe, releaseMonth, body.releaseDate, JSON.stringify(normalizeTaskLinks(task.links)), originRef, replyToRef);
+      insert.run(task.tenTask.trim(), task.ghiChu?.trim() || '', now, normalizedStart, toTime(end), task.ngayCuThe, releaseMonth, body.releaseDate, JSON.stringify(normalizeTaskLinks(task.links)), originRef, replyToRef, actor.userId);
     }
     db.exec('COMMIT');
     res.status(201).json({ created: body.tasks!.length });
@@ -300,8 +341,9 @@ router.post('/schedules/regular-release/tasks', (req, res) => {
   }
 });
 
-router.post('/schedules/regular-release/task', (req, res) => {
+router.post('/schedules/regular-release/task', requireSession, requireActiveAccount, (req, res) => {
   try {
+    const actor = requireOwnPersonalTaskSchedule(req);
     const body = req.body as TaoMotReleaseTaskBody;
     const releaseDate = body.releaseDate?.trim();
     const definitionId = body.definitionId?.trim();
@@ -311,7 +353,7 @@ router.post('/schedules/regular-release/task', (req, res) => {
     const releaseMonth = releaseDate.slice(0, 7);
     const { willUpdate, willInsert, skipped } = planReleaseWrite(releaseMonth, [definitionId], new Date(), {
       allowInsert: true, releaseDateForInsert: releaseDate
-    });
+    }, actor.userId);
     // Council code-review (run 581517e4, 2026-09-12): `definitionId` không resolve được (đã xoá/sai id)
     // -> loadDefinitions() trả mảng rỗng -> CẢ BA mảng willInsert/willUpdate/skipped đều rỗng. Trước đây
     // rơi xuống nhánh `skipped[0]?.reason || 'unchanged'` bên dưới, báo THÀNH CÔNG im lặng — sai với
@@ -325,7 +367,7 @@ router.post('/schedules/regular-release/task', (req, res) => {
     db.exec('BEGIN TRANSACTION');
     try {
       if (willInsert.length > 0) {
-        applyInsert(willInsert[0], releaseMonth, now);
+        applyInsert(willInsert[0], releaseMonth, now, actor.userId);
         db.exec('COMMIT');
         return res.status(201).json({ created: 1, updated: 0 });
       }
@@ -348,17 +390,18 @@ router.post('/schedules/regular-release/task', (req, res) => {
 
 // FR-5: phát hiện lệch CHỦ ĐỘNG, không cần bấm gì. Chỉ đọc, MỘT lượt truy vấn task + definitions +
 // templates của đợt rồi tự phân loại (Codex §14 P2 #4 — không N+1, vì màn Release gọi mỗi lần mở).
-router.get('/schedules/release/drift', (req, res) => {
+router.get('/schedules/release/drift', requireSession, requireActiveAccount, (req, res) => {
   try {
+    const actor = requireOwnPersonalTaskSchedule(req);
     const releaseMonth = String(req.query.releaseMonth || '').trim();
     if (!releaseMonth) throw new HttpError(400, 'Thiếu release_month');
 
-    const definitions = loadDefinitions();
+    const definitions = loadDefinitions(actor.userId);
     const definitionsById = new Map(definitions.map((d) => [d.id, d]));
-    const templates = loadTemplatesMap();
+    const templates = loadTemplatesMap(actor.userId);
     const now = new Date();
 
-    const tasks = db.prepare('SELECT * FROM tasks WHERE release_month = ?').all(releaseMonth) as Record<string, unknown>[];
+    const tasks = db.prepare('SELECT * FROM tasks WHERE release_month = ? AND owner_user_id = ?').all(releaseMonth, actor.userId) as Record<string, unknown>[];
 
     const lech: { taskId: number; originRef: string; title: string; fields: string[] }[] = [];
     const boQua: { originRef: string; title: string; reason: string }[] = [];
@@ -391,7 +434,10 @@ router.get('/schedules/release/drift', (req, res) => {
 // Codex review §4.49 Medium #4: UI checkbox chỉ cho chọn Dr.JOY/Pr.JOY và giới hạn số team, nhưng đó
 // không bảo vệ được API gọi trực tiếp — đóng enum/kích thước ở TẦNG BACKEND, dùng chung cho cả POST
 // (giai đoạn 1) lẫn PATCH (đổi batch đã tồn tại).
-const VALID_EMERGENCY_SYSTEMS = new Set(['Dr.JOY', 'Pr.JOY']);
+// Xuất công khai (Lát 6, server/routes/release-schedule.ts): FR-23a/FR-24 dùng LẠI đúng allowlist này
+// cho `affected_systems` của team_release_registrations — CR §6.3 xác nhận "đã là danh sách đóng,
+// không cần đổi gì khi mở rộng lên nhiều team".
+export const VALID_EMERGENCY_SYSTEMS = new Set(['Dr.JOY', 'Pr.JOY']);
 const MAX_EMERGENCY_TEAMS = 20;
 const MAX_EMERGENCY_TEAM_LABEL_LEN = 100;
 
@@ -408,7 +454,8 @@ function parseEmergencyBatchTeamsSystems(rawTeams: unknown, rawSystems: unknown)
   return { teams, systems };
 }
 
-router.post('/schedules/emergency-release/tasks', (req, res) => {
+router.post('/schedules/emergency-release/tasks', requireSession, requireActiveAccount, (req, res) => {
+  const actor = requireOwnPersonalTaskSchedule(req);
   const body = req.body as TaoReleaseTasksBody;
   if (!body.releaseDate || !/^\d{4}-\d{2}-\d{2}$/.test(body.releaseDate)) {
     return res.status(400).json({ message: 'Ngày release khẩn cấp không hợp lệ' });
@@ -424,14 +471,16 @@ router.post('/schedules/emergency-release/tasks', (req, res) => {
     INSERT INTO tasks (
       ten_task, ghi_chu, loai_task, do_uu_tien, trang_thai, ngay_tao, gio_bat_dau, gio_ket_thuc,
       lap_lai_kieu, ngay_trong_thang, thu_trong_tuan, ngay_cu_the, release_month, release_date, task_links,
-      origin_ref, reply_to_ref
+      origin_ref, reply_to_ref, owner_user_id
     )
-    VALUES (?, ?, 'dinh_ky', NULL, 'chua_thuc_hien', ?, ?, ?, NULL, NULL, NULL, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, 'dinh_ky', NULL, 'chua_thuc_hien', ?, ?, ?, NULL, NULL, NULL, ?, ?, ?, ?, ?, ?, ?)
   `);
+  // owner_user_id (Lát 6): definition/task khẩn cấp cá nhân nay thuộc đúng 1 User — chỉ cho actor tham
+  // chiếu definition/template CỦA CHÍNH MÌNH, không phải lọc thêm quyền mới ngoài "task cá nhân riêng tư".
   const layDefinitionChoKiemTraRevision = db.prepare(
-    'SELECT note, template_id, reply_to_definition_id FROM emergency_release_task_definitions WHERE id = ?'
+    'SELECT note, template_id, reply_to_definition_id FROM emergency_release_task_definitions WHERE id = ? AND owner_user_id = ?'
   );
-  const layTemplateContentChoKiemTraRevision = db.prepare('SELECT content FROM emergency_release_templates WHERE id = ?');
+  const layTemplateContentChoKiemTraRevision = db.prepare('SELECT content FROM emergency_release_templates WHERE id = ? AND owner_user_id = ?');
   interface DinhNghiaChoKiemTraRevision { note: string | null; template_id: string | null; reply_to_definition_id: string | null; }
   // `null` = KHÔNG có originRef (task không gắn definition nào — hợp lệ, giữ nguyên NULL theo quy tắc
   // legacy). Definition không resolve được (đã xoá) THÌ KHÔNG trả `null` im lặng nữa — ném lỗi ngay, vì
@@ -442,12 +491,12 @@ router.post('/schedules/emergency-release/tasks', (req, res) => {
   // CHÍNH definition này — backend LUÔN là nguồn thẩm quyền cho replyToRef, không tin task.replyToRef
   // do FE gửi (trước đây ghi thẳng xuống DB, không hề đối chiếu với definition thật).
   function layThongTinDinhNghiaChoTaoTask(originRef: string, tenTaskDeBaoLoi: string): { hash: string; replyToDefinitionId: string | null } {
-    const definition = layDefinitionChoKiemTraRevision.get(originRef) as DinhNghiaChoKiemTraRevision | undefined;
+    const definition = layDefinitionChoKiemTraRevision.get(originRef, actor.userId) as DinhNghiaChoKiemTraRevision | undefined;
     if (!definition) {
       throw new HttpError(409, `Definition '${originRef}' không còn tồn tại — tải lại danh sách task rồi thử lại (task "${tenTaskDeBaoLoi}").`);
     }
     const templateContent = definition.template_id
-      ? ((layTemplateContentChoKiemTraRevision.get(definition.template_id) as { content: string } | undefined)?.content ?? null)
+      ? ((layTemplateContentChoKiemTraRevision.get(definition.template_id, actor.userId) as { content: string } | undefined)?.content ?? null)
       : null;
     return {
       hash: hashEmergencyDefinitionSnapshot(definition.note, definition.template_id, templateContent),
@@ -456,8 +505,8 @@ router.post('/schedules/emergency-release/tasks', (req, res) => {
   }
   const now = new Date().toISOString();
   const releaseMonth = body.releaseKey?.trim() || `emergency:${body.releaseDate}`;
-  const existing = db.prepare('SELECT COUNT(*) AS total FROM tasks WHERE release_month = ?')
-    .get(releaseMonth) as { total: number };
+  const existing = db.prepare('SELECT COUNT(*) AS total FROM tasks WHERE release_month = ? AND owner_user_id = ?')
+    .get(releaseMonth, actor.userId) as { total: number };
   if (existing.total > 0 && !body.force && !body.replaceMatching) {
     return res.status(409).json({
       code: 'EMERGENCY_RELEASE_EXISTS',
@@ -502,13 +551,13 @@ router.post('/schedules/emergency-release/tasks', (req, res) => {
       // KHÔNG đụng `emergency_release_batches` ở đây (Codex §4.49 High #1) — teams/systems ở trên đã
       // được đảm bảo KHỚP dữ liệu đang lưu (hoặc batch chưa tồn tại) trước khi vào transaction; `force`
       // chỉ xoá-tạo-lại TASK, không xoá/ghi đè batch canonical (giữ dấu vết audit + không lách guard PATCH).
-      db.prepare('DELETE FROM tasks WHERE release_month = ?').run(releaseMonth);
+      db.prepare('DELETE FROM tasks WHERE release_month = ? AND owner_user_id = ?').run(releaseMonth, actor.userId);
     } else if (body.replaceMatching && placeholders) {
       // Đợt khẩn cấp sinh mới theo từng sự cố (rủi ro thấp hơn định kỳ, xem CR-20260814 §2 "ngoài
       // phạm vi") và người dùng đã xác nhận muốn thay thế qua `replaceMatching` — match theo tên
       // ở đây là lựa chọn có ý thức, không phải lỗi im lặng như đường (1) cũ.
       // ten-task-match-ok: emergency-replace-matching-nguoi-dung-tu-chon-thay-the-theo-ten
-      db.prepare(`DELETE FROM tasks WHERE release_month = ? AND ten_task IN (${placeholders})`).run(releaseMonth, ...taskNames);
+      db.prepare(`DELETE FROM tasks WHERE release_month = ? AND owner_user_id = ? AND ten_task IN (${placeholders})`).run(releaseMonth, actor.userId, ...taskNames);
     }
     if (laGiaiDoan1 && teamsJson && systemsJson) {
       db.prepare(`
@@ -540,7 +589,7 @@ router.post('/schedules/emergency-release/tasks', (req, res) => {
         }
         replyToRef = replyToDefinitionId;
       }
-      insert.run(task.tenTask.trim(), task.ghiChu?.trim() || '', now, task.gioBatDau, toTime(end), task.ngayCuThe, releaseMonth, body.releaseDate, JSON.stringify(normalizeTaskLinks(task.links)), originRef, replyToRef);
+      insert.run(task.tenTask.trim(), task.ghiChu?.trim() || '', now, task.gioBatDau, toTime(end), task.ngayCuThe, releaseMonth, body.releaseDate, JSON.stringify(normalizeTaskLinks(task.links)), originRef, replyToRef, actor.userId);
     }
     db.exec('COMMIT');
     res.status(201).json({ created: body.tasks.length });
@@ -550,7 +599,11 @@ router.post('/schedules/emergency-release/tasks', (req, res) => {
   }
 });
 
-router.patch('/schedules/emergency-release/batches/:releaseMonth', (req, res) => {
+// Batch canonical (team/hệ thống của cả đợt) KHÔNG có owner_user_id — đây là dữ liệu incident dùng
+// chung, khác `tasks` cá nhân — chỉ cần đăng nhập + thuộc team đang Bật Task cá nhân, không lọc thêm
+// theo actor cụ thể (đồng nhất với việc route giai đoạn 1 (POST) cũng không yêu cầu actor sở hữu batch).
+router.patch('/schedules/emergency-release/batches/:releaseMonth', requireSession, requireActiveAccount, (req, res) => {
+  requireOwnPersonalTaskSchedule(req);
   const releaseMonth = String(req.params.releaseMonth || '').trim();
   if (!releaseMonth) return res.status(400).json({ message: 'release_month không hợp lệ' });
   const body = req.body as { teams?: string[]; systems?: string[] };
@@ -582,10 +635,11 @@ router.patch('/schedules/emergency-release/batches/:releaseMonth', (req, res) =>
   }
 });
 
-router.delete('/schedules/emergency-release/tasks', (req, res) => {
+router.delete('/schedules/emergency-release/tasks', requireSession, requireActiveAccount, (req, res) => {
+  const actor = requireOwnPersonalTaskSchedule(req);
   const releaseKey = String(req.query.releaseKey || '').trim();
   if (!releaseKey) return res.status(400).json({ message: 'Release key khẩn cấp không hợp lệ' });
-  const result = db.prepare('DELETE FROM tasks WHERE release_month = ?').run(releaseKey);
+  const result = db.prepare('DELETE FROM tasks WHERE release_month = ? AND owner_user_id = ?').run(releaseKey, actor.userId);
   res.json({ deleted: result.changes });
 });
 

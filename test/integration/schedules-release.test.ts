@@ -42,15 +42,23 @@ await onboarding.setFeatureVisibility(adminSession, teamId, 'personal_task', 'on
 const actor = await onboarding.joinAndApprove('schedules-release-itest@drjoy.jp', 'Người test schedules-release', teamId, 'member', adminSession);
 const authHeaders = flow.H(actor.session);
 
+// CR-20260913 Lát 6 (§6.3) — retrofit auth: team KHÔNG bật "Task cá nhân" + 1 actor thứ 2 CÙNG team
+// gốc nhưng CHƯA duyệt vào team nào (dùng để kiểm cách ly owner_user_id chéo actor).
+const teamNoFeature = await onboarding.makeTeam(adminSession, '[itest] Team Schedules Release (personal_task OFF)');
+const actorNoFeature = await onboarding.joinAndApprove('schedules-release-itest-nofeature@drjoy.jp', 'Người test không Bật Task cá nhân', teamNoFeature, 'member', adminSession);
+const authHeadersNoFeature = flow.H(actorNoFeature.session);
+const actorOther = await onboarding.joinAndApprove('schedules-release-itest-other@drjoy.jp', 'Người test khác (owner scoping)', teamId, 'member', adminSession);
+const authHeadersOther = flow.H(actorOther.session);
+
 after(async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
   await mockAuth.close();
   try { fs.rmSync(tmpAppData, { recursive: true, force: true }); } catch { /* bỏ qua */ }
 });
 
-async function req(method: string, p: string, body?: unknown) {
+async function req(method: string, p: string, body?: unknown, headers: Record<string, string> = authHeaders) {
   const res = await fetch(`${base}${p}`, {
-    method, headers: authHeaders,
+    method, headers,
     body: body === undefined ? undefined : JSON.stringify(body)
   });
   const text = await res.text();
@@ -216,4 +224,56 @@ test('FR-5 (drift): task release thiếu origin_ref -> liệt kê ở nhóm khon
   const drift = await req('GET', `/api/schedules/release/drift?releaseMonth=${releaseMonth}`);
   assert.ok(drift.json.khongXacDinhNguon.some((item: { taskId: number }) => item.taskId === created.json.id));
   assert.ok(!drift.json.lech.some((item: { taskId: number }) => item.taskId === created.json.id));
+});
+
+// ── CR-20260913 Lát 6 (§6.3) — retrofit auth cho schedules.ts: chặn đúng vai trò + cách ly owner ──
+
+test('auth: chưa đăng nhập (không cookie phiên) -> mọi route đều 401, không lộ dữ liệu', async () => {
+  const noAuthHeaders = { 'Content-Type': 'application/json' };
+  const r1 = await req('POST', '/api/schedules/regular-release/tasks', { releaseDate: '2099-09-01', tasks: [] }, noAuthHeaders);
+  assert.equal(r1.status, 401);
+  const r2 = await req('POST', '/api/schedules/release/sync-preview', { releaseMonth: '2099-09' }, noAuthHeaders);
+  assert.equal(r2.status, 401);
+  const r3 = await req('GET', '/api/schedules/release/drift?releaseMonth=2099-09', undefined, noAuthHeaders);
+  assert.equal(r3.status, 401);
+  const r4 = await req('POST', '/api/schedules/emergency-release/tasks', { releaseDate: '2099-09-01', tasks: [] }, noAuthHeaders);
+  assert.equal(r4.status, 401);
+});
+
+test('auth: actor thuộc team CHƯA Bật "Task cá nhân" -> 403 FEATURE_DISABLED, không tạo task nào', async () => {
+  const r = await req('POST', '/api/schedules/regular-release/tasks', {
+    releaseDate: '2099-09-02',
+    tasks: [{ tenTask: '[itest] khong duoc tao', gioBatDau: '10:00', ngayCuThe: '2099-09-02' }]
+  }, authHeadersNoFeature);
+  assert.equal(r.status, 403);
+  assert.equal(r.json.code, 'FEATURE_DISABLED');
+  const total = (db.prepare("SELECT COUNT(*) AS c FROM tasks WHERE ten_task = '[itest] khong duoc tao'").get() as { c: number }).c;
+  assert.equal(total, 0);
+});
+
+test('owner scoping: actor B KHÔNG sync/thấy được definition hay task release định kỳ của actor A dù cùng team', async () => {
+  const releaseDate = '2099-09-03';
+  const releaseMonth = releaseDate.slice(0, 7);
+  const definitionA = await req('POST', '/api/release/task-definitions', {
+    title: '[itest] cua actor A', startTime: '10:00', dateToken: 'release.date'
+  });
+  assert.equal(definitionA.status, 201);
+  const createdA = await req('POST', '/api/schedules/regular-release/task', { releaseDate, definitionId: definitionA.json.id });
+  assert.equal(createdA.status, 201);
+
+  // Actor B (cùng team, cũng Bật Task cá nhân) gọi drift/sync cho ĐÚNG releaseMonth đó — không được
+  // thấy definition/task của actor A (owner_user_id khác), và KHÔNG được lợi dụng originRef của A.
+  const driftB = await req('GET', `/api/schedules/release/drift?releaseMonth=${releaseMonth}`, undefined, authHeadersOther);
+  assert.equal(driftB.status, 200);
+  assert.ok(!driftB.json.lech.some((item: { originRef: string }) => item.originRef === definitionA.json.id));
+  assert.ok(!driftB.json.boQua.some((item: { originRef: string }) => item.originRef === definitionA.json.id));
+
+  const reuseB = await req('POST', '/api/schedules/regular-release/task', { releaseDate, definitionId: definitionA.json.id }, authHeadersOther);
+  assert.equal(reuseB.status, 409, 'definitionId của actor khác phải bị coi là không resolve được, không âm thầm dùng ké');
+
+  const bulkB = await req('POST', '/api/schedules/regular-release/tasks', {
+    releaseDate,
+    tasks: [{ tenTask: '[itest] B muon dung ref cua A', gioBatDau: '10:15', ngayCuThe: releaseDate, originRef: definitionA.json.id }]
+  }, authHeadersOther);
+  assert.equal(bulkB.status, 409, 'lô tạo hàng loạt cũng phải từ chối originRef của actor khác');
 });

@@ -61,8 +61,10 @@ test('BUG-006: instance thứ hai trên cùng port tự thoát, không thành ti
   assert.notEqual(ma, 'timeout', 'instance 2 PHẢI thoát, không được sống tiếp');
   assert.equal(ma, 0, 'thoát êm (mã 0) vì đây là tình huống bình thường, không phải lỗi');
 
-  // Instance đầu vẫn phải sống và phục vụ bình thường.
+  // Instance đầu vẫn phải sống và phục vụ bình thường. Dùng /health/live làm probe (không cần đăng
+  // nhập) — CR-20260913 Lát 6: /api/release/templates giờ đòi phiên đăng nhập thật (FR-28a, mỗi
+  // template thuộc riêng 1 User), không còn hợp làm "endpoint bất kỳ để biết server còn sống".
   assert.equal(thu1.exitCode, null, 'instance 1 không được chết theo');
-  const r = await fetch(`http://127.0.0.1:${PORT}/api/release/templates`);
+  const r = await fetch(`http://127.0.0.1:${PORT}/health/live`);
   assert.equal(r.ok, true, 'instance 1 vẫn trả API');
 });

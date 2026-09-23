@@ -65,7 +65,7 @@ export const ERROR_CODE_REGISTRY: Record<string, ErrorCodeEntry> = {
   },
   FEATURE_DISABLED: {
     status: 403,
-    note: 'authorize() policyKind=team_feature: team_feature_visibility(teamId, feature) đang off (CR-20260913 FR-7/§6.2 tầng 2)'
+    note: 'team_feature_visibility(teamId, feature) đang off (CR-20260913 FR-7/§6.2 tầng 2) — dùng ở authorize() policyKind=team_feature, VÀ ở assertTeamFeatureOn() (server/lib/authorize.ts, Council review vòng 2 Lát 6) cho 2 route sinh task cá nhân từ Release cần lọc riêng đúng 1 teamId cụ thể'
   },
   NOT_TEAM_MEMBER: {
     status: 403,
@@ -82,5 +82,21 @@ export const ERROR_CODE_REGISTRY: Record<string, ErrorCodeEntry> = {
   VERSION_CONFLICT: {
     status: 409,
     note: 'Optimistic concurrency chung cho bảng nền Lát 3 (teams/users/join_requests/team_feature_visibility/app_config): UPDATE ... WHERE row_version=? không khớp dòng nào'
+  },
+  REGISTRATION_LOCKED: {
+    status: 409,
+    note: 'CR-20260913 Lát 6 (FR-26): team_release_registrations.status=locked — sửa/huỷ trực tiếp bị chặn, phải qua release_unlock_requests; hoặc cycle đang locked_at chặn tạo đăng ký MỚI cho team chưa từng có mặt'
+  },
+  UNLOCK_REQUEST_STALE: {
+    status: 409,
+    note: 'CR-20260913 Lát 6 (FR-26/FR-27): yêu cầu mở khoá/huỷ đã được duyệt/từ chối bởi người khác trước đó (UPDATE ... WHERE status=pending không khớp dòng nào)'
+  },
+  RELEASE_REGISTRATION_EXISTS: {
+    status: 409,
+    note: 'CR-20260913 Lát 6 (FR-23a/FR-25): team đã có đăng ký lịch khẩn cấp cho đúng cycle đó (UNIQUE (cycle_id, team_id))'
+  },
+  REGULAR_CYCLE_NOT_FOUND: {
+    status: 404,
+    note: 'CR-20260913 Lát 6 (FR-28a nhánh Định kỳ): cycleId gửi lên không khớp release_cycles kind=regular status=open nào — chọn lại đợt, không tự đoán'
   }
 };

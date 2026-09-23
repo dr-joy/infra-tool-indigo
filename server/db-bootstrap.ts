@@ -9,7 +9,7 @@ import { applyMindmapSchema } from './schema/mindmap.js';
 import { applyAppSettingsSchema } from './schema/app-settings.js';
 import { applyRedmineSchema } from './schema/redmine.js';
 import { applyAuthSchema } from './schema/auth.js';
-import { runLegacyMigrations, runVersionedMigrations, runSlice4Migrations, type DbMigrationContext } from './db-migrations.js';
+import { runLegacyMigrations, runVersionedMigrations, runSlice4Migrations, runSlice6Migrations, type DbMigrationContext } from './db-migrations.js';
 import { runSeed } from './db-seed.js';
 
 // Toàn bộ schema hiện hành + migration lịch sử + seed + migration theo user_version, tách RIÊNG
@@ -40,6 +40,7 @@ export function bootstrapDatabase(targetDb: DatabaseSync, context: DbMigrationCo
   // lịch sử -> seed -> migration theo user_version.
   runLegacyMigrations(targetDb, context);
   runSlice4Migrations(targetDb, context);
+  runSlice6Migrations(targetDb);
   runSeed(targetDb);
   runVersionedMigrations(targetDb, context);
 }
