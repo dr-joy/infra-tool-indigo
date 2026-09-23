@@ -13,7 +13,7 @@
 // nếu được viết) hoặc import trực tiếp bằng script khác, tự cung cấp đường dẫn + leaderUserId thật.
 import { DatabaseSync } from 'node:sqlite';
 import { createHash, randomBytes } from 'node:crypto';
-import { createReadStream, existsSync, mkdirSync, statSync, unlinkSync } from 'node:fs';
+import { createReadStream, existsSync, mkdirSync, readFileSync, statSync, unlinkSync } from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import net from 'node:net';
@@ -669,14 +669,15 @@ function verifyWeeklyScoping(targetDb: DatabaseSync, problems: string[]): void {
 // tắc regex/decode của server/lib/mindmap-gc.ts (URL_RE) để không lệch với logic GC thật đang chạy.
 const MINDMAP_FILE_URL_RE = /\/api\/mindmaps\/files\/([^"'\s]+)/g;
 
-// Kiểm Mind Map (CR §6.3 bước 6): parse JSON hợp lệ + file đính kèm còn tồn tại trên đĩa.
+// Kiểm Mind Map DI SẢN trước Lát 5 (CR §6.3 bước 6): parse JSON hợp lệ + file đính kèm (kiểu cũ, lưu
+// URL tự do trong JSON, thư mục `mindmap-files/`) còn tồn tại trên đĩa.
 //
-// KHÔNG hiện thực được "hash khớp manifest": tại Lát 4, KHÔNG có bảng/manifest nào lưu hash file đính
-// kèm mind map lúc tải lên (đã xác nhận qua đọc code: server/routes/mindmaps.ts chỉ lưu file bằng
-// tên ngẫu nhiên, KHÔNG lưu hash; bảng `mindmap_attachments` có hash là thiết kế Lát 5, CHƯA tồn tại
-// trong schema hiện có — xem docs/delivery/changes/CR-20260913-nen-tang-da-nguoi-dung.md, đoạn Lát 5).
-// Không có manifest thì không có gì để so khớp — đây là khoảng trống THẬT của kiến trúc hiện tại, không
-// phải lười làm; ghi lại rõ ở đây và trong báo cáo bàn giao thay vì tự bịa một manifest giả.
+// KHÔNG kiểm được "hash khớp manifest" cho NHÓM FILE NÀY: kiểu đính kèm cũ (trước Lát 5) không có
+// bảng/manifest nào lưu hash lúc tải lên (server/routes/mindmaps.ts bản cũ chỉ lưu file bằng tên
+// ngẫu nhiên). Đây là khoảng trống THẬT của kiến trúc CŨ, không phải lười làm. Lát 5 đã thêm bảng
+// `mindmap_attachments` (CÓ hash) cho cơ chế đính kèm MỚI — phần kiểm hash cho bảng đó nằm ở hàm
+// RIÊNG verifyMindmapAttachmentHashes() ngay dưới đây (2 cơ chế khác thư mục, khác thế hệ, không gộp
+// chung một hàm).
 // Thư mục `mindmap-files/` cũng KHÔNG nằm trong phạm vi createVerifiedBackup/
 // buildServerDatabaseFromDesktopSnapshot (2 hàm đó chỉ VACUUM INTO đúng file .sqlite, xem comment ở
 // server/routes/mindmaps.ts) — người vận hành thật phải tự copy thư mục này sang `targetDataDir` TRƯỚC
@@ -718,14 +719,47 @@ function verifyMindmapAttachments(targetDb: DatabaseSync, targetDataDir: string,
   if (missingFiles.length > 0) problems.push(`mindmaps: ${missingFiles.length} file đính kèm bị thiếu trên đĩa (mindmap-files/ chưa được copy sang đích, hoặc file đã mất) — ví dụ: ${missingFiles.slice(0, MAX_EXAMPLES).join(' | ')}`);
 }
 
+// Lát 5 (BL-20260913-001, việc dọn nợ #3) — QUAY LẠI bổ sung phần "hash khớp manifest" mà comment ở
+// verifyMindmapAttachments() phía trên nói CHƯA làm được ở Lát 4 (chưa có bảng lưu hash lúc đó).
+// Bảng `mindmap_attachments` (server/schema/mindmap.ts, Lát 5) giờ CHÍNH LÀ manifest đó — mỗi dòng
+// `status = 'ready'` có `sha256` tính lúc upload thật (server/routes/mindmaps.ts). Đây là kiểm ĐỘC LẬP
+// với verifyMindmapAttachments() ở trên (bảng khác, thư mục khác `mindmap-attachments/` chứ không phải
+// `mindmap-files/` cũ) — không gộp chung để không lẫn 2 cơ chế đính kèm khác thế hệ.
+function verifyMindmapAttachmentHashes(targetDb: DatabaseSync, targetDataDir: string, problems: string[]): void {
+  if (!tableExists(targetDb, 'mindmap_attachments')) return;
+  const attachmentsDir = path.join(targetDataDir, 'mindmap-attachments');
+  const rows = targetDb.prepare(
+    "SELECT id, storage_key, sha256, original_name FROM mindmap_attachments WHERE status = 'ready'"
+  ).all() as { id: string; storage_key: string; sha256: string; original_name: string }[];
+  const MAX_EXAMPLES = 5;
+  const missing: string[] = [];
+  const mismatched: string[] = [];
+
+  for (const row of rows) {
+    const full = path.join(attachmentsDir, row.storage_key);
+    if (!full.startsWith(attachmentsDir) || !existsSync(full)) {
+      missing.push(`attachment ${row.id} ("${row.original_name}"): file không tồn tại tại ${attachmentsDir}`);
+      continue;
+    }
+    const actualHash = createHash('sha256').update(readFileSync(full)).digest('hex');
+    if (actualHash !== row.sha256) {
+      mismatched.push(`attachment ${row.id} ("${row.original_name}"): sha256 lệch (manifest=${row.sha256}, thực tế=${actualHash})`);
+    }
+  }
+
+  if (missing.length > 0) problems.push(`mindmap_attachments: ${missing.length} file 'ready' bị thiếu trên đĩa (mindmap-attachments/ chưa được copy sang đích, hoặc file đã mất) — ví dụ: ${missing.slice(0, MAX_EXAMPLES).join(' | ')}`);
+  if (mismatched.length > 0) problems.push(`mindmap_attachments: ${mismatched.length} file có sha256 KHÔNG khớp manifest (nội dung đã bị đổi hoặc sao chép hỏng) — ví dụ: ${mismatched.slice(0, MAX_EXAMPLES).join(' | ')}`);
+}
+
 // ── Bước 6: verifySlice4Migration ────────────────────────────────────────────────────────────
 // Kiểm ĐỦ danh sách CR §6.3 bước 6: số dòng + TẬP ID trước/sau từng bảng; hash nội dung canonical
 // (cột cũ không đổi giá trị); scope/owner không còn NULL ngoài chỗ thiết kế nullable; cây project
 // không vòng lặp; assignment (task tồn tại, ngày hợp lệ, nhãn legacy khớp nguồn, user mới đúng team);
 // rollup trước/sau (ngày min/max + tổng estimate + % task cha, tái dùng đúng thuật toán thật);
 // weekly goal/evaluation/summary trỏ đúng project/task cùng team; Mind Map JSON hợp lệ + file đính
-// kèm còn tồn tại (KHÔNG kiểm được "hash khớp manifest" — xem comment verifyMindmapAttachments, Lát 4
-// chưa có manifest hash để so); PRAGMA foreign_key_check + quick_check.
+// kèm còn tồn tại (đính kèm kiểu CŨ trước Lát 5 — không kiểm được hash, xem comment
+// verifyMindmapAttachments) VÀ hash khớp manifest cho đính kèm kiểu MỚI Lát 5 (bảng
+// `mindmap_attachments`, xem verifyMindmapAttachmentHashes); PRAGMA foreign_key_check + quick_check.
 //
 // `targetDataDir`: thư mục chứa `tasks.sqlite` ĐÍCH (đúng quy ước dùng chung với
 // smokeBootMigratedServer) — cần để (a) định vị `mindmap-files/` lúc kiểm file đính kèm, (b) biết
@@ -812,6 +846,7 @@ export function verifySlice4Migration(
 
   verifyWeeklyScoping(targetDb, problems);
   verifyMindmapAttachments(targetDb, targetDataDir, problems);
+  verifyMindmapAttachmentHashes(targetDb, targetDataDir, problems);
 
   const ok = problems.length === 0;
   let rolledBack = false;

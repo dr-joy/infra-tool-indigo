@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
+import crypto from 'node:crypto';
 import {
   applySlice4Schema, ensureDev13Identity, backfillDev13Scope, migrateLegacyPicLabels,
   createVerifiedBackup, buildServerDatabaseFromDesktopSnapshot, verifySlice4Migration,
@@ -728,6 +729,62 @@ test('verifySlice4Migration: Mind Map data không phải JSON hợp lệ + file 
   assert.equal(result.ok, false);
   assert.ok(result.problems.some((p) => p.includes('mindmaps') && p.includes('parse được JSON')));
   assert.ok(result.problems.some((p) => p.includes('mindmaps') && p.includes('file đính kèm bị thiếu')));
+  db.close();
+});
+
+// BL-20260913-001 (việc dọn nợ #3, Lát 5): bảng mindmap_attachments (thiết kế Lát 5) giờ CÓ hash —
+// verifySlice4Migration() quay lại kiểm được "hash khớp manifest" mà Lát 4 xác nhận là khoảng trống
+// thật (chưa có bảng lưu hash lúc đó). Test này độc lập với test Mind Map JSON/URL phía trên (khác
+// bảng, khác thư mục — mindmap-attachments/ chứ không phải mindmap-files/).
+test('verifySlice4Migration: mindmap_attachments — sha256 khớp manifest thì ok, lệch hash hoặc thiếu file thì ok=false nêu rõ cả 2', () => {
+  const dir = nextDir('verify-mindmap-attachment-hash');
+  const { dbPath: sourceDbPath } = buildLegacyDesktopDb(dir);
+  const targetDir = path.join(dir, 'target');
+  fs.mkdirSync(targetDir, { recursive: true });
+  const { db } = buildMigratedTargetFromLegacySource(sourceDbPath, targetDir);
+
+  const now = new Date().toISOString();
+  const mindmapId = Number(
+    db.prepare("INSERT INTO mindmaps (title, data, created_at, updated_at) VALUES ('Sơ đồ có attachment', '{}', ?, ?)").run(now, now).lastInsertRowid
+  );
+
+  const attachmentsDir = path.join(targetDir, 'mindmap-attachments');
+  fs.mkdirSync(attachmentsDir, { recursive: true });
+
+  // (1) File đúng nội dung, hash khớp -> không được liệt vào problems.
+  const okContent = 'nội dung file đính kèm hợp lệ';
+  const okHash = crypto.createHash('sha256').update(okContent).digest('hex');
+  fs.writeFileSync(path.join(attachmentsDir, 'ok-storage-key'), okContent);
+  db.prepare(`
+    INSERT INTO mindmap_attachments (id, mindmap_id, original_name, storage_key, extension, declared_mime, byte_size, sha256, status, created_at)
+    VALUES ('att-ok', ?, 'ok.txt', 'ok-storage-key', '.txt', 'text/plain', ?, ?, 'ready', ?)
+  `).run(mindmapId, Buffer.byteLength(okContent), okHash, now);
+
+  // (2) File TỒN TẠI nhưng nội dung bị đổi sau khi copy -> hash lệch.
+  fs.writeFileSync(path.join(attachmentsDir, 'tampered-storage-key'), 'nội dung ĐÃ BỊ ĐỔI sau khi copy');
+  db.prepare(`
+    INSERT INTO mindmap_attachments (id, mindmap_id, original_name, storage_key, extension, declared_mime, byte_size, sha256, status, created_at)
+    VALUES ('att-tampered', ?, 'tampered.txt', 'tampered-storage-key', '.txt', 'text/plain', 10, 'hash-goc-khong-khop', 'ready', ?)
+  `).run(mindmapId, now);
+
+  // (3) File KHÔNG được copy sang đích (storage_key không tồn tại trên đĩa).
+  db.prepare(`
+    INSERT INTO mindmap_attachments (id, mindmap_id, original_name, storage_key, extension, declared_mime, byte_size, sha256, status, created_at)
+    VALUES ('att-missing', ?, 'missing.txt', 'missing-storage-key', '.txt', 'text/plain', 10, 'khong-quan-trong', 'ready', ?)
+  `).run(mindmapId, now);
+
+  // (4) status = 'pending' (chưa publish) -> KHÔNG kiểm, không được liệt vào problems dù không có file.
+  db.prepare(`
+    INSERT INTO mindmap_attachments (id, mindmap_id, original_name, storage_key, extension, declared_mime, byte_size, sha256, status, created_at)
+    VALUES ('att-pending', ?, 'pending.txt', 'pending-storage-key', '.txt', 'text/plain', 10, 'bat-ky', 'pending', ?)
+  `).run(mindmapId, now);
+
+  const result = verifySlice4Migration(sourceDbPath, db, targetDir, { autoRollbackOnFailure: false });
+  assert.equal(result.ok, false);
+  assert.ok(result.problems.some((p) => p.includes('mindmap_attachments') && p.includes('att-tampered') && p.includes('sha256')), JSON.stringify(result.problems));
+  assert.ok(result.problems.some((p) => p.includes('mindmap_attachments') && p.includes('att-missing') && p.includes('thiếu')), JSON.stringify(result.problems));
+  assert.ok(!result.problems.some((p) => p.includes('att-ok')), 'file hash khớp không được liệt vào problems');
+  assert.ok(!result.problems.some((p) => p.includes('att-pending')), "attachment 'pending' chưa publish không được kiểm");
   db.close();
 });
 
