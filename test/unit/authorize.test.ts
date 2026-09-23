@@ -149,25 +149,30 @@ test("team_feature, resource='release_coordinator': Leader của ĐÚNG team đi
 });
 
 // ── policyKind: 'personal_task' (FR-14/FR-31, Lát 5) ────────────────────────────────
+// Lát 5: resource/action đổi sang 'personal_task'/'own' — ĐÚNG lời gọi thật của
+// server/routes/tasks.ts (requireOwnPersonalTask()), khớp policy đã khai ở
+// AUTHORIZATION_POLICY['personal_task']['own']. Bản trước Lát 5 dùng placeholder 'task'/'update'
+// (vô hại lúc đó vì authorizePersonalTask() không tra AUTHORIZATION_POLICY) — Lát 5 tổng quát hoá
+// hàm này để đọc `feature` từ policy (cho Mind Map dùng lại), nên placeholder không còn hợp lệ.
 test('personal_task: chủ sở hữu thuộc team đang Bật personal_task -> qua; team đang Tắt -> FEATURE_DISABLED', () => {
   setVisibility(teamA, 'personal_task', 'on');
   const decision = authorize({
     actor: actorOf(memberA, 'user', [{ teamId: teamA, role: 'member' }]),
-    policyKind: 'personal_task', resource: 'task', action: 'update', scope: { ownerId: memberA }
+    policyKind: 'personal_task', resource: 'personal_task', action: 'own', scope: { ownerId: memberA }
   });
   assert.equal(decision.ownerOnly, true);
 
   setVisibility(teamB, 'personal_task', 'off');
   assert.throws(() => authorize({
     actor: actorOf(memberB, 'user', [{ teamId: teamB, role: 'member' }]),
-    policyKind: 'personal_task', resource: 'task', action: 'update', scope: { ownerId: memberB }
+    policyKind: 'personal_task', resource: 'personal_task', action: 'own', scope: { ownerId: memberB }
   }), (err: unknown) => err instanceof HttpError && err.code === 'FEATURE_DISABLED');
 });
 
 test('personal_task: không phải chủ sở hữu -> ROLE_FORBIDDEN dù team đang Bật', () => {
   assert.throws(() => authorize({
     actor: actorOf(memberA, 'user', [{ teamId: teamA, role: 'member' }]),
-    policyKind: 'personal_task', resource: 'task', action: 'update', scope: { ownerId: memberB }
+    policyKind: 'personal_task', resource: 'personal_task', action: 'own', scope: { ownerId: memberB }
   }), (err: unknown) => err instanceof HttpError && err.code === 'ROLE_FORBIDDEN');
 });
 
@@ -176,6 +181,8 @@ test('cross_team_release: có ít nhất 1 team đang Bật release -> qua; khô
   setVisibility(teamA, 'release', 'on');
   const decision = authorize({
     actor: actorOf(memberA, 'user', [{ teamId: teamA, role: 'member' }]),
+    // 'release_schedule'.'read' khai TRƯỚC cho Lát 6 ở authorization-policy.ts (chưa có route gọi) —
+    // đúng tên resource CR §6.2 đã chốt cho GET /api/release/schedule-board.
     policyKind: 'cross_team_release', resource: 'release_schedule', action: 'read', scope: {}
   });
   assert.equal(decision.projection, 'schedule_board');
@@ -184,6 +191,37 @@ test('cross_team_release: có ít nhất 1 team đang Bật release -> qua; khô
   assert.throws(() => authorize({
     actor: actorOf(memberB, 'user', [{ teamId: teamB, role: 'member' }]),
     policyKind: 'cross_team_release', resource: 'release_schedule', action: 'read', scope: {}
+  }), (err: unknown) => err instanceof HttpError && err.code === 'FEATURE_DISABLED');
+});
+
+// ── Lát 5 (FR-32) — Mind Map dùng lại policyKind 'personal_task'/'cross_team_release' đã tổng quát
+// hoá, với feature 'mind_map' thay vì 'personal_task'/'release'. Test này khoá lại đúng phần tổng
+// quát hoá (đọc `feature` từ policy thay vì hardcode) không làm hỏng ý nghĩa gate của resource khác.
+test("mind_map: policyKind 'personal_task' áp đúng feature 'mind_map' (không lẫn với 'personal_task')", () => {
+  setVisibility(teamA, 'mind_map', 'on');
+  setVisibility(teamA, 'personal_task', 'off');
+  // Team đang Bật mind_map nhưng TẮT personal_task -> vẫn phải qua vì hàm tra đúng feature 'mind_map'
+  // (không lẫn sang feature 'personal_task' của resource khác cùng policyKind).
+  const decision = authorize({
+    actor: actorOf(memberA, 'user', [{ teamId: teamA, role: 'member' }]),
+    policyKind: 'personal_task', resource: 'mind_map', action: 'create', scope: { ownerId: memberA }
+  });
+  assert.equal(decision.ownerOnly, true);
+});
+
+test("mind_map: policyKind 'cross_team_release' áp đúng feature 'mind_map' (gate riêng, không lẫn 'release')", () => {
+  setVisibility(teamA, 'mind_map', 'on');
+  setVisibility(teamA, 'release', 'off');
+  const decision = authorize({
+    actor: actorOf(memberA, 'user', [{ teamId: teamA, role: 'member' }]),
+    policyKind: 'cross_team_release', resource: 'mind_map', action: 'browse', scope: {}
+  });
+  assert.equal(decision.projection, 'schedule_board');
+
+  setVisibility(teamB, 'mind_map', 'off');
+  assert.throws(() => authorize({
+    actor: actorOf(memberB, 'user', [{ teamId: teamB, role: 'member' }]),
+    policyKind: 'cross_team_release', resource: 'mind_map', action: 'browse', scope: {}
   }), (err: unknown) => err instanceof HttpError && err.code === 'FEATURE_DISABLED');
 });
 

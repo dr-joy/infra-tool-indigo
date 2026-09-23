@@ -158,6 +158,15 @@ export const AUTHORIZATION_POLICY: Record<string, Record<string, PolicyEntry>> =
   weekly_project_risk: {
     list: { feature: 'weekly_report', roles: ['leader', 'member'] },
     upsert: { feature: 'weekly_report', roles: ['leader'] }
+  },
+
+  // Khai báo TRƯỚC cho Lát 6 (FR-24, CR §6.2: `GET /api/release/schedule-board`) — CHƯA có route nào
+  // gọi (đúng policyKind 'cross_team_release', `roles` không dùng ở policyKind này). Khai sớm đúng
+  // TÊN RESOURCE thật CR đã chốt, không phải đoán — giữ ý nghĩa cho test/unit/authorize.test.ts (viết
+  // từ trước Lát 5) tiếp tục kiểm đúng kịch bản "gate theo feature 'release'", không đổi sang feature
+  // khác chỉ vì cần một entry hợp lệ.
+  release_schedule: {
+    read: { feature: 'release', roles: [] }
   }
 
   // 'audit_log'.'read' KHÔNG khai ở đây — policyKind: 'audit' có luật riêng hẳn (Admin luôn qua, global,
