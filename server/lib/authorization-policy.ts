@@ -113,6 +113,60 @@ export const AUTHORIZATION_POLICY: Record<string, Record<string, PolicyEntry>> =
     update: { feature: null, roles: ['leader'] },
     reorder: { feature: null, roles: ['leader'] },
     delete: { feature: null, roles: ['leader'] }
+  },
+
+  // Lát 5 (FR-14/FR-31) — Task cá nhân. `roles` KHÔNG dùng ở policyKind 'personal_task' (authorize.ts
+  // chỉ đọc `feature` của policy này + tự so `scope.ownerId === actor.userId`), để mảng rỗng cho rõ.
+  personal_task: {
+    own: { feature: 'personal_task', roles: [] }
+  },
+
+  // Lát 5 (FR-32) — Mind Map: "chỉ chủ sở hữu mới sửa" dùng lại NGUYÊN khuôn ownerId của
+  // policyKind 'personal_task' (feature 'mind_map' thay vì 'personal_task'); "đang thuộc ≥1 team Bật
+  // Mind Map" (gate trước khi route tự lọc private/shared theo từng dòng) dùng khuôn
+  // 'cross_team_release'. `roles` không dùng ở cả 2 policyKind này, để mảng rỗng cho rõ — route
+  // server/routes/mindmaps.ts tự kiểm thêm quyền theo TỪNG BẢN GHI (owner/visibility/shared_team_id)
+  // sau khi authorize() cho qua bước gate chung, đúng khuôn "route tự kiểm thêm" đã dùng ở
+  // project_task cho Member.
+  mind_map: {
+    browse: { feature: 'mind_map', roles: [] },
+    create: { feature: 'mind_map', roles: [] },
+    update: { feature: 'mind_map', roles: [] },
+    delete: { feature: 'mind_map', roles: [] },
+    upload_attachment: { feature: 'mind_map', roles: [] },
+    delete_attachment: { feature: 'mind_map', roles: [] }
+  },
+
+  // Lát 5 (FR-33) — Redmine. Khoá cá nhân: toàn cục, mọi actor đã đăng nhập tự quản lý CỦA MÌNH
+  // (route tự ép `scope.ownerId = actor.userId` khi đọc/ghi, giống 'team_member'.'list_own'). URL hệ
+  // thống: toàn cục, chỉ Admin.
+  redmine_config: {
+    read_self: { feature: null, roles: ['user', 'admin'] },
+    write_self: { feature: null, roles: ['user', 'admin'] },
+    delete_self_key: { feature: null, roles: ['user', 'admin'] },
+    test_self: { feature: null, roles: ['user', 'admin'] },
+    read_admin_url: { feature: null, roles: ['admin'] },
+    write_admin_url: { feature: null, roles: ['admin'] }
+  },
+
+  // Lát 5 (FR-22) — cấu hình loại báo cáo tuần theo team + Risk theo team/tuần/loại/project.
+  weekly_report_kind: {
+    list: { feature: 'weekly_report', roles: ['leader', 'member'] },
+    create: { feature: 'weekly_report', roles: ['leader'] },
+    update: { feature: 'weekly_report', roles: ['leader'] }
+  },
+  weekly_project_risk: {
+    list: { feature: 'weekly_report', roles: ['leader', 'member'] },
+    upsert: { feature: 'weekly_report', roles: ['leader'] }
+  },
+
+  // Khai báo TRƯỚC cho Lát 6 (FR-24, CR §6.2: `GET /api/release/schedule-board`) — CHƯA có route nào
+  // gọi (đúng policyKind 'cross_team_release', `roles` không dùng ở policyKind này). Khai sớm đúng
+  // TÊN RESOURCE thật CR đã chốt, không phải đoán — giữ ý nghĩa cho test/unit/authorize.test.ts (viết
+  // từ trước Lát 5) tiếp tục kiểm đúng kịch bản "gate theo feature 'release'", không đổi sang feature
+  // khác chỉ vì cần một entry hợp lệ.
+  release_schedule: {
+    read: { feature: 'release', roles: [] }
   }
 
   // 'audit_log'.'read' KHÔNG khai ở đây — policyKind: 'audit' có luật riêng hẳn (Admin luôn qua, global,

@@ -7,6 +7,7 @@ import { applyWeeklyReportSchema } from './schema/weekly-report.js';
 import { applyLuyenDeSchema } from './schema/luyen-de.js';
 import { applyMindmapSchema } from './schema/mindmap.js';
 import { applyAppSettingsSchema } from './schema/app-settings.js';
+import { applyRedmineSchema } from './schema/redmine.js';
 import { applyAuthSchema } from './schema/auth.js';
 import { runLegacyMigrations, runVersionedMigrations, runSlice4Migrations, type DbMigrationContext } from './db-migrations.js';
 import { runSeed } from './db-seed.js';
@@ -33,6 +34,7 @@ export function bootstrapDatabase(targetDb: DatabaseSync, context: DbMigrationCo
   applyLuyenDeSchema(targetDb);
   applyMindmapSchema(targetDb);
   applyAppSettingsSchema(targetDb);
+  applyRedmineSchema(targetDb);
 
   // Thứ tự gọi giữ nguyên như code trước khi tách hàm này: schema hiện hành xong hết -> migration
   // lịch sử -> seed -> migration theo user_version.

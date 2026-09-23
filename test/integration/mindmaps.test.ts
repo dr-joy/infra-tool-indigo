@@ -1,83 +1,356 @@
-// Test tích hợp cho server/routes/mindmaps.ts — khoá lại bản vá bảo mật từ Council review (phiên
-// a24496ba, xem docs/exchanges/2026-09-12.md): file đính kèm mind map trước đây không kiểm tra loại
-// file và phục vụ lại bằng Content-Disposition: inline, nên một file .html/.svg độc hại đính vào sơ đồ
-// có thể được trình duyệt RENDER trực tiếp cùng origin với API, script trong đó gọi được fetch('/api/...')
-// mà không bị CORS chặn (CORS không chặn same-origin) — CRUD toàn bộ dữ liệu app. Test này xác nhận:
-// (1) upload đuôi file "nội dung chủ động" (html/svg/js...) bị từ chối ngay lúc tải lên,
-// (2) upload đuôi file tài liệu bình thường vẫn thành công,
-// (3) file phục vụ lại LUÔN có Content-Disposition: attachment, không bao giờ inline.
-import { test, before, after } from 'node:test';
+// Test tích hợp cho server/routes/mindmaps.ts — Lát 5 (CR-20260913, FR-32/FR-32a/FR-43).
+//
+// Viết lại toàn bộ so với bản trước Lát 5: route cũ hoàn toàn KHÔNG có auth và không có khái niệm
+// sở hữu/chia sẻ (bug thật đã xác nhận ở CR §Nhóm D FR-32: `GET /api/mindmaps/files/:name` chỉ chặn
+// path traversal, không tra quyền). Test này phủ: quyền đọc theo owner/chia sẻ team (AC-25), CHỈ
+// owner mới ghi được dù đang chia sẻ, và 3 lớp xác thực file đính kèm mới (đuôi + MIME khai báo +
+// nội dung thật — FR-32a/FR-43): đuôi nguy hiểm bị chặn, magic-bytes không khớp bị chặn, file rỗng bị
+// chặn, và file phục vụ lại LUÔN attachment (không bao giờ inline).
+import { test, after, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import type { Server } from 'node:http';
+import { createMockAuthServer, loginFlow, makeOnboardingHelpers } from './fixtures/auth-harness.js';
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-void repoRoot;
+const ADMIN_EMAIL = 'admin@drjoy.jp';
+
+const mockAuth = await createMockAuthServer();
 const tmpAppData = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-mindmaps-itest-'));
 process.env.APPDATA = tmpAppData;
+process.env.AUTH_BASE_URL = mockAuth.authBaseUrl;
+process.env.AUTH_CLIENT = 'indigo';
+process.env.APP_CALLBACK_URL = 'http://127.0.0.1:0/api/auth/callback';
+process.env.ADMIN_BOOTSTRAP_EMAIL = ADMIN_EMAIL;
 
 const { app } = await import('../../server/app.js');
+// Đọc SAU khi app.js đã import (nên paths.ts đã tính dataDir dựa trên APPDATA đã set ở trên) — dùng để
+// tự đặt file "di sản" thẳng vào đúng thư mục server/routes/mindmaps.ts đọc lại (test đường
+// GET /mindmaps/files/:name, Council review vòng 1 Lát 5).
+const { dataDir } = await import('../../server/paths.js');
+const legacyFilesDir = path.join(dataDir, 'mindmap-files');
+fs.mkdirSync(legacyFilesDir, { recursive: true });
+
+// Council review vòng 2 Lát 5 — route /mindmaps/files/:name không còn quét SỐNG mindmaps.data nữa,
+// chỉ tra bảng snapshot bất biến legacy_mindmap_file_owners (chụp ĐÚNG 1 LẦN lúc khởi động DB thật,
+// xem server/db-migrations.ts). Ở app khởi động cho test này, lượt chụp tự động đó đã chạy TRƯỚC khi
+// bất kỳ mindmap nào của test tồn tại (mindmaps table rỗng) nên không chụp được gì — các test DI SẢN
+// dưới đây phải tự gọi RAW hàm chụp (bỏ qua gate "chỉ chạy 1 lần" của PRAGMA user_version) đúng vào
+// thời điểm muốn mô phỏng "lúc snapshot được chụp", y hệt cách sản phẩm thật vận hành: mindmap tạo
+// TRƯỚC thời điểm gọi hàm này được coi là chủ sở hữu thật; mindmap tạo SAU thì không.
+const { db } = await import('../../server/db.js');
+const { captureLegacyMindmapFileOwnersSnapshot } = await import('../../server/lib/legacy-mindmap-file-owners.js');
 
 let server: Server;
 let base = '';
-
-before(async () => {
-  await new Promise<void>((resolve) => {
-    server = app.listen(0, '127.0.0.1', () => {
-      const addr = server.address();
-      base = `http://127.0.0.1:${typeof addr === 'object' && addr ? addr.port : 0}`;
-      resolve();
-    });
+await new Promise<void>((resolve) => {
+  server = app.listen(0, '127.0.0.1', () => {
+    const addr = server.address();
+    base = `http://127.0.0.1:${typeof addr === 'object' && addr ? addr.port : 0}`;
+    resolve();
   });
 });
+
+const flow = loginFlow(() => base, mockAuth.issueAuthCode);
+const onboarding = makeOnboardingHelpers(() => base, flow);
+
+const adminSession = await flow.loginAs(ADMIN_EMAIL, 'Admin Thật', 'mindmaps-itest-admin-sub');
+const teamA = await onboarding.makeTeam(adminSession, '[itest] Team Mindmap A');
+const teamB = await onboarding.makeTeam(adminSession, '[itest] Team Mindmap B');
+await onboarding.setFeatureVisibility(adminSession, teamA, 'mind_map', 'on');
+await onboarding.setFeatureVisibility(adminSession, teamB, 'mind_map', 'on');
+const owner = await onboarding.joinAndApprove('mindmaps-itest-owner@drjoy.jp', 'Owner A', teamA, 'member', adminSession);
+const teammate = await onboarding.joinAndApprove('mindmaps-itest-teammate@drjoy.jp', 'Teammate A', teamA, 'member', adminSession);
+const outsider = await onboarding.joinAndApprove('mindmaps-itest-outsider@drjoy.jp', 'Outsider B', teamB, 'member', adminSession);
+const ownerHeaders = flow.H(owner.session);
+const teammateHeaders = flow.H(teammate.session);
+const outsiderHeaders = flow.H(outsider.session);
+
 after(async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
+  await mockAuth.close();
   try { fs.rmSync(tmpAppData, { recursive: true, force: true }); } catch { /* bỏ qua */ }
 });
 
-function toBase64(text: string): string {
-  return Buffer.from(text, 'utf8').toString('base64');
-}
-
-async function upload(name: string, content: string) {
-  const res = await fetch(`${base}/api/mindmaps/upload`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, dataBase64: toBase64(content) })
-  });
-  const json = await res.json();
+async function req(method: string, p: string, body?: unknown, headers: Record<string, string> = ownerHeaders) {
+  const res = await fetch(`${base}${p}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  const text = await res.text();
+  let json: any = null;
+  try { json = text ? JSON.parse(text) : null; } catch { json = text; }
   return { status: res.status, json };
 }
 
-const duoiNguyHiem = ['.html', '.htm', '.xhtml', '.svg', '.mhtml', '.js'];
+function multipartBody(fields: Record<string, string>, fileField: { name: string; filename: string; contentType: string; content: Buffer }): { body: Buffer; contentType: string } {
+  const boundary = `----itestBoundary${Math.random().toString(16).slice(2)}`;
+  const parts: Buffer[] = [];
+  for (const [key, value] of Object.entries(fields)) {
+    parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${key}"\r\n\r\n${value}\r\n`));
+  }
+  parts.push(Buffer.from(
+    `--${boundary}\r\nContent-Disposition: form-data; name="${fileField.name}"; filename="${fileField.filename}"\r\nContent-Type: ${fileField.contentType}\r\n\r\n`
+  ));
+  parts.push(fileField.content);
+  parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
+  return { body: Buffer.concat(parts), contentType: `multipart/form-data; boundary=${boundary}` };
+}
 
-for (const ext of duoiNguyHiem) {
-  test(`upload file đuôi ${ext} (nội dung chủ động) bị từ chối 400, không lưu xuống đĩa`, async () => {
-    const { status, json } = await upload(`evil${ext}`, '<script>fetch("/api/tasks")</script>');
-    assert.equal(status, 400);
-    assert.match(String(json.message), /không hỗ trợ/i);
-    const filesDir = path.join(tmpAppData, 'TaskManager', 'data', 'mindmap-files');
-    const files = fs.existsSync(filesDir) ? fs.readdirSync(filesDir) : [];
-    assert.equal(files.some((f) => f.toLowerCase().endsWith(ext)), false, 'file nguy hiểm không được lưu xuống đĩa');
+async function uploadAttachment(mindmapId: number, filename: string, contentType: string, content: Buffer, headers: Record<string, string> = ownerHeaders) {
+  const { body, contentType: ct } = multipartBody({}, { name: 'file', filename, contentType, content });
+  const authHeaders = { ...headers };
+  delete authHeaders['Content-Type'];
+  const res = await fetch(`${base}/api/mindmaps/${mindmapId}/attachments`, {
+    method: 'POST',
+    headers: { ...authHeaders, 'Content-Type': ct },
+    body
+  });
+  const text = await res.text();
+  let json: any = null;
+  try { json = text ? JSON.parse(text) : null; } catch { json = text; }
+  return { status: res.status, json };
+}
+
+// PNG 1x1 THẬT (đủ signature + IHDR + IDAT hợp lệ) — file-type cần cấu trúc chunk thật, không chỉ
+// 8 byte signature, mới nhận diện được (đã tự kiểm chứng bằng cách đọc source node_modules/file-type).
+const PNG_SIGNATURE = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+  'base64'
+);
+
+// ── Quyền đọc/ghi theo owner + chia sẻ team (FR-32/AC-25) ─────────────────────────────────────────
+test('SEC: chưa đăng nhập -> 401', async () => {
+  const r = await fetch(`${base}/api/mindmaps`);
+  assert.equal(r.status, 401);
+});
+
+test('SEC: tạo sơ đồ riêng tư -> chỉ owner đọc được, người khác cùng team bị 403', async () => {
+  const created = await req('POST', '/api/mindmaps', { title: '[itest] riêng tư', data: { root: { id: 'r', text: 'root', children: [] } } });
+  assert.equal(created.status, 201, JSON.stringify(created.json));
+  const id = created.json.id;
+
+  const asOwner = await req('GET', `/api/mindmaps/${id}`);
+  assert.equal(asOwner.status, 200);
+
+  const asTeammate = await req('GET', `/api/mindmaps/${id}`, undefined, teammateHeaders);
+  assert.equal(asTeammate.status, 403);
+});
+
+test('SEC: đổi sang chia sẻ team -> teammate đọc được nhưng KHÔNG sửa/xoá được (chỉ owner ghi)', async () => {
+  const created = await req('POST', '/api/mindmaps', { title: '[itest] sẽ chia sẻ', data: { root: { id: 'r', text: 'root', children: [] } } });
+  const id = created.json.id;
+
+  const shareRes = await req('PUT', `/api/mindmaps/${id}`, { visibility: 'team', sharedTeamId: teamA });
+  assert.equal(shareRes.status, 200, JSON.stringify(shareRes.json));
+
+  const readByTeammate = await req('GET', `/api/mindmaps/${id}`, undefined, teammateHeaders);
+  assert.equal(readByTeammate.status, 200);
+
+  const writeByTeammate = await req('PUT', `/api/mindmaps/${id}`, { title: '[itest] teammate cố sửa' }, teammateHeaders);
+  assert.equal(writeByTeammate.status, 403, 'chỉ owner mới được sửa, kể cả khi đang chia sẻ (FR-32)');
+
+  const deleteByTeammate = await req('DELETE', `/api/mindmaps/${id}`, undefined, teammateHeaders);
+  assert.equal(deleteByTeammate.status, 403);
+
+  const readByOutsider = await req('GET', `/api/mindmaps/${id}`, undefined, outsiderHeaders);
+  assert.equal(readByOutsider.status, 403, 'team khác không thấy sơ đồ chia sẻ cho team A');
+});
+
+test('SEC: đổi lại về riêng tư -> thu hồi quyền đọc của teammate NGAY (không cache quyền cũ)', async () => {
+  const created = await req('POST', '/api/mindmaps', { title: '[itest] share rồi thu hồi', data: { root: { id: 'r', text: 'root', children: [] } } });
+  const id = created.json.id;
+  await req('PUT', `/api/mindmaps/${id}`, { visibility: 'team', sharedTeamId: teamA });
+  assert.equal((await req('GET', `/api/mindmaps/${id}`, undefined, teammateHeaders)).status, 200);
+
+  await req('PUT', `/api/mindmaps/${id}`, { visibility: 'private' });
+  assert.equal((await req('GET', `/api/mindmaps/${id}`, undefined, teammateHeaders)).status, 403);
+});
+
+test('SEC: không được chia sẻ cho team mình không thuộc về', async () => {
+  const created = await req('POST', '/api/mindmaps', { title: '[itest] chia sẻ sai team', data: { root: { id: 'r', text: 'root', children: [] } } });
+  const id = created.json.id;
+  const r = await req('PUT', `/api/mindmaps/${id}`, { visibility: 'team', sharedTeamId: teamB });
+  assert.equal(r.status, 400);
+});
+
+// ── File đính kèm — 3 lớp xác thực (FR-32a/FR-43) ─────────────────────────────────────────────────
+let sharedMapId: number;
+test('setup: tạo sơ đồ chia sẻ để test attachment', async () => {
+  const created = await req('POST', '/api/mindmaps', { title: '[itest] map cho attachment', data: { root: { id: 'r', text: 'root', children: [] } } });
+  sharedMapId = created.json.id;
+  const share = await req('PUT', `/api/mindmaps/${sharedMapId}`, { visibility: 'team', sharedTeamId: teamA });
+  assert.equal(share.status, 200);
+});
+
+const duoiNguyHiem = ['evil.html', 'evil.svg', 'evil.js'];
+for (const filename of duoiNguyHiem) {
+  test(`upload đuôi nguy hiểm ${filename} bị từ chối 400`, async () => {
+    const r = await uploadAttachment(sharedMapId, filename, 'text/plain', Buffer.from('<script>alert(1)</script>'));
+    assert.equal(r.status, 400);
   });
 }
 
-test('upload file đuôi .txt (tài liệu bình thường) vẫn thành công', async () => {
-  const { status, json } = await upload('ghi-chu.txt', 'nội dung ghi chú bình thường');
-  assert.equal(status, 201);
-  assert.equal(json.name, 'ghi-chu.txt');
-  assert.ok(String(json.url).startsWith('/api/mindmaps/files/'));
+test('upload .txt hợp lệ (UTF-8, không control byte lạ) -> 201', async () => {
+  const r = await uploadAttachment(sharedMapId, 'ghi-chu.txt', 'text/plain', Buffer.from('nội dung ghi chú bình thường', 'utf8'));
+  assert.equal(r.status, 201, JSON.stringify(r.json));
+  assert.equal(r.json.originalName, 'ghi-chu.txt');
 });
 
-test('file phục vụ lại LUÔN có Content-Disposition: attachment, không bao giờ inline', async () => {
-  const { status, json } = await upload('bao-cao.txt', 'nội dung báo cáo');
-  assert.equal(status, 201);
-  const fileRes = await fetch(`${base}${json.url}`);
-  assert.equal(fileRes.status, 200);
-  const disposition = fileRes.headers.get('content-disposition') || '';
+test('upload .png giả (đuôi/MIME đúng nhưng nội dung KHÔNG phải PNG thật) -> 400 (magic bytes không khớp)', async () => {
+  const r = await uploadAttachment(sharedMapId, 'fake.png', 'image/png', Buffer.from('đây không phải ảnh PNG thật'));
+  assert.equal(r.status, 400);
+  assert.match(String(r.json.message), /không khớp|magic|nhận diện/i);
+});
+
+test('upload .png thật (đúng magic bytes) -> 201', async () => {
+  const r = await uploadAttachment(sharedMapId, 'real.png', 'image/png', PNG_SIGNATURE);
+  assert.equal(r.status, 201, JSON.stringify(r.json));
+});
+
+test('upload file rỗng -> 400', async () => {
+  const r = await uploadAttachment(sharedMapId, 'empty.txt', 'text/plain', Buffer.alloc(0));
+  assert.equal(r.status, 400);
+});
+
+test('upload người KHÔNG PHẢI owner (teammate cùng team, sơ đồ đang chia sẻ) -> 403 (chỉ owner ghi)', async () => {
+  const r = await uploadAttachment(sharedMapId, 'teammate.txt', 'text/plain', Buffer.from('nội dung'), teammateHeaders);
+  assert.equal(r.status, 403);
+});
+
+test('download attachment: teammate cùng team đọc được, outsider team khác bị 403, luôn Content-Disposition: attachment', async () => {
+  const uploaded = await uploadAttachment(sharedMapId, 'download-test.txt', 'text/plain', Buffer.from('nội dung tải xuống'));
+  assert.equal(uploaded.status, 201);
+  const downloadUrl = `${base}${uploaded.json.downloadUrl}`;
+
+  const byTeammate = await fetch(downloadUrl, { headers: teammateHeaders });
+  assert.equal(byTeammate.status, 200);
+  const disposition = byTeammate.headers.get('content-disposition') || '';
   assert.match(disposition, /^attachment/i);
   assert.doesNotMatch(disposition, /inline/i);
+
+  const byOutsider = await fetch(downloadUrl, { headers: outsiderHeaders });
+  assert.equal(byOutsider.status, 403);
+
+  const anonymous = await fetch(downloadUrl);
+  assert.equal(anonymous.status, 401);
+});
+
+test('đổi sơ đồ về riêng tư -> teammate KHÔNG tải được attachment nữa (thu hồi quyền theo trạng thái sống)', async () => {
+  const uploaded = await uploadAttachment(sharedMapId, 'revoke-test.txt', 'text/plain', Buffer.from('nội dung'));
+  const downloadUrl = `${base}${uploaded.json.downloadUrl}`;
+  assert.equal((await fetch(downloadUrl, { headers: teammateHeaders })).status, 200);
+
+  await req('PUT', `/api/mindmaps/${sharedMapId}`, { visibility: 'private' });
+  assert.equal((await fetch(downloadUrl, { headers: teammateHeaders })).status, 403);
+
+  // trả lại trạng thái chia sẻ cho các test khác chạy sau (nếu node:test không đảm bảo cô lập thứ tự)
+  await req('PUT', `/api/mindmaps/${sharedMapId}`, { visibility: 'team', sharedTeamId: teamA });
+});
+
+// ── Đường DI SẢN GET /mindmaps/files/:name — tra quyền qua snapshot chủ sở hữu bất biến
+// (Council review vòng 1 Lát 5: route cũ chỉ yêu cầu đăng nhập, KHÔNG tra sở hữu/chia sẻ; review vòng
+// 2 phát hiện bản vá vòng 1 quét SỐNG mindmaps.data là chính lỗ hổng — actor tự nhét URL vào mindmap
+// riêng của mình là tự cấp quyền cho bản thân). Fix vòng 2: chụp snapshot BẤT BIẾN một lần, route chỉ
+// tra snapshot đó; canRead() vẫn tính lại theo trạng thái SỐNG của mindmap đã được snapshot ghi nhận.
+function writeLegacyFile(name: string, content = 'nội dung file cũ'): void {
+  fs.writeFileSync(path.join(legacyFilesDir, name), content, 'utf8');
+}
+
+test('DI SẢN: file được 1 mindmap RIÊNG TƯ tham chiếu TRƯỚC thời điểm chụp -> chỉ owner tải được, teammate cùng team và outsider đều 403', async () => {
+  writeLegacyFile('legacy-private-1.txt');
+  const created = await req('POST', '/api/mindmaps', {
+    title: '[itest] map tham chiếu file di sản riêng tư',
+    data: { root: { id: 'r', text: 'xem file /api/mindmaps/files/legacy-private-1.txt', children: [] } }
+  });
+  assert.equal(created.status, 201, JSON.stringify(created.json));
+  captureLegacyMindmapFileOwnersSnapshot(db); // mô phỏng thời điểm chụp — mindmap trên đã tồn tại TRƯỚC
+
+  const url = `${base}/api/mindmaps/files/legacy-private-1.txt`;
+  assert.equal((await fetch(url, { headers: ownerHeaders })).status, 200, 'owner phải tải được');
+  assert.equal((await fetch(url, { headers: teammateHeaders })).status, 403, 'teammate không phải owner, mindmap đang riêng tư -> 403');
+  assert.equal((await fetch(url, { headers: outsiderHeaders })).status, 403);
+  assert.equal((await fetch(url)).status, 401, 'chưa đăng nhập vẫn 401 như mọi route khác');
+});
+
+test('DI SẢN: đổi mindmap tham chiếu (đã có trong snapshot) sang chia sẻ team -> teammate tải được, outsider team khác vẫn 403', async () => {
+  writeLegacyFile('legacy-shared-1.txt');
+  const created = await req('POST', '/api/mindmaps', {
+    title: '[itest] map tham chiếu file di sản sẽ chia sẻ',
+    data: { root: { id: 'r', text: 'đính kèm /api/mindmaps/files/legacy-shared-1.txt', children: [] } }
+  });
+  const id = created.json.id;
+  captureLegacyMindmapFileOwnersSnapshot(db); // chụp NGAY lúc mindmap còn riêng tư
+  const url = `${base}/api/mindmaps/files/legacy-shared-1.txt`;
+  assert.equal((await fetch(url, { headers: teammateHeaders })).status, 403);
+
+  // Đổi visibility SAU thời điểm chụp vẫn có tác dụng ngay — snapshot chỉ đóng băng "mindmap nào là
+  // chủ sở hữu của file", KHÔNG đóng băng quyền đọc của chính mindmap đó (canRead() vẫn tính SỐNG).
+  await req('PUT', `/api/mindmaps/${id}`, { visibility: 'team', sharedTeamId: teamA });
+  assert.equal((await fetch(url, { headers: teammateHeaders })).status, 200, 'chia sẻ team A -> teammate cùng team đọc được');
+  assert.equal((await fetch(url, { headers: outsiderHeaders })).status, 403, 'outsider team B vẫn không được');
+});
+
+test('DI SẢN: file không có trong snapshot tại thời điểm chụp (mồ côi thật) -> giữ hành vi cũ, chỉ cần đăng nhập, có log cảnh báo', async () => {
+  writeLegacyFile('legacy-orphan-1.txt');
+  captureLegacyMindmapFileOwnersSnapshot(db); // chụp lúc CHƯA có mindmap nào tham chiếu file này
+  const url = `${base}/api/mindmaps/files/legacy-orphan-1.txt`;
+  const warnSpy = mock.method(console, 'warn', () => {});
+  try {
+    assert.equal((await fetch(url, { headers: outsiderHeaders })).status, 200, 'file mồ côi thật -> phương án cuối là chỉ cần đăng nhập (chưa có cách tra quyền)');
+    assert.equal((await fetch(url)).status, 401);
+    const loggedOrphanWarning = warnSpy.mock.calls.some((c) => String(c.arguments[0] ?? '').includes('mồ côi'));
+    assert.ok(loggedOrphanWarning, 'phải log cảnh báo rõ ràng khi rơi vào nhánh mồ côi thật (để sau này đếm được còn bao nhiêu)');
+  } finally {
+    warnSpy.mock.restore();
+  }
+});
+
+test('DI SẢN: file được ≥2 mindmap tham chiếu TRƯỚC thời điểm chụp -> cấp quyền nếu actor đọc được ÍT NHẤT MỘT bản ghi trong số đó', async () => {
+  writeLegacyFile('legacy-multi-1.txt');
+  const byOwner = await req('POST', '/api/mindmaps', {
+    title: '[itest] map A tham chiếu file dùng chung',
+    data: { root: { id: 'r', text: '/api/mindmaps/files/legacy-multi-1.txt', children: [] } }
+  });
+  assert.equal(byOwner.status, 201);
+  const byTeammate = await req('POST', '/api/mindmaps', {
+    title: '[itest] map B (khác owner) cũng tham chiếu file dùng chung',
+    data: { root: { id: 'r', text: '/api/mindmaps/files/legacy-multi-1.txt', children: [] } }
+  }, teammateHeaders);
+  assert.equal(byTeammate.status, 201);
+  captureLegacyMindmapFileOwnersSnapshot(db); // chụp snapshot NGAY BÂY GIỜ — cả map A lẫn map B đều đã tồn tại
+
+  const url = `${base}/api/mindmaps/files/legacy-multi-1.txt`;
+  // outsider không đọc được map A (owner riêng tư) lẫn map B (teammate riêng tư) -> 403
+  assert.equal((await fetch(url, { headers: outsiderHeaders })).status, 403);
+  // teammate đọc được CHÍNH map B của mình (dù không đọc được map A) -> phải được cấp quyền
+  assert.equal((await fetch(url, { headers: teammateHeaders })).status, 200);
+});
+
+test('DI SẢN (chống hồi quy lỗ hổng đã đóng — Council review vòng 2): actor tự tạo mindmap RIÊNG tham chiếu file di sản SAU thời điểm chụp -> KHÔNG được cấp quyền qua đường đó', async () => {
+  writeLegacyFile('legacy-post-snapshot-1.txt');
+  // Chủ thật duy nhất TRƯỚC thời điểm chụp: chỉ owner (không phải outsider).
+  const byOwner = await req('POST', '/api/mindmaps', {
+    title: '[itest] map chủ thật, tạo TRƯỚC khi chụp',
+    data: { root: { id: 'r', text: '/api/mindmaps/files/legacy-post-snapshot-1.txt', children: [] } }
+  });
+  assert.equal(byOwner.status, 201);
+  captureLegacyMindmapFileOwnersSnapshot(db); // chụp NGAY — chỉ mindmap của owner được ghi nhận
+
+  const url = `${base}/api/mindmaps/files/legacy-post-snapshot-1.txt`;
+  assert.equal((await fetch(url, { headers: outsiderHeaders })).status, 403, 'trước khi tự nhét tham chiếu, outsider đã đúng là không có quyền');
+
+  // Lỗ hổng bản vá vòng 1 (đã đóng ở vòng 2): outsider KHÔNG PHẢI chủ thật, tự biết URL file di sản,
+  // tự tạo 1 mindmap RIÊNG của mình rồi nhét URL vào — với quét SỐNG (vòng 1) route sẽ thấy outsider
+  // "sở hữu" 1 bản ghi tham chiếu và cấp quyền tải ngay, dù outsider không phải chủ thật của file gốc.
+  const selfInserted = await req('POST', '/api/mindmaps', {
+    title: '[itest] outsider tự nhét tham chiếu SAU khi đã chụp snapshot',
+    data: { root: { id: 'r', text: '/api/mindmaps/files/legacy-post-snapshot-1.txt', children: [] } }
+  }, outsiderHeaders);
+  assert.equal(selfInserted.status, 201);
+
+  // Với snapshot bất biến: mindmap outsider vừa tạo không nằm trong bảng legacy_mindmap_file_owners
+  // (được chụp TRƯỚC khi mindmap này tồn tại) -> route không bao giờ nhìn thấy nó, outsider vẫn 403.
+  assert.equal((await fetch(url, { headers: outsiderHeaders })).status, 403, 'tự nhét tham chiếu SAU thời điểm chụp không còn tác dụng chiếm quyền nữa (lỗ hổng đã đóng)');
+  // Chủ thật (owner, đã có trong snapshot từ trước) vẫn tải được bình thường — fix không ảnh hưởng
+  // tới quyền của chủ thật.
+  assert.equal((await fetch(url, { headers: ownerHeaders })).status, 200, 'chủ thật (đã snapshot từ trước) vẫn tải được bình thường');
 });

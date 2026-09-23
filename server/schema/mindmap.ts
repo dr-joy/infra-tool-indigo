@@ -20,5 +20,48 @@ export function applyMindmapSchema(db: DatabaseSync): void {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+
+    -- Lát 5 (CR §6.3, FR-32a/FR-43) — bản ghi riêng cho từng file đính kèm (thay hẳn cơ chế cũ chỉ
+    -- lưu URL tự do trong JSON). Quyền tải LUÔN join trạng thái SỐNG của mindmaps (owner_user_id/
+    -- visibility/shared_team_id) tại thời điểm tải, KHÔNG lưu cứng quyền ở đây — đổi sơ đồ từ chia sẻ
+    -- sang riêng tư phải thu hồi quyền tải ngay (khớp FR-32). team_id ở dưới CHỈ là metadata lúc
+    -- upload (phục vụ audit/thống kê), KHÔNG phải nguồn quyền.
+    CREATE TABLE IF NOT EXISTS mindmap_attachments (
+      id TEXT PRIMARY KEY,
+      mindmap_id INTEGER NOT NULL REFERENCES mindmaps(id) ON DELETE CASCADE,
+      owner_user_id INTEGER REFERENCES users(id),
+      team_id INTEGER REFERENCES teams(id),
+      original_name TEXT NOT NULL,
+      storage_key TEXT NOT NULL UNIQUE,
+      extension TEXT NOT NULL,
+      declared_mime TEXT NOT NULL,
+      detected_mime TEXT,
+      byte_size INTEGER NOT NULL CHECK (byte_size > 0),
+      sha256 TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'ready', 'quarantined', 'deleted')),
+      created_at TEXT NOT NULL,
+      ready_at TEXT,
+      deleted_at TEXT,
+      created_by INTEGER REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_mindmap_attachments_mindmap ON mindmap_attachments(mindmap_id);
+    CREATE INDEX IF NOT EXISTS idx_mindmap_attachments_status_created ON mindmap_attachments(status, created_at);
+
+    -- Council review vòng 2 Lát 5 — snapshot BẤT BIẾN "file di sản <-> mindmap sở hữu thật", thay hẳn
+    -- việc route /mindmaps/files/:name quét SỐNG cột mindmaps.data mỗi lần tải (lỗ hổng thật: actor tự
+    -- nhét URL file di sản vào data của 1 mindmap RIÊNG do actor tạo là tự cấp quyền cho chính mình).
+    -- Ghi ĐÚNG 1 LẦN bởi captureLegacyMindmapFileOwnersSnapshot() (server/lib/legacy-mindmap-file-
+    -- owners.ts), gọi từ server/db-migrations.ts (runVersionedMigrations, gate PRAGMA user_version) —
+    -- tham chiếu actor tự thêm vào mindmaps.data SAU thời điểm chụp KHÔNG bao giờ xuất hiện ở đây, nên
+    -- không còn tác dụng chiếm quyền. PRIMARY KEY (file_name, mindmap_id) + INSERT OR IGNORE khi ghi ->
+    -- không có đường "sửa lại"/ghi đè dòng đã có. ON DELETE CASCADE: xoá mindmap thì dọn theo, không để
+    -- lại tham chiếu treo tới mindmap không còn tồn tại.
+    CREATE TABLE IF NOT EXISTS legacy_mindmap_file_owners (
+      file_name TEXT NOT NULL,
+      mindmap_id INTEGER NOT NULL REFERENCES mindmaps(id) ON DELETE CASCADE,
+      captured_at TEXT NOT NULL,
+      PRIMARY KEY (file_name, mindmap_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_legacy_mindmap_file_owners_file ON legacy_mindmap_file_owners(file_name);
   `);
 }

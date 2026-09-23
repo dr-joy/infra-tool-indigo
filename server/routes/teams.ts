@@ -4,6 +4,7 @@ import { HttpError, sendRouteError } from '../lib/utils.js';
 import { requireSession, requireActiveAccount, actorFromRequest } from '../lib/auth-middleware.js';
 import { authorize } from '../lib/authorize.js';
 import { writeAudit } from '../lib/audit.js';
+import { seedWeeklyReportKindsForTeam } from '../db-seed.js';
 
 // Lát 3 (FR-6, FR-12) — Admin quản lý team/Leader (toàn cục, policyKind 'team_feature' với
 // scope.teamId bỏ trống), Leader/Member tự quản thành viên đúng team mình (scope.teamId thật).
@@ -67,6 +68,9 @@ router.post('/admin/teams', requireSession, requireActiveAccount, (req, res) => 
         INSERT INTO projects (ten_project, pic, team_id, ngay_bat_dau, sort_order, is_system, created_at, updated_at)
         VALUES ('Khác', '', ?, ?, 1, 1, ?, ?)
       `).run(id, now.slice(0, 10), now, now);
+      // CR-20260913 Lát 5 (FR-22): 2 loại báo cáo tuần mặc định ngay trong cùng transaction tạo team,
+      // giống cách seed project hệ thống "Khác" ở trên — team mới có ngay danh sách dùng được.
+      seedWeeklyReportKindsForTeam(db, id, now);
       writeAudit(req.user!.id, id, 'team.create', `team:${id}`, { name, description: body.description || null });
       return id;
     });

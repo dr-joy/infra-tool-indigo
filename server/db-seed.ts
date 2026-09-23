@@ -1,4 +1,28 @@
 import type { DatabaseSync } from 'node:sqlite';
+import { randomUUID } from 'node:crypto';
+
+// CR-20260913 Lát 5 (FR-22, Council 74715c65) — Danh sách loại báo cáo tuần MẶC ĐỊNH khi 1 team mới
+// được tạo hoặc khi backfill team đã tồn tại chưa có dòng nào: 2 loại y hệt 2 giá trị ghi cứng cũ
+// (`internal`→"Nội bộ Dev13", `vn_management`→"Báo cáo DM"), giữ nguyên `code` để dữ liệu lịch sử
+// (weekly_report_history.kind) không bị lệch tên. `render_mode` là allowlist ĐÓNG trong code (xem
+// server/lib/weekly-report.ts RENDER_MODES) — Leader KHÔNG tự soạn được render_mode mới qua API.
+export const DEFAULT_WEEKLY_REPORT_KINDS = [
+  { code: 'internal', label: 'Nội bộ Dev13', renderMode: 'internal_markdown', requiresProjectRisk: 0 },
+  { code: 'vn_management', label: 'Báo cáo DM', renderMode: 'management_summary', requiresProjectRisk: 1 },
+] as const;
+
+// Dùng lại ở CẢ HAI nơi: (1) backfill team đã tồn tại (dưới đây), (2) route tạo team mới
+// (server/routes/teams.ts, cùng transaction với seed 5 dòng feature-visibility) — một nguồn duy nhất
+// cho danh sách mặc định, tránh 2 nơi tự chép tay rồi lệch nhau.
+export function seedWeeklyReportKindsForTeam(db: DatabaseSync, teamId: number, now = new Date().toISOString()): void {
+  const insert = db.prepare(`
+    INSERT INTO weekly_report_kinds (id, team_id, code, label, render_mode, requires_project_risk, sort_order, is_active, row_version, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?)
+  `);
+  DEFAULT_WEEKLY_REPORT_KINDS.forEach((k, index) => {
+    insert.run(randomUUID(), teamId, k.code, k.label, k.renderMode, k.requiresProjectRisk, index, now, now);
+  });
+}
 
 // Seed data lịch sử, tách khỏi server/db.ts (kế hoạch Council run 022dd1e5, xem
 // docs/exchanges/2026-09-12.md) — giữ NGUYÊN VĂN nội dung và thứ tự, không import ngược singleton
@@ -190,6 +214,15 @@ Xin cảm ơn.`
 
   // Sửa tên project hệ thống nếu bị hỏng mã hoá (lần seed cũ lưu nhầm "Kh�c")
   db.prepare("UPDATE projects SET ten_project = 'Khác' WHERE is_system = 1 AND ten_project <> 'Khác'").run();
+
+  // Backfill weekly_report_kinds cho team ĐÃ TỒN TẠI chưa có dòng nào (FR-22) — cùng nguyên tắc idempotent
+  // như backfill project hệ thống "Khác" phía trên; team tạo MỚI được seed ngay trong route tạo team.
+  const teamIdsForReportKinds = db.prepare('SELECT id FROM teams').all() as { id: number }[];
+  for (const team of teamIdsForReportKinds) {
+    const total = (db.prepare('SELECT COUNT(*) AS total FROM weekly_report_kinds WHERE team_id = ?').get(team.id) as { total: number }).total;
+    if (total > 0) continue;
+    seedWeeklyReportKindsForTeam(db, team.id);
+  }
 
   // Seed PIC mặc định (danh sách hard-code cũ) khi bảng còn trống
   const demPic = db.prepare('SELECT COUNT(*) AS total FROM pics').get() as { total: number };

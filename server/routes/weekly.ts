@@ -1,11 +1,14 @@
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import { db } from '../db.js';
 import { recalculateProjectTaskRollups } from '../lib/mappers.js';
 import { sendRouteError, HttpError, parseIntId } from '../lib/utils.js';
 import { isValidProjectTaskProgress } from '../types.js';
 import {
-  buildReportPlan, renderReport, renderDmReport, reportKinds, mondayOf, addDays, toISODate,
+  buildReportPlan, renderReport, renderDmReport, mondayOf, addDays, toISODate,
   validEvalStatuses, taskOverlapsWeek, buildWeekData, buildTaskNumbers, type EvalStatus,
+  listReportKinds, findReportKindById, findReportKindByCode, upsertProjectRisks, listProjectRisks, VALID_RENDER_MODES,
+  RiskVersionConflictError,
 } from '../lib/weekly-report.js';
 import { buildDmReportWorkbook } from '../lib/weekly-report-excel.js';
 import { requireSession, requireActiveAccount, actorFromRequest } from '../lib/auth-middleware.js';
@@ -38,14 +41,156 @@ function parseTeamIdParam(raw: unknown): number {
   return teamId;
 }
 
-// Danh sách loại báo cáo + tuần hiện tại
+// `id` ở đây CỐ Ý trả về `code` (không phải row id UUID nội bộ) — giữ tương thích với hợp đồng cũ mà
+// frontend đang dùng (dropdown chọn loại báo cáo gửi thẳng giá trị này làm `?kind=` cho GET
+// /weeks/:weekStart/text và `body.kind` cho POST /weeks/:weekStart/report-history, cả hai đều so khớp
+// theo CODE — xem renderReport()/findReportKindByCode() ở server/lib/weekly-report.ts). Row id UUID
+// thật (cần cho CRUD Leader sau này) trả riêng ở `rowId`.
+function mapReportKind(k: ReturnType<typeof listReportKinds>[number]) {
+  return {
+    id: k.code,
+    rowId: k.id,
+    code: k.code,
+    label: k.label,
+    renderMode: k.render_mode,
+    requiresProjectRisk: Boolean(k.requires_project_risk),
+    sortOrder: k.sort_order,
+    isActive: Boolean(k.is_active),
+    rowVersion: k.row_version,
+  };
+}
+
+// Danh sách loại báo cáo (CR-20260913 Lát 5, FR-22 — cấu hình theo team, không còn ghi cứng
+// internal/vn_management) + tuần hiện tại.
 router.get('/weeks/report-kinds', requireSession, requireActiveAccount, (req, res) => {
   const teamId = parseTeamIdParam(req.query.teamId);
-  authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'weekly_report', action: 'badges', scope: { teamId } });
+  const actor = actorFromRequest(req);
+  authorize({ actor, policyKind: 'team_feature', resource: 'weekly_report_kind', action: 'list', scope: { teamId } });
   res.json({
     currentWeek: mondayOf(toISODate(new Date())),
-    kinds: reportKinds.map((k) => ({ id: k.id, label: k.label, lang: k.lang })),
+    kinds: listReportKinds(teamId).map(mapReportKind),
   });
+});
+
+// Tạo loại báo cáo mới cho team (Leader-only). `renderMode` PHẢI thuộc allowlist đóng trong code —
+// Leader chọn từ danh sách có sẵn, không tự soạn logic hiển thị mới (CR §6.3).
+router.post('/weeks/report-kinds', requireSession, requireActiveAccount, (req, res) => {
+  const body = req.body as { teamId?: number | string; code?: string; label?: string; renderMode?: string; requiresProjectRisk?: boolean };
+  const teamId = parseTeamIdParam(body.teamId);
+  const actor = actorFromRequest(req);
+  authorize({ actor, policyKind: 'team_feature', resource: 'weekly_report_kind', action: 'create', scope: { teamId } });
+
+  const code = String(body.code || '').trim();
+  const label = String(body.label || '').trim();
+  const renderMode = String(body.renderMode || '');
+  if (!code) return res.status(400).json({ message: 'Mã loại báo cáo là bắt buộc' });
+  if (!label) return res.status(400).json({ message: 'Nhãn hiển thị là bắt buộc' });
+  if (!VALID_RENDER_MODES.has(renderMode)) return res.status(400).json({ message: `renderMode không hợp lệ. Cho phép: ${[...VALID_RENDER_MODES].join(', ')}` });
+
+  const now = new Date().toISOString();
+  const nextOrder = (db.prepare('SELECT COALESCE(MAX(sort_order),-1)+1 n FROM weekly_report_kinds WHERE team_id = ?').get(teamId) as { n: number }).n;
+  try {
+    const id = randomUUID();
+    db.prepare(`
+      INSERT INTO weekly_report_kinds (id, team_id, code, label, render_mode, requires_project_risk, sort_order, is_active, row_version, created_at, updated_at, created_by, updated_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?, ?)
+    `).run(id, teamId, code, label, renderMode, body.requiresProjectRisk ? 1 : 0, nextOrder, now, now, actor.userId, actor.userId);
+    writeAudit(actor.userId, teamId, 'weekly_report_kind.create', `weekly_report_kind:${id}`, { code, label, renderMode });
+    res.status(201).json(mapReportKind(findReportKindById(teamId, id)!));
+  } catch (error) {
+    if (error instanceof Error && /UNIQUE/.test(error.message)) {
+      return res.status(409).json({ message: 'Mã loại báo cáo này đã tồn tại trong team' });
+    }
+    sendRouteError(res, error, 'Không tạo được loại báo cáo');
+  }
+});
+
+// Sửa loại báo cáo đã có (Leader-only) — CHỈ mã/nhãn/thứ tự/bật-tắt/yêu cầu Risk, KHÔNG cho đổi
+// `renderMode` sau khi tạo (CR §6.3: Leader không tự soạn render_mode).
+router.patch('/weeks/report-kinds/:id', requireSession, requireActiveAccount, (req, res) => {
+  const id = String(req.params.id);
+  const body = req.body as { teamId?: number | string; code?: string; label?: string; sortOrder?: number; isActive?: boolean; requiresProjectRisk?: boolean; rowVersion?: number };
+  const teamId = parseTeamIdParam(body.teamId);
+  const actor = actorFromRequest(req);
+  authorize({ actor, policyKind: 'team_feature', resource: 'weekly_report_kind', action: 'update', scope: { teamId } });
+
+  const existing = findReportKindById(teamId, id);
+  if (!existing) return res.status(404).json({ message: 'Không tìm thấy loại báo cáo' });
+
+  const fields: string[] = [];
+  const values: (string | number)[] = [];
+  if (body.code !== undefined) { fields.push('code = ?'); values.push(String(body.code).trim()); }
+  if (body.label !== undefined) { fields.push('label = ?'); values.push(String(body.label).trim()); }
+  if (body.sortOrder !== undefined) { fields.push('sort_order = ?'); values.push(Number(body.sortOrder)); }
+  if (body.isActive !== undefined) { fields.push('is_active = ?'); values.push(body.isActive ? 1 : 0); }
+  if (body.requiresProjectRisk !== undefined) { fields.push('requires_project_risk = ?'); values.push(body.requiresProjectRisk ? 1 : 0); }
+  if (fields.length === 0) return res.status(400).json({ message: 'Không có gì để sửa' });
+  fields.push('updated_at = ?', 'updated_by = ?', 'row_version = row_version + 1');
+  values.push(new Date().toISOString(), actor.userId);
+
+  try {
+    const result = db.prepare(`UPDATE weekly_report_kinds SET ${fields.join(', ')} WHERE id = ? AND team_id = ? AND row_version = ?`)
+      .run(...values, id, teamId, body.rowVersion ?? -1);
+    if (result.changes === 0) return res.status(409).json({ message: 'Có người vừa sửa loại báo cáo này, vui lòng tải lại', code: 'VERSION_CONFLICT' });
+    writeAudit(actor.userId, teamId, 'weekly_report_kind.update', `weekly_report_kind:${id}`, body);
+    res.json(mapReportKind(findReportKindById(teamId, id)!));
+  } catch (error) {
+    if (error instanceof Error && /UNIQUE/.test(error.message)) {
+      return res.status(409).json({ message: 'Mã loại báo cáo này đã tồn tại trong team' });
+    }
+    sendRouteError(res, error, 'Không sửa được loại báo cáo');
+  }
+});
+
+// ── Risk & biện pháp đối ứng theo team/tuần/loại/project (FR-22, FR-21a — hiện cho CẢ TEAM xem) ────
+router.get('/weeks/:weekStart/risks', requireSession, requireActiveAccount, (req, res) => {
+  const weekStart = normWeek(req.params.weekStart);
+  if (!weekStart) return res.status(400).json({ message: 'Tuần không hợp lệ' });
+  const teamId = parseTeamIdParam(req.query.teamId);
+  const reportKindId = String(req.query.reportKindId || '');
+  authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'weekly_project_risk', action: 'list', scope: { teamId } });
+  if (!reportKindId || !findReportKindById(teamId, reportKindId)) return res.status(400).json({ message: 'reportKindId không hợp lệ' });
+  res.json(listProjectRisks(teamId, weekStart, reportKindId).map((r) => ({
+    id: r.id, projectId: String(r.project_id), risk: r.risk, mitigation: r.mitigation, rowVersion: r.row_version,
+  })));
+});
+
+router.put('/weeks/:weekStart/risks', requireSession, requireActiveAccount, (req, res) => {
+  const weekStart = normWeek(req.params.weekStart);
+  if (!weekStart) return res.status(400).json({ message: 'Tuần không hợp lệ' });
+  const body = req.body as { teamId?: number | string; reportKindId?: string; risks?: { projectId?: string | number; risk?: string; mitigation?: string; rowVersion?: number }[] };
+  const teamId = parseTeamIdParam(body.teamId);
+  const actor = actorFromRequest(req);
+  authorize({ actor, policyKind: 'team_feature', resource: 'weekly_project_risk', action: 'upsert', scope: { teamId } });
+
+  const reportKindId = String(body.reportKindId || '');
+  const kind = findReportKindById(teamId, reportKindId);
+  if (!kind) return res.status(400).json({ message: 'reportKindId không hợp lệ' });
+  const risks = (Array.isArray(body.risks) ? body.risks : [])
+    .map((r) => ({
+      projectId: Number(r.projectId), risk: String(r.risk || ''), mitigation: String(r.mitigation || ''),
+      rowVersion: r.rowVersion == null ? undefined : Number(r.rowVersion),
+    }))
+    .filter((r) => Number.isInteger(r.projectId));
+
+  // Trigger DB (schema/weekly-report.ts) đã chặn project_id không thuộc đúng team_id — bắt lỗi đó
+  // thành 400 rõ ràng thay vì vỡ 500. RiskVersionConflictError (optimistic concurrency, xem
+  // upsertProjectRisks()) -> 409 kèm danh sách projectId xung đột để client tải lại đúng dòng đó.
+  try {
+    upsertProjectRisks(teamId, weekStart, reportKindId, risks, actor.userId);
+    writeAudit(actor.userId, teamId, 'weekly_project_risk.upsert', `weekly_project_risks:${weekStart}:${reportKindId}`, { weekStart, reportKindId, count: risks.length });
+    res.json(listProjectRisks(teamId, weekStart, reportKindId).map((r) => ({
+      id: r.id, projectId: String(r.project_id), risk: r.risk, mitigation: r.mitigation, rowVersion: r.row_version,
+    })));
+  } catch (error) {
+    if (error instanceof RiskVersionConflictError) {
+      return res.status(409).json({ message: 'Có Risk vừa bị người khác sửa, vui lòng tải lại', code: 'VERSION_CONFLICT', conflicts: error.conflicts });
+    }
+    if (error instanceof Error && /phai thuoc cung team_id/.test(error.message)) {
+      return res.status(400).json({ message: 'Có project không thuộc team này' });
+    }
+    sendRouteError(res, error, 'Không lưu được Risk');
+  }
 });
 
 // ── Badge & cảnh báo trên bảng project ───────────────────────────────────────────
@@ -137,13 +282,32 @@ router.post('/weeks/:weekStart/report-history', requireSession, requireActiveAcc
   // 1 báo cáo = dự án + member ghép lại -> mỗi tuần+loại chỉ có 1 bản (mode cố định 'full')
   const mode = 'full';
   const content = String(body.content || '').trim();
-  if (!reportKinds.some((k) => k.id === kind)) return res.status(400).json({ message: 'Loại báo cáo không hợp lệ' });
+  // CR-20260913 Lát 5 (FR-22): danh sách hợp lệ giờ đọc từ cấu hình CỦA TEAM (weekly_report_kinds),
+  // không còn 2 giá trị ghi cứng — `kind` khớp theo `code`, không phân biệt hoa/thường (giống unique
+  // index của bảng).
+  const kindRow = findReportKindByCode(teamId, kind);
+  if (!kindRow) {
+    return res.status(400).json({ message: 'Loại báo cáo không hợp lệ' });
+  }
   if (!content) return res.status(400).json({ message: 'Nội dung báo cáo trống' });
 
+  // Council review 2026-09-23 (lỗ hổng #1): `findReportKindByCode` khớp KHÔNG phân biệt hoa/thường,
+  // nhưng UNIQUE(team_id, week_start, kind, mode) của weekly_report_history PHÂN BIỆT hoa/thường
+  // (SQLite mặc định) -> nếu dùng lại biến `kind` gốc (chưa chuẩn hoá, do client gửi) thì "khac" và
+  // "KHAC" cùng khớp một `kindRow` cấu hình nhưng tạo ra 2 dòng khác nhau trong bảng, vi phạm đúng bất
+  // biến "mỗi tuần+loại chỉ có 1 bản". Từ đây trở đi dùng `kindRow.code` (giá trị ĐÃ CHUẨN HOÁ, đúng
+  // casing lưu trong weekly_report_kinds), không dùng lại `kind` thô nữa.
   const existing = db.prepare('SELECT id, row_version FROM weekly_report_history WHERE team_id = ? AND week_start = ? AND kind = ? AND mode = ?')
-    .get(teamId, weekStart, kind, mode) as { id: number; row_version: number } | undefined;
+    .get(teamId, weekStart, kindRow.code, mode) as { id: number; row_version: number } | undefined;
   if (existing && !body.force) {
     return res.status(409).json({ message: 'Báo cáo của tuần này đã tồn tại', code: 'REPORT_EXISTS' });
+  }
+  // Council review 2026-09-23 (lỗ hổng #2): check `is_active` chỉ được áp dụng cho điểm TẠO MỚI thật
+  // sự (`!existing`) — Schema (`weekly_report_kinds.is_active`) ghi rõ ý định "ngừng dùng không phá
+  // lịch sử": Leader vẫn phải sửa/ghi đè được báo cáo ĐÃ CÓ (`existing && force`) của một loại vừa bị
+  // Admin tắt sau khi báo cáo đã tồn tại — chỉ chặn khi đây thực sự là bản ghi mới cho tuần/loại đó.
+  if (!existing && !kindRow.is_active) {
+    return res.status(400).json({ message: 'Loại báo cáo này đã ngừng dùng, không tạo được báo cáo mới bằng loại này' });
   }
 
   const now = new Date().toISOString();
@@ -153,9 +317,9 @@ router.post('/weeks/:weekStart/report-history', requireSession, requireActiveAcc
     if (updated.changes === 0) throw new HttpError(409, 'Có người vừa thay đổi báo cáo này, vui lòng tải lại', 'VERSION_CONFLICT');
   } else {
     db.prepare('INSERT INTO weekly_report_history (week_start, team_id, kind, mode, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-      .run(weekStart, teamId, kind, mode, content, now, now);
+      .run(weekStart, teamId, kindRow.code, mode, content, now, now);
   }
-  writeAudit(actor.userId, teamId, 'weekly_report.finalize', `weekly_report_history:${weekStart}:${kind}`, { weekStart, kind, overwritten: Boolean(existing) });
+  writeAudit(actor.userId, teamId, 'weekly_report.finalize', `weekly_report_history:${weekStart}:${kindRow.code}`, { weekStart, kind: kindRow.code, overwritten: Boolean(existing) });
   res.json({ ok: true, overwritten: Boolean(existing) });
 });
 
@@ -285,10 +449,11 @@ router.post('/weeks/:weekStart/apply', requireSession, requireActiveAccount, (re
           }
         }
         if (projectId == null) projectId = task.project_id;
-        // PIC duyệt ở wizard phản ánh ngược vào task trong project
-        if (assignee && assignee !== (task.assignee || '')) {
-          db.prepare('UPDATE project_tasks SET assignee = ?, updated_at = ? WHERE id = ?').run(assignee, now, taskId);
-        }
+        // CR-20260913 Lát 4/Lát 5 dọn nợ (BL-20260913-001): KHÔNG còn ghi `assignee` do client gửi
+        // ngược vào `project_tasks.assignee` — cột đó giờ là CACHE tự tính từ `project_task_assignments`
+        // (server/lib/mappers.ts#deriveLeafFromAssignments), không phải input người dùng (đúng tinh
+        // thần đã chốt ở Lát 4 cho mọi route khác). `assignee` ở đây chỉ còn dùng làm snapshot của
+        // riêng `weekly_goals.assignee` (dòng insGoal bên dưới) — không lan ngược sang task.
         const dup = db.prepare('SELECT id FROM weekly_goals WHERE week_start = ? AND project_task_id = ?').get(weekStart, taskId);
         if (dup) continue;
       } else if (!goalText) {
@@ -349,18 +514,61 @@ router.get('/weeks/:weekStart/text', requireSession, requireActiveAccount, (req,
   res.json({ text: renderReport(weekStart, kind, teamId) });
 });
 
-// Báo cáo DM kèm Risk: nhận risk + biện pháp theo từng project, trả text đã format
+// Báo cáo DM kèm Risk: nhận risk + biện pháp theo từng project, trả text đã format.
+// CR-20260913 Lát 5 (FR-22, FR-21a): nếu có `reportKindId` (loại báo cáo có `requiresProjectRisk`),
+// ghi luôn vào weekly_project_risks để CẢ TEAM xem lại được ở màn báo cáo tuần (không chỉ ephemeral
+// trong lần gọi này) — giữ tương thích ngược: không gửi `reportKindId` vẫn render được như cũ, chỉ
+// không lưu lại. Bucket "Khác" (`projectId` rỗng) KHÔNG lưu được vào bảng này (project_id NOT NULL
+// theo schema) — vẫn render bình thường, chỉ không có lịch sử xem lại cho đúng bucket đó.
+//
+// SEC (Council review sau FR-22, 2026-09-23): route này chỉ đòi quyền `render` (Leader+Member) vì bản
+// thân việc RENDER báo cáo là hành động Member được phép (CR §... "Member chỉ xem"). Nhưng khi có
+// `reportKindId`, route gọi thẳng upsertProjectRisks() — ĐÚNG hàm ghi mà PUT /weeks/:weekStart/risks
+// dùng, và route đó đòi quyền `upsert` (Leader-only). Không kiểm thêm ở đây thì Member bị chặn ở PUT
+// /risks nhưng vẫn ghi/ghi đè được Risk qua ngả này — cửa hậu. Quyết định đã chọn (không có gợi ý rõ
+// hơn trong CR): PHƯƠNG ÁN (a) — Member gửi `reportKindId` (bất kể `risks` có phần tử ghi được hay
+// không) bị chặn 403 NGAY, không âm thầm bỏ qua phần lưu rồi vẫn render — actor biết ngay hành vi bị
+// chặn thay vì đoán tại sao Risk không được lưu. Member vẫn render báo cáo bình thường khi KHÔNG gửi
+// `reportKindId`.
 router.post('/weeks/:weekStart/dm-report', requireSession, requireActiveAccount, (req, res) => {
   const weekStart = normWeek(req.params.weekStart);
   if (!weekStart) return res.status(400).json({ message: 'Tuần không hợp lệ' });
-  const body = req.body as { teamId?: number | string; risks?: { projectId?: string | number | null; risk?: string; mitigation?: string }[] };
+  const body = req.body as {
+    teamId?: number | string; reportKindId?: string;
+    risks?: { projectId?: string | number | null; risk?: string; mitigation?: string; rowVersion?: number }[];
+  };
   const teamId = parseTeamIdParam(body.teamId);
-  authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'weekly_report', action: 'render', scope: { teamId } });
+  const actor = actorFromRequest(req);
+  authorize({ actor, policyKind: 'team_feature', resource: 'weekly_report', action: 'render', scope: { teamId } });
   const risks = Array.isArray(body.risks) ? body.risks.map((r) => ({
     projectId: r.projectId == null || r.projectId === '' ? null : String(r.projectId),
     risk: String(r.risk || ''),
     mitigation: String(r.mitigation || ''),
+    rowVersion: r.rowVersion == null ? undefined : Number(r.rowVersion),
   })) : [];
+
+  if (body.reportKindId) {
+    // Cửa hậu ghi Risk (xem ghi chú SEC ở trên) — bắt buộc đúng quyền `upsert` (Leader-only) TRƯỚC khi
+    // đụng tới upsertProjectRisks(), không dựa vào quyền `render` chung đã kiểm ở trên.
+    authorize({ actor, policyKind: 'team_feature', resource: 'weekly_project_risk', action: 'upsert', scope: { teamId } });
+    const kind = findReportKindById(teamId, body.reportKindId);
+    if (!kind) return res.status(400).json({ message: 'reportKindId không hợp lệ' });
+    const persistable = risks
+      .filter((r) => r.projectId != null)
+      .map((r) => ({ projectId: Number(r.projectId), risk: r.risk, mitigation: r.mitigation, rowVersion: r.rowVersion }))
+      .filter((r) => Number.isInteger(r.projectId));
+    try {
+      upsertProjectRisks(teamId, weekStart, body.reportKindId, persistable, actor.userId);
+    } catch (error) {
+      if (error instanceof RiskVersionConflictError) {
+        return res.status(409).json({ message: 'Có Risk vừa bị người khác sửa, vui lòng tải lại', code: 'VERSION_CONFLICT', conflicts: error.conflicts });
+      }
+      if (error instanceof Error && /phai thuoc cung team_id/.test(error.message)) {
+        return res.status(400).json({ message: 'Có project không thuộc team này' });
+      }
+      return sendRouteError(res, error, 'Không lưu được Risk');
+    }
+  }
   res.json({ text: renderDmReport(weekStart, risks, teamId) });
 });
 

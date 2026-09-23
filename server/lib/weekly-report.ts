@@ -1,4 +1,5 @@
-import { db } from '../db.js';
+import { randomUUID } from 'node:crypto';
+import { db, withTransaction } from '../db.js';
 // Tiện ích ngày thuần (mondayOf/addDays/toISODate/taskOverlapsWeek) dùng chung nhiều tính năng —
 // tách sang server/lib/date.ts (kế hoạch Council run 022dd1e5, xem docs/exchanges/2026-09-12.md),
 // re-export tại đây để các nơi đang import từ file này không phải sửa lại đường dẫn.
@@ -466,24 +467,127 @@ function renderVnManagement(data: WeekData): string {
   return `${projectSummarySection(data, VI_LABELS)}${SECTION_SEP}${memberSection(data, VI_LABELS)}`;
 }
 
-// ── Registry các loại báo cáo (mở rộng được) ─────────────────────────────────────
+// ── Registry loại báo cáo — CR-20260913 Lát 5 (FR-22, Council 74715c65) ──────────────────────────
+// Danh sách loại báo cáo tuần giờ là CẤU HÌNH THEO TEAM (bảng weekly_report_kinds, Leader quản
+// mã/nhãn/thứ tự/bật-tắt/yêu cầu Risk), thay 2 giá trị ghi cứng cũ. `render_mode` VẪN là allowlist
+// ĐÓNG trong code (Leader không tự soạn được template/logic hiển thị mới qua API) — chỉ 2 giá trị ở
+// đây khớp đúng 2 hàm render đã có sẵn từ trước Lát 5, không đổi hành vi hiển thị.
+export const RENDER_MODES: Record<string, (data: WeekData) => string> = {
+  internal_markdown: renderInternal,
+  management_summary: renderVnManagement,
+};
+export const VALID_RENDER_MODES = new Set(Object.keys(RENDER_MODES));
 
-export interface ReportKind {
+export interface WeeklyReportKindRow {
   id: string;
+  team_id: number;
+  code: string;
   label: string;
-  lang: 'vi';
-  render: (data: WeekData) => string;
+  render_mode: string;
+  requires_project_risk: number;
+  sort_order: number;
+  is_active: number;
+  row_version: number;
+  created_at: string;
+  updated_at: string;
 }
 
-export const reportKinds: ReportKind[] = [
-  { id: 'internal', label: 'Nội bộ Dev13', lang: 'vi', render: renderInternal },
-  { id: 'vn_management', label: 'Báo cáo DM', lang: 'vi', render: renderVnManagement },
-];
+export function listReportKinds(teamId: number, opts: { onlyActive?: boolean } = {}): WeeklyReportKindRow[] {
+  const sql = opts.onlyActive
+    ? 'SELECT * FROM weekly_report_kinds WHERE team_id = ? AND is_active = 1 ORDER BY sort_order ASC, id ASC'
+    : 'SELECT * FROM weekly_report_kinds WHERE team_id = ? ORDER BY sort_order ASC, id ASC';
+  return db.prepare(sql).all(teamId) as unknown as WeeklyReportKindRow[];
+}
 
-export function renderReport(weekStart: string, kindId: string, teamId: number): string {
-  const kind = reportKinds.find((k) => k.id === kindId) || reportKinds[0];
+export function findReportKindById(teamId: number, id: string): WeeklyReportKindRow | undefined {
+  return db.prepare('SELECT * FROM weekly_report_kinds WHERE team_id = ? AND id = ?').get(teamId, id) as WeeklyReportKindRow | undefined;
+}
+
+export function findReportKindByCode(teamId: number, code: string): WeeklyReportKindRow | undefined {
+  return db.prepare('SELECT * FROM weekly_report_kinds WHERE team_id = ? AND code = ? COLLATE NOCASE').get(teamId, code) as WeeklyReportKindRow | undefined;
+}
+
+// Kind mặc định cho `renderReport()` khi caller không chỉ định — ưu tiên kind ĐANG BẬT có sort_order
+// nhỏ nhất, giữ đúng hành vi cũ (kind đầu tiên) khi team chưa từng đổi cấu hình.
+function defaultReportKind(teamId: number): WeeklyReportKindRow | undefined {
+  return listReportKinds(teamId, { onlyActive: true })[0];
+}
+
+export function renderReport(weekStart: string, kindCode: string, teamId: number): string {
+  const kind = (kindCode ? findReportKindByCode(teamId, kindCode) : undefined) || defaultReportKind(teamId);
+  const renderFn = (kind && RENDER_MODES[kind.render_mode]) || renderInternal;
   const data = buildWeekData(weekStart, teamId);
-  return kind.render(data);
+  return renderFn(data);
+}
+
+// ── Risk & biện pháp đối ứng theo team/tuần/loại/project (FR-22, FR-21a: hiện cho CẢ TEAM xem) ────
+export interface ProjectRiskRow {
+  id: string;
+  team_id: number;
+  week_start: string;
+  report_kind_id: string;
+  project_id: number;
+  risk: string;
+  mitigation: string;
+  row_version: number;
+}
+
+export function listProjectRisks(teamId: number, weekStart: string, reportKindId: string): ProjectRiskRow[] {
+  return db.prepare(`
+    SELECT * FROM weekly_project_risks WHERE team_id = ? AND week_start = ? AND report_kind_id = ? ORDER BY project_id ASC
+  `).all(teamId, weekStart, reportKindId) as unknown as ProjectRiskRow[];
+}
+
+// Ném ra khi 1 hoặc nhiều dòng Risk trong lô có `rowVersion` client gửi lên lệch với bản mới nhất
+// trong DB (người khác đã sửa trước) — route bắt lỗi này để trả 409 kèm danh sách projectId xung đột,
+// giống code 'VERSION_CONFLICT' đã dùng ở PATCH /weeks/report-kinds/:id.
+export class RiskVersionConflictError extends Error {
+  conflicts: number[];
+  constructor(conflicts: number[]) {
+    super('weekly_project_risks: row_version conflict');
+    this.name = 'RiskVersionConflictError';
+    this.conflicts = conflicts;
+  }
+}
+
+// Upsert TỪNG dòng theo unique (team_id, week_start, report_kind_id, project_id) — không xoá dòng
+// vắng mặt trong `risks` truyền vào (client có thể chỉ gửi project đang có nội dung, không phải toàn
+// bộ danh sách project của team).
+//
+// Optimistic concurrency (bổ sung cùng đợt soát lỗ hổng #2 FR-22): mỗi dòng risk ĐÃ TỒN TẠI phải kèm
+// đúng `rowVersion` đọc được từ GET/PUT gần nhất (client bỏ trống -> coi như -1, không khớp bất kỳ
+// row_version thật nào >= 1, buộc phải tải lại trước khi ghi — cùng quy ước `body.rowVersion ?? -1`
+// đã dùng ở PATCH /weeks/report-kinds/:id). Dòng CHƯA TỒN TẠI (insert lần đầu) không bị ảnh hưởng —
+// mệnh đề `WHERE` chỉ áp cho nhánh DO UPDATE, nhánh INSERT không có gì để đối chiếu.
+//
+// Toàn bộ lô chạy trong 1 transaction (withTransaction() có sẵn, dùng khắp code base) — 1 dòng bị
+// trigger DB từ chối (sai team) hoặc lệch rowVersion sẽ cuộn ngược TOÀN BỘ lô, không để lại ghi nửa
+// vời khi API trả lỗi.
+export function upsertProjectRisks(
+  teamId: number, weekStart: string, reportKindId: string,
+  risks: { projectId: number; risk: string; mitigation: string; rowVersion?: number }[], updatedBy: number
+): void {
+  withTransaction(() => {
+    const now = new Date().toISOString();
+    const upsert = db.prepare(`
+      INSERT INTO weekly_project_risks (id, team_id, week_start, report_kind_id, project_id, risk, mitigation, row_version, created_by, updated_by, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
+      ON CONFLICT(team_id, week_start, report_kind_id, project_id) DO UPDATE SET
+        risk = excluded.risk, mitigation = excluded.mitigation, row_version = row_version + 1,
+        updated_by = excluded.updated_by, updated_at = excluded.updated_at
+      WHERE weekly_project_risks.row_version = ?
+    `);
+    const conflicts: number[] = [];
+    for (const r of risks) {
+      const expectedVersion = r.rowVersion ?? -1;
+      const result = upsert.run(
+        randomUUID(), teamId, weekStart, reportKindId, r.projectId, r.risk || '', r.mitigation || '',
+        updatedBy, updatedBy, now, now, expectedVersion,
+      );
+      if (result.changes === 0) conflicts.push(r.projectId);
+    }
+    if (conflicts.length > 0) throw new RiskVersionConflictError(conflicts);
+  });
 }
 
 // ── Báo cáo DM kèm Risk ───────────────────────────────────────────────────────────

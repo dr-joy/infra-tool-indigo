@@ -31,12 +31,12 @@ function runChild(tmpAppData: string, action: 'set' | 'get'): { status: number; 
   return JSON.parse(out);
 }
 
-test('QA: secret.key bị mất giữa 2 lần khởi động -> GET /redmine/config KHÔNG được vỡ 500, phải coi như chưa có key', () => {
+test('QA: secret.key bị mất giữa 2 lần khởi động -> GET /me/redmine KHÔNG được vỡ 500, phải coi như chưa có key', () => {
   const tmpAppData = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-redmine-secretkey-itest-'));
   try {
     const setResult = runChild(tmpAppData, 'set');
-    assert.equal(setResult.status, 200);
-    assert.equal(setResult.body.coKey, true);
+    assert.equal(setResult.status, 200, JSON.stringify(setResult.body));
+    assert.equal(setResult.body.hasKey, true);
 
     const keyFile = path.join(tmpAppData, 'TaskManager', 'secret.key');
     assert.ok(fs.existsSync(keyFile), 'secret.key phải được tự sinh sau khi lưu API key lần đầu');
@@ -44,8 +44,8 @@ test('QA: secret.key bị mất giữa 2 lần khởi động -> GET /redmine/co
 
     const getResult = runChild(tmpAppData, 'get');
     assert.equal(getResult.status, 200, `phải trả 200 (coi như chưa có key), không được 500 — body: ${JSON.stringify(getResult.body)}`);
-    assert.equal(getResult.body.coKey, false, 'key cũ không giải mã lại được nữa -> coi như chưa cấu hình');
-    assert.equal(getResult.body.baseUrl, 'https://redmine.example.com', 'URL không mã hóa, vẫn phải giữ nguyên dù key bị mất');
+    assert.equal(getResult.body.hasKey, false, 'key cũ không giải mã lại được nữa -> coi như chưa cấu hình');
+    assert.equal(getResult.body.baseUrl, 'https://redmine.example.com', 'URL không mã hóa, vẫn phải giữ nguyên dù key bị mất (Admin cấu hình, tách khỏi khoá cá nhân)');
   } finally {
     fs.rmSync(tmpAppData, { recursive: true, force: true });
   }
