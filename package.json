@@ -17,7 +17,7 @@
     "backup-db": "node scripts/backup-db.mjs",
     "quiz:html-to-json": "node scripts/html-quiz-to-json.mjs",
     "test": "npm run test:server && npm run test:client",
-    "test:server": "node --import tsx --test \"test/unit/**/*.test.ts\" \"test/integration/**/*.test.ts\"",
+    "test:server": "node --import tsx --experimental-test-module-mocks --test \"test/unit/**/*.test.ts\" \"test/integration/**/*.test.ts\"",
     "test:client": "vitest run",
     "test:client:watch": "vitest"
   },
