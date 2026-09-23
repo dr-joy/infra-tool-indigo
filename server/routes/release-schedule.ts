@@ -176,6 +176,38 @@ function syncPersonalEmergencyTasksForRegistration(anchors: EmergencyRegistratio
   return updated;
 }
 
+// ── FR-26 bước 7 — registration chuyển cycle (đổi ngày release khác ngày cycle hiện tại): mọi task cá
+// nhân CHƯA hoàn thành & CHƯA qua ngày đã sinh cho đúng team+cycle CŨ phải "đi theo" registration sang
+// cycle MỚI — release_month MÃ HOÁ cycleReleaseKey (xem emergencyPersonalReleaseMonthKey ở
+// server/lib/release-schedule.ts), nên nếu không đổi tiền tố này thì các task đó sẽ mồ côi: mọi lần
+// sync/cancel về sau (FR-26 bước 5/6, đọc theo cycleReleaseKey CỦA CYCLE HIỆN TẠI) sẽ không còn tìm ra
+// chúng nữa vì chúng vẫn mang tiền tố ngày CŨ. Chỉ đổi TIỀN TỐ (nhóm), giữ nguyên phần đuôi
+// `user<id>:<locale>` và toàn bộ nội dung/giờ khác — việc re-render giờ/nội dung theo mỏ neo MỚI do
+// syncPersonalEmergencyTasksForRegistration() (gọi ngay sau hàm này) đảm nhiệm.
+// Task ĐÃ hoàn thành/đã huỷ/đã qua ngày GIỮ NGUYÊN release_month CŨ — không viết lại lịch sử, nhất quán
+// với quy tắc cascade huỷ ở FR-26 bước 6.
+function relocatePersonalEmergencyTasksForRegistration(oldCycleReleaseKey: string, newCycleReleaseKey: string, teamId: number, now: string): number {
+  const rawOldPrefix = emergencyPersonalReleaseMonthPrefix(oldCycleReleaseKey, teamId);
+  const rawNewPrefix = emergencyPersonalReleaseMonthPrefix(newCycleReleaseKey, teamId);
+  const likeOldPrefix = likeEscape(rawOldPrefix);
+  const todayVn = vietnamDateKey(new Date());
+  const rows = db.prepare(`
+    SELECT id, release_month FROM tasks
+    WHERE release_month LIKE ? ESCAPE '\\'
+      AND trang_thai NOT IN ('da_hoan_thanh', 'canceled')
+      AND (ngay_cu_the IS NULL OR ngay_cu_the >= ?)
+  `).all(`${likeOldPrefix}%`, todayVn) as { id: number; release_month: string }[];
+  const update = db.prepare('UPDATE tasks SET release_month = ? WHERE id = ?');
+  let moved = 0;
+  for (const row of rows) {
+    if (!row.release_month.startsWith(rawOldPrefix)) continue;
+    update.run(rawNewPrefix + row.release_month.slice(rawOldPrefix.length), row.id);
+    moved++;
+  }
+  void now;
+  return moved;
+}
+
 // ── FR-23a — đăng ký lịch release KHẨN CẤP của team mình ─────────────────────────────────────────
 router.post('/release/schedule/registrations', requireSession, requireActiveAccount, (req, res) => {
   try {
@@ -258,31 +290,50 @@ router.patch('/release/schedule/registrations/:id', requireSession, requireActiv
     const ticketNumbers = parseTicketNumbers(body.ticketNumbers);
     const { link, reason } = resolveJapanCoordination(body.japanCoordinationLink, body.noJapanCoordinationReason);
     const notes = typeof body.notes === 'string' ? body.notes : '';
-    // Đổi ngày release (khác ngày cycle hiện tại) -> chuyển sang cycle khác (FR-26 bước 7). Ngoài
-    // phạm vi route này (giữ route PATCH đơn giản, đúng 1 việc "sửa thông tin trong cùng đợt") — báo lỗi
-    // rõ ràng thay vì âm thầm để registration lệch khỏi cycle của chính nó.
+    // Đổi ngày release sang NGÀY khác ngày cycle hiện tại -> chuyển registration sang cycle của ngày mới
+    // (FR-26 bước 7, chốt 19/09 lần 13). Không còn chặn 400 ở đây nữa — xử lý chuyển cycle bên dưới.
     const newReleaseDateKey = wallClockDateKey(releaseAt);
-    const cycle = db.prepare('SELECT release_key FROM release_cycles WHERE id = ?').get(reg.cycle_id) as { release_key: string };
-    if (`emergency:${newReleaseDateKey}` !== cycle.release_key) {
-      throw new HttpError(400, 'Đổi sang NGÀY release khác đợt hiện tại chưa được hỗ trợ ở route này — huỷ đăng ký cũ và tạo đăng ký mới cho ngày mới');
-    }
+    const oldCycle = db.prepare('SELECT release_key FROM release_cycles WHERE id = ?').get(reg.cycle_id) as { release_key: string };
+    const isCycleTransfer = `emergency:${newReleaseDateKey}` !== oldCycle.release_key;
+    const oldReleaseDateKey = wallClockDateKey(reg.release_at);
 
     const now = new Date().toISOString();
     withTransaction(() => {
+      let targetCycleId = reg.cycle_id;
+      let targetCycleReleaseKey = oldCycle.release_key;
+
+      if (isCycleTransfer) {
+        // "y hệt lúc đăng ký lần đầu ở FR-25" (CR dòng ~766-770): tìm-hoặc-tạo cycle theo đúng ngày mới,
+        // rồi áp lại đúng 2 điều kiện chặn của POST /registrations — team đã có đăng ký cho cycle đó, hoặc
+        // cycle đó đang khoá (team "chưa từng có mặt" ở cycle mới phải đi đúng luồng xin mở khoá, nhất
+        // quán với FR-26 bước 8).
+        const newCycle = findOrCreateEmergencyCycle(db, newReleaseDateKey, actor.userId, now);
+        const alreadyInNewCycle = db.prepare('SELECT id FROM team_release_registrations WHERE cycle_id = ? AND team_id = ?')
+          .get(newCycle.id, reg.team_id);
+        if (alreadyInNewCycle) throw new HttpError(409, 'Team này đã có đăng ký cho ngày release mới', 'RELEASE_REGISTRATION_EXISTS');
+        const newCycleRow = db.prepare('SELECT locked_at FROM release_cycles WHERE id = ?').get(newCycle.id) as { locked_at: string | null };
+        if (newCycleRow.locked_at) {
+          throw new HttpError(409, 'Đợt release ngày mới đang khoá — team chưa từng có mặt phải chờ Leader điều phối mở khoá', 'REGISTRATION_LOCKED');
+        }
+        targetCycleId = newCycle.id;
+        targetCycleReleaseKey = newCycle.releaseKey;
+      }
+
       const updated = db.prepare(`
         UPDATE team_release_registrations
-        SET deploy_staging_at = ?, release_at = ?, deploy_demo_at = ?, affected_systems = ?, platforms = ?,
+        SET cycle_id = ?, deploy_staging_at = ?, release_at = ?, deploy_demo_at = ?, affected_systems = ?, platforms = ?,
             ticket_numbers = ?, japan_coordination_link = ?, no_japan_coordination_reason = ?, notes = ?,
             updated_at = ?, updated_by = ?, row_version = row_version + 1
         WHERE id = ? AND row_version = ?
       `).run(
-        deployStagingAt, releaseAt, deployDemoAt, JSON.stringify(affectedSystems), JSON.stringify(platforms),
+        targetCycleId, deployStagingAt, releaseAt, deployDemoAt, JSON.stringify(affectedSystems), JSON.stringify(platforms),
         JSON.stringify(ticketNumbers), link, reason, notes, now, actor.userId, id, body.rowVersion ?? -1
       );
       if (updated.changes === 0) throw new HttpError(409, 'Có người vừa sửa đăng ký này, vui lòng tải lại', 'VERSION_CONFLICT');
 
-      // Bất kỳ yêu cầu mở khoá nào đã được duyệt cho cycle này -> đợt đang ở "chế độ kỷ luật khoá lại
-      // khi lưu" (FR-26 bước 3-4): registration của CHÍNH team vừa lưu tự khoá lại ngay.
+      // Bất kỳ yêu cầu mở khoá nào đã được duyệt cho cycle CŨ (nơi registration này đang nằm trước khi
+      // PATCH này chạy) -> đợt đang ở "chế độ kỷ luật khoá lại khi lưu" (FR-26 bước 3-4): registration
+      // của CHÍNH team vừa lưu tự khoá lại ngay — giữ nguyên logic này kể cả khi PATCH cũng đổi cycle.
       const everApproved = db.prepare(`
         SELECT 1 FROM release_unlock_requests r JOIN team_release_registrations t ON t.id = r.registration_id
         WHERE t.cycle_id = ? AND r.kind = 'edit' AND r.status = 'approved' LIMIT 1
@@ -291,13 +342,30 @@ router.patch('/release/schedule/registrations/:id', requireSession, requireActiv
         db.prepare(`UPDATE team_release_registrations SET status = 'locked' WHERE id = ?`).run(id);
       }
 
-      reconcileConflictsForCycle(db, reg.cycle_id, now);
+      // Rà soát xung đột lại cả 2 cycle khi có chuyển cycle: cycle CŨ đóng nốt xung đột do registration
+      // này gây ra (nó không còn ở đó nữa — reconcileConflictsForCycle tự đóng cặp không còn xuất hiện
+      // trong danh sách hiện tại), cycle MỚI phát hiện xung đột mới nếu có team khác đã ở đó.
+      if (isCycleTransfer) reconcileConflictsForCycle(db, reg.cycle_id, now);
+      reconcileConflictsForCycle(db, targetCycleId, now);
+
+      let relocatedCount = 0;
+      if (isCycleTransfer) {
+        relocatedCount = relocatePersonalEmergencyTasksForRegistration(oldCycle.release_key, targetCycleReleaseKey, reg.team_id, now);
+      }
       const syncedCount = syncPersonalEmergencyTasksForRegistration({
-        teamId: reg.team_id, cycleId: reg.cycle_id, cycleReleaseKey: cycle.release_key,
+        teamId: reg.team_id, cycleId: targetCycleId, cycleReleaseKey: targetCycleReleaseKey,
         deployStagingAt, releaseAt, deployDemoAt
       }, now);
+
+      if (isCycleTransfer) {
+        writeAudit(actor.userId, reg.team_id, 'release_registration.cycle_transfer', `team_release_registration:${id}`, {
+          oldCycleId: reg.cycle_id, newCycleId: targetCycleId, oldReleaseDateKey, newReleaseDateKey,
+          reason: `Đổi ngày release từ ${oldReleaseDateKey} sang ${newReleaseDateKey}`,
+          relocatedPersonalTasks: relocatedCount
+        });
+      }
       writeAudit(actor.userId, reg.team_id, 'release_registration.update', `team_release_registration:${id}`, {
-        deployStagingAt, releaseAt, autoRelocked: Boolean(everApproved), syncedPersonalTasks: syncedCount
+        deployStagingAt, releaseAt, autoRelocked: Boolean(everApproved), syncedPersonalTasks: syncedCount, cycleTransferred: isCycleTransfer
       });
     });
     res.json(mapRegistrationFull(loadRegistrationRow(id)!));
