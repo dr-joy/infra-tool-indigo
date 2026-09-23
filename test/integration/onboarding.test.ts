@@ -352,6 +352,52 @@ test('POST .../approve: THIẾU rowVersion -> 409, KHÔNG được tự khớp v
   assert.equal(stillPending.status, 'pending', 'không được duyệt khi thiếu rowVersion');
 });
 
+// CR-20260913 §6.1 — FE cần biết "user pending này đã từng gửi đơn chưa" để dựng đúng màn ("Chọn team
+// và vai trò" hay "Đang chờ duyệt"). Route bổ sung nhỏ cho lượt frontend Giai đoạn 1 (không có route
+// nào khác trả về info này cho CHÍNH user, chỉ /admin/join-requests dành cho Admin).
+test('GET /onboarding/my-join-request: chưa từng gửi đơn -> joinRequest null', async () => {
+  const userSession = await loginAs('never-joined@drjoy.jp', 'Chưa từng xin team');
+  const res = await fetch(`${base}/api/onboarding/my-join-request`, { headers: cookieHeader(userSession) });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.joinRequest, null);
+});
+
+test('GET /onboarding/my-join-request: đã gửi đơn -> trả đúng team/vai trò đã xin', async () => {
+  const teamId = seedTeam('Team My-Join-Request');
+  const userSession = await loginAs('my-join-request@drjoy.jp', 'Đang chờ duyệt');
+  await fetch(`${base}/api/onboarding/join-request`, {
+    method: 'POST', headers: { ...cookieHeader(userSession), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ teamId, role: 'leader' })
+  });
+  const res = await fetch(`${base}/api/onboarding/my-join-request`, { headers: cookieHeader(userSession) });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.joinRequest.teamId, teamId);
+  assert.equal(body.joinRequest.teamName, 'Team My-Join-Request');
+  assert.equal(body.joinRequest.role, 'leader');
+});
+
+test('GET /onboarding/my-join-request: sau khi bị Admin từ chối (FR-3a) -> lại về null, không kẹt', async () => {
+  const teamId = seedTeam('Team My-Join-Request Rejected');
+  const adminSession = await loginAsAdmin();
+  const userSession = await loginAs('my-join-request-rejected@drjoy.jp', 'Bị từ chối');
+  await fetch(`${base}/api/onboarding/join-request`, {
+    method: 'POST', headers: { ...cookieHeader(userSession), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ teamId, role: 'member' })
+  });
+  const list = await (await fetch(`${base}/api/admin/join-requests`, { headers: cookieHeader(adminSession) })).json();
+  const jr = list.joinRequests[list.joinRequests.length - 1];
+  await fetch(`${base}/api/admin/join-requests/${jr.id}/reject`, {
+    method: 'POST', headers: { ...cookieHeader(adminSession), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rowVersion: jr.row_version })
+  });
+
+  const res = await fetch(`${base}/api/onboarding/my-join-request`, { headers: cookieHeader(userSession) });
+  const body = await res.json();
+  assert.equal(body.joinRequest, null, 'đơn đã rejected không còn là pending -> không hiện lại nữa');
+});
+
 test('FR-34: đánh dấu đã đọc chỉ áp dụng cho đúng chủ thông báo, đọc lại vẫn còn trong danh sách với read_at', async () => {
   const teamId = seedTeam('Team F');
   const adminSession = await loginAsAdmin();

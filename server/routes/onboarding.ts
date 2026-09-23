@@ -16,6 +16,29 @@ router.get('/teams', requireSession, (_req, res) => {
   res.json({ teams: rows });
 });
 
+// FE cần biết "user pending này đã từng gửi đơn xin tham gia team chưa" để dựng đúng màn (CR §6.1:
+// có đơn đang chờ -> "Đang chờ duyệt", hiện lại team/vai trò đã xin; chưa có/đã bị từ chối (FR-3a,
+// không phải khoá vĩnh viễn) -> "Chọn team và vai trò"). Không có route nào khác trả về thông tin
+// này cho CHÍNH user đó (chỉ có /admin/join-requests dành cho Admin) — bổ sung nhỏ, chỉ đọc, cùng
+// access class `onboarding` (chủ thể là chính user), giữ đúng unique index (user_id) WHERE
+// status='pending' -> tối đa 1 dòng.
+router.get('/onboarding/my-join-request', requireSession, (req, res) => {
+  const row = db.prepare(`
+    SELECT jr.id, jr.requested_team_id, jr.requested_role, t.name AS team_name
+    FROM join_requests jr JOIN teams t ON t.id = jr.requested_team_id
+    WHERE jr.user_id = ? AND jr.status = 'pending'
+  `).get(req.user!.id) as { id: number; requested_team_id: number; requested_role: string; team_name: string } | undefined;
+  if (!row) return res.json({ joinRequest: null });
+  res.json({
+    joinRequest: {
+      id: row.id,
+      teamId: row.requested_team_id,
+      teamName: row.team_name,
+      role: row.requested_role
+    }
+  });
+});
+
 interface JoinRequestBody {
   teamId?: number;
   role?: string;
