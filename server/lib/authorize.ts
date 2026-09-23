@@ -1,6 +1,6 @@
 import { db } from '../db.js';
 import { HttpError } from './utils.js';
-import { AUTHORIZATION_POLICY } from './authorization-policy.js';
+import { AUTHORIZATION_POLICY, type FeatureKey } from './authorization-policy.js';
 
 // Hàm authorize() — MỘT cổng vào duy nhất (FR-40), chốt qua Council `1aa7fe8b` + `f0a0e1bb` (xem
 // docs/exchanges/2026-09-19.md, 2026-09-21.md). Chạy SAU lớp 1 (phiên) + lớp 1.5 (trạng thái tài khoản)
@@ -130,6 +130,25 @@ function authorizePersonalTask(input: AuthorizeInput): AuthorizationDecision {
     if (row) return { viewerTeamId: null, effectiveRole: null, ownerOnly: true };
   }
   throw new HttpError(403, 'Bạn chưa thuộc team nào đang Bật chức năng này', 'FEATURE_DISABLED');
+}
+
+// Council review vòng 2 (CR-20260913 Lát 6, 2026-09-23) — lỗ hổng thật: authorizePersonalTask() ở trên
+// CỐ Ý kiểm "hợp của MỌI team actor thuộc về" (đúng chủ đích cho route CRUD template/definition cá
+// nhân — task cá nhân không gắn 1 team cụ thể, FR-31/FR-14). Nhưng 2 route sinh task cá nhân từ Release
+// (server/routes/release-schedule.ts: personal-emergency-tasks/personal-regular-tasks) THAO TÁC trên
+// đúng 1 `teamId` cụ thể (đọc registration/cycle của đúng team đó) — nếu chỉ gọi
+// authorizePersonalTask() (scope không có teamId) thì actor thuộc 1 team KHÁC đang Bật personal_task
+// vẫn qua được gate, dù personal_task đang TẮT cho đúng team đang thao tác. Hàm riêng này bắt chước
+// ĐÚNG khuôn bước 1 của authorizeTeamFeature() ở trên (cùng câu SQL) để kiểm feature Bật cho ĐÚNG 1
+// team — route tự gọi thêm hàm này SAU khi đã xác nhận actor là member của teamId đó, KHÔNG sửa hành
+// vi của authorizePersonalTask()/policyKind 'personal_task' (giữ nguyên cho mọi resource khác đang dùng
+// nó — release_template_personal/release_task_definition_personal/emergency_release_*_personal).
+export function assertTeamFeatureOn(teamId: number, feature: FeatureKey): void {
+  const row = db.prepare('SELECT level FROM team_feature_visibility WHERE team_id = ? AND feature = ?')
+    .get(teamId, feature) as { level: string } | undefined;
+  if (!row || row.level !== 'on') {
+    throw new HttpError(403, 'Chức năng này đang bị tắt cho team của bạn', 'FEATURE_DISABLED');
+  }
 }
 
 // policyKind: 'cross_team_release' (FR-24, và Lát 5 FR-32 dùng lại cho gate "đang thuộc ≥1 team Bật

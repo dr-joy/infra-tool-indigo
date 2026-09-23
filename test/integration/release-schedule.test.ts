@@ -46,19 +46,23 @@ async function setReleaseCoordinator(teamId: number): Promise<void> {
 const teamCoord = await onboarding.makeTeam(adminSession, '[itest] Team Dieu Phoi');
 const teamA = await onboarding.makeTeam(adminSession, '[itest] Team RS A');
 const teamB = await onboarding.makeTeam(adminSession, '[itest] Team RS B');
+const teamC = await onboarding.makeTeam(adminSession, '[itest] Team RS C');
 await onboarding.setFeatureVisibility(adminSession, teamCoord, 'release', 'on');
 await onboarding.setFeatureVisibility(adminSession, teamA, 'release', 'on');
 await onboarding.setFeatureVisibility(adminSession, teamB, 'release', 'on');
+await onboarding.setFeatureVisibility(adminSession, teamC, 'release', 'on');
 const coordLeader = await onboarding.joinAndApprove('rs-itest-coord@drjoy.jp', 'Leader Dieu Phoi', teamCoord, 'leader', adminSession);
 const leaderA = await onboarding.joinAndApprove('rs-itest-leaderA@drjoy.jp', 'Leader A', teamA, 'leader', adminSession);
 const memberA = await onboarding.joinAndApprove('rs-itest-memberA@drjoy.jp', 'Member A', teamA, 'member', adminSession);
 const leaderB = await onboarding.joinAndApprove('rs-itest-leaderB@drjoy.jp', 'Leader B', teamB, 'leader', adminSession);
+const leaderC = await onboarding.joinAndApprove('rs-itest-leaderC@drjoy.jp', 'Leader C', teamC, 'leader', adminSession);
 await setReleaseCoordinator(teamCoord);
 
 const coordHeaders = flow.H(coordLeader.session);
 const leaderAHeaders = flow.H(leaderA.session);
 const memberAHeaders = flow.H(memberA.session);
 const leaderBHeaders = flow.H(leaderB.session);
+const leaderCHeaders = flow.H(leaderC.session);
 
 after(async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
@@ -168,6 +172,103 @@ test('FR-25: 2 team cùng ngày khác giờ release -> xung đột "open" hiện
   assert.ok(cycleAfter.conflicts.some((c: any) => c.status === 'forced'));
   const regA = cycleAfter.registrations.find((r: any) => r.teamId === teamA);
   assert.equal(regA.releaseAt, '2026-10-10 16:00');
+});
+
+// ── FR-25 (Council review vòng 2, 2026-09-23) — hội tụ 3 team + không mất dấu xung đột ────────────
+// 3 team cùng ngày khác giờ release -> 3 cặp xung đột "open" (A-B, A-C, B-C). Ép dần từng cặp cho tới
+// khi hội tụ (không còn cặp nào "open", cả 3 registration cùng giờ). Trọng tâm: reconcileConflictsForCycle()
+// đọc code cho thấy nó chỉ so registration hiện tại với các dòng CONFLICT có status='open' (không quan
+// tâm dòng cũ đã 'forced'/'resolved') — nên nếu 1 registration vừa bị ép ở 1 pha (vd A-B) rồi sau đó bị
+// ép LẠI ở 1 pha khác không cùng đối tác (vd A-C, làm A trôi khỏi giá trị đã khớp với B) thì cặp A-B
+// phải tự phát sinh lại 1 dòng "open" MỚI — xác nhận đúng bằng thực nghiệm dưới đây, không chỉ đọc code
+// suy luận (R-CODE của dự án: không đoán hành vi chưa kiểm chứng thật).
+test('FR-25: 3 team cùng ngày khác giờ release -> ép dần từng cặp tới khi hội tụ, KHÔNG mất dấu xung đột', async () => {
+  const day = '2026-10-20';
+  const a = await req('POST', '/api/release/schedule/registrations', registrationBody({
+    deployStagingAt: { date: day, time: '13:00' }, releaseAt: { date: day, time: '15:00' }
+  }), leaderAHeaders);
+  assert.equal(a.status, 201, JSON.stringify(a.json));
+  const b = await req('POST', '/api/release/schedule/registrations', registrationBody({
+    teamId: teamB, deployStagingAt: { date: day, time: '13:00' }, releaseAt: { date: day, time: '16:00' }
+  }), leaderBHeaders);
+  assert.equal(b.status, 201, JSON.stringify(b.json));
+  const c = await req('POST', '/api/release/schedule/registrations', registrationBody({
+    teamId: teamC, deployStagingAt: { date: day, time: '13:00' }, releaseAt: { date: day, time: '17:00' }
+  }), leaderCHeaders);
+  assert.equal(c.status, 201, JSON.stringify(c.json));
+
+  async function loadCycle() {
+    const board = await req('GET', '/api/release/schedule-board', undefined, leaderAHeaders);
+    assert.equal(board.status, 200);
+    const cycle = (board.json.cycles as any[]).find((cy) => cy.releaseKey === `emergency:${day}`);
+    assert.ok(cycle, 'phải thấy cycle của ngày vừa đăng ký');
+    return cycle as { registrations: { id: number; teamId: number; releaseAt: string }[]; conflicts: { id: number; registration_a_id: number; registration_b_id: number; status: string }[] };
+  }
+  // 1 cặp registration có thể có NHIỀU dòng conflict theo thời gian (dòng cũ đã forced/resolved vẫn
+  // giữ lại làm lịch sử, dòng "open" mới phát sinh lại là 1 bản ghi RIÊNG — xem comment ở
+  // reconcileConflictsForCycle()/server/lib/release-schedule.ts) — trả về TOÀN BỘ để test tự chọn
+  // đúng dòng cần soi, không chỉ lấy dòng đầu tiên khớp.
+  function findConflicts(cycle: Awaited<ReturnType<typeof loadCycle>>, teamX: number, teamY: number) {
+    const regX = cycle.registrations.find((r) => r.teamId === teamX)!.id;
+    const regY = cycle.registrations.find((r) => r.teamId === teamY)!.id;
+    return cycle.conflicts.filter((cf) =>
+      (cf.registration_a_id === regX && cf.registration_b_id === regY) ||
+      (cf.registration_a_id === regY && cf.registration_b_id === regX)
+    );
+  }
+  function findOpenConflict(cycle: Awaited<ReturnType<typeof loadCycle>>, teamX: number, teamY: number) {
+    return findConflicts(cycle, teamX, teamY).find((cf) => cf.status === 'open');
+  }
+
+  let cycle = await loadCycle();
+  assert.equal(cycle.conflicts.filter((cf) => cf.status === 'open').length, 3, 'phải có đủ 3 cặp xung đột open ban đầu (A-B, A-C, B-C)');
+  const abInitial = findOpenConflict(cycle, teamA, teamB);
+  assert.ok(abInitial && findOpenConflict(cycle, teamA, teamC) && findOpenConflict(cycle, teamB, teamC), 'đủ 3 cặp đang open');
+
+  // Bước 1 — ép A-B về giờ trung gian 18:00 (khác cả C=17:00) -> A-B chuyển "forced" ngay; A-C, B-C vẫn
+  // "open" vì C chưa đổi giờ.
+  const force1 = await req('POST', `/api/release/schedule/conflicts/${abInitial!.id}/force-time`, {
+    deployStagingAt: { date: day, time: '13:00' }, releaseAt: { date: day, time: '18:00' }
+  }, coordHeaders);
+  assert.equal(force1.status, 200, JSON.stringify(force1.json));
+
+  cycle = await loadCycle();
+  assert.deepEqual(findConflicts(cycle, teamA, teamB).map((cf) => cf.status), ['forced'], 'A-B chuyển forced ngay sau khi ép, đúng 1 dòng');
+  assert.ok(findOpenConflict(cycle, teamA, teamC), 'A-C vẫn open — C chưa đổi giờ');
+  assert.ok(findOpenConflict(cycle, teamB, teamC), 'B-C vẫn open — C chưa đổi giờ');
+
+  // Bước 2 — ép A-C về 19:00 -> A và C cùng 19:00, nhưng B vẫn đứng ở 18:00 (từ bước 1) -> cặp A-B (đang
+  // "forced") LỆCH GIỜ TRỞ LẠI (A=19, B=18). reconcileConflictsForCycle() PHẢI tự tạo lại 1 dòng "open"
+  // MỚI cho đúng cặp A-B (dòng "forced" cũ vẫn giữ nguyên, không bị ghi đè/xoá) — đây là hành vi cốt lõi
+  // cần xác nhận bằng thực nghiệm, không chỉ đọc code suy luận.
+  const acId = findOpenConflict(cycle, teamA, teamC)!.id;
+  const force2 = await req('POST', `/api/release/schedule/conflicts/${acId}/force-time`, {
+    deployStagingAt: { date: day, time: '13:00' }, releaseAt: { date: day, time: '19:00' }
+  }, coordHeaders);
+  assert.equal(force2.status, 200, JSON.stringify(force2.json));
+
+  cycle = await loadCycle();
+  const abConflictsAfterStep2 = findConflicts(cycle, teamA, teamB);
+  assert.equal(abConflictsAfterStep2.length, 2, 'A-B phải có 2 dòng: dòng "forced" cũ (lịch sử) + 1 dòng "open" MỚI tự phát sinh do lệch giờ trở lại');
+  assert.deepEqual(abConflictsAfterStep2.map((cf) => cf.status).sort(), ['forced', 'open'], 'không được mất dấu — phải thấy cả dòng lịch sử lẫn dòng open mới');
+  const abAfterStep2 = abConflictsAfterStep2.find((cf) => cf.status === 'open')!;
+  assert.notEqual(abAfterStep2.id, abInitial!.id, 'dòng open mới phải là 1 bản ghi MỚI, khác id dòng đã forced trước đó');
+  assert.deepEqual(findConflicts(cycle, teamA, teamC).map((cf) => cf.status), ['forced'], 'A-C chuyển forced, đúng 1 dòng');
+  assert.ok(findOpenConflict(cycle, teamB, teamC), 'B-C vẫn open — B(18:00) vs C(19:00) vẫn lệch giờ');
+  assert.equal(findConflicts(cycle, teamB, teamC).length, 1, 'B-C chưa từng bị ép — vẫn đúng 1 dòng duy nhất từ đầu');
+
+  // Bước 3 — ép cặp A-B (dòng MỚI vừa được tạo lại) về đúng giờ đã khớp giữa A/C (19:00) -> hội tụ: cả 3
+  // registration cùng giờ, KHÔNG còn cặp nào open.
+  const force3 = await req('POST', `/api/release/schedule/conflicts/${abAfterStep2.id}/force-time`, {
+    deployStagingAt: { date: day, time: '13:00' }, releaseAt: { date: day, time: '19:00' }
+  }, coordHeaders);
+  assert.equal(force3.status, 200, JSON.stringify(force3.json));
+
+  cycle = await loadCycle();
+  assert.equal(cycle.conflicts.filter((cf) => cf.status === 'open').length, 0, 'phải hội tụ — không còn cặp nào open');
+  const times = new Set(cycle.registrations.map((r) => r.releaseAt));
+  assert.equal(times.size, 1, 'cả 3 registration phải cùng giờ release sau khi hội tụ');
+  assert.equal([...times][0], `${day} 19:00`);
 });
 
 // ── FR-24: lịch chung lọc field theo team sở hữu ────────────────────────────────────────────────

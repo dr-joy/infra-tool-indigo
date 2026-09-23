@@ -173,3 +173,50 @@ test('FR-26 bước 6: huỷ registration -> task cá nhân CHƯA hoàn thành t
   const doneTask = db.prepare('SELECT trang_thai FROM tasks WHERE origin_ref = ?').get(defDone.json.id) as { trang_thai: string };
   assert.equal(doneTask.trang_thai, 'da_hoan_thanh', 'task đã hoàn thành phải giữ nguyên làm lịch sử, không bị huỷ theo');
 });
+
+// ── Council review vòng 2 (2026-09-23) — lỗ hổng thật: authorize() policyKind 'personal_task' chỉ
+// kiểm actor thuộc ÍT NHẤT 1 team đang Bật personal_task (BẤT KỲ team nào), không lọc riêng đúng
+// `teamId` route đang thao tác. actor ở đây đã là Leader team A (personal_task đã Bật ở setup phía
+// trên) — thêm team B với personal_task TẮT (mặc định) nhưng Admin lỡ Bật autogen riêng cho B (2 bảng
+// độc lập, không có ràng buộc/cascade) để mô phỏng đúng kịch bản CR mô tả.
+test('Bảo mật: personal_task Bật cho team A (khác) nhưng TẮT cho team B -> sinh task khẩn cấp cho team B phải bị chặn dù autogen đang Bật cho B', async () => {
+  const teamB = await onboarding.makeTeam(adminSession, '[itest] Team B rieng - personal_task tat');
+  await onboarding.setFeatureVisibility(adminSession, teamB, 'release', 'on');
+  // KHÔNG bật personal_task cho teamB — giữ nguyên mặc định 'off' (schema backfill), mô phỏng đúng
+  // kịch bản CR: Admin bật autogen riêng cho B mà quên/chưa bật personal_task cho B.
+  const teamBLeader = await onboarding.joinAndApprove('rs-personal-emg-teamb-leader@drjoy.jp', 'Leader Team B rieng', teamB, 'leader', adminSession);
+
+  // actor (đã active, Leader team A) tham gia thêm team B với vai trò member — dùng đúng route thật
+  // team_member.create (Leader team B thêm actor vào), không chèn thẳng DB.
+  const addMember = await fetch(`${base}/api/teams/${teamB}/members`, {
+    method: 'POST', headers: flow.H(teamBLeader.session), body: JSON.stringify({ userId: actor.userId })
+  });
+  if (!addMember.ok) throw new Error(`thêm actor vào teamB thất bại: ${addMember.status}`);
+
+  // Admin lỡ bật autogen riêng cho team B dù personal_task đang tắt cho B.
+  const listAutogen = await (await fetch(`${base}/api/admin/release-task-autogen`, { headers: flow.H(adminSession) })).json() as
+    { settings: { team_id: number; row_version: number }[] };
+  const currentB = listAutogen.settings.find((s) => s.team_id === teamB);
+  const enableB = await fetch(`${base}/api/admin/release-task-autogen`, {
+    method: 'PUT', headers: flow.H(adminSession),
+    body: JSON.stringify({ teamId: teamB, enabled: true, rowVersion: currentB?.row_version })
+  });
+  if (!enableB.ok) throw new Error(`bật autogen cho teamB thất bại: ${enableB.status}`);
+
+  const day = '2026-10-29';
+  const created = await req('POST', '/api/release/schedule/registrations', {
+    teamId: teamB, deployStagingAt: { date: day, time: '13:00' }, releaseAt: { date: day, time: '15:00' },
+    affectedSystems: ['Dr.JOY'], platforms: ['Web'], noJapanCoordinationReason: 'khong co'
+  }, flow.H(teamBLeader.session));
+  assert.equal(created.status, 201, JSON.stringify(created.json));
+
+  // actor gọi sinh task cá nhân khẩn cấp cho TEAM B — gate chung policyKind 'personal_task' sẽ cho qua
+  // (actor đã thuộc team A đang Bật personal_task), nên cái CHẶN THẬT phải là kiểm riêng đúng teamB.
+  const r = await req('POST', '/api/release/schedule/personal-emergency-tasks', { teamId: teamB, cycleId: created.json.cycleId });
+  assert.equal(r.status, 403, JSON.stringify(r.json));
+  assert.equal(r.json.code, 'FEATURE_DISABLED');
+
+  const count = db.prepare("SELECT COUNT(*) as c FROM tasks WHERE release_month LIKE ?")
+    .get(`emergency:${day}:team${teamB}:user%`) as { c: number };
+  assert.equal(count.c, 0, 'không được sinh bất kỳ task cá nhân nào cho team B khi personal_task đang TẮT cho ĐÚNG team đó');
+});

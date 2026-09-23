@@ -219,3 +219,44 @@ test('CR §6.3 cảnh báo kỹ thuật: 2 cycle định kỳ CÙNG tháng dươ
   assert.equal(byCycleA!.ngay_cu_the, dateA);
   assert.equal(byCycleB!.ngay_cu_the, dateB);
 });
+
+// ── Council review vòng 2 (2026-09-23) — lỗ hổng thật: authorize() policyKind 'personal_task' chỉ
+// kiểm actor thuộc ÍT NHẤT 1 team đang Bật personal_task (BẤT KỲ team nào), không lọc riêng đúng
+// `teamId` route đang thao tác. actor ở đây đã thuộc teamWork (personal_task đã Bật ở setup phía
+// trên) — thêm teamC với personal_task TẮT (mặc định) nhưng Admin lỡ Bật autogen riêng cho C (2 bảng
+// độc lập, không có ràng buộc/cascade) để mô phỏng đúng kịch bản CR mô tả. Khác test "actor không
+// thuộc team -> NOT_TEAM_MEMBER" ở trên (dùng teamOutsider actor KHÔNG thuộc) — ở đây actor CÓ thuộc
+// teamC thật, nên phải bị chặn bởi đúng lớp kiểm feature riêng-team, không phải lớp kiểm thành viên.
+test('Bảo mật: personal_task Bật cho teamWork (khác) nhưng TẮT cho teamC -> sinh task định kỳ cho teamC phải bị chặn dù autogen đang Bật cho C', async () => {
+  const teamC = await onboarding.makeTeam(adminSession, '[itest] Team C rieng - personal_task tat');
+  // KHÔNG bật personal_task cho teamC — giữ nguyên mặc định 'off' (schema backfill).
+  const teamCLeader = await onboarding.joinAndApprove('rs-personal-regular-teamc-leader@drjoy.jp', 'Leader Team C rieng', teamC, 'leader', adminSession);
+
+  // actor (đã active, member teamWork) tham gia thêm teamC — dùng đúng route thật team_member.create.
+  const addMember = await fetch(`${base}/api/teams/${teamC}/members`, {
+    method: 'POST', headers: flow.H(teamCLeader.session), body: JSON.stringify({ userId: actor.userId })
+  });
+  if (!addMember.ok) throw new Error(`thêm actor vào teamC thất bại: ${addMember.status}`);
+
+  // Admin lỡ bật autogen riêng cho teamC dù personal_task đang tắt cho C.
+  const listAutogen = await (await fetch(`${base}/api/admin/release-task-autogen`, { headers: flow.H(adminSession) })).json() as
+    { settings: { team_id: number; row_version: number }[] };
+  const currentC = listAutogen.settings.find((s) => s.team_id === teamC);
+  const enableC = await fetch(`${base}/api/admin/release-task-autogen`, {
+    method: 'PUT', headers: flow.H(adminSession),
+    body: JSON.stringify({ teamId: teamC, enabled: true, rowVersion: currentC?.row_version })
+  });
+  if (!enableC.ok) throw new Error(`bật autogen cho teamC thất bại: ${enableC.status}`);
+
+  const cycleId = await makeRegularCycle('2026-12-26');
+
+  // actor gọi sinh task cá nhân định kỳ cho TEAM C — gate chung policyKind 'personal_task' sẽ cho qua
+  // (actor đã thuộc teamWork đang Bật personal_task), nên cái CHẶN THẬT phải là kiểm riêng đúng teamC.
+  const r = await req('POST', '/api/release/schedule/personal-regular-tasks', { teamId: teamC, cycleId });
+  assert.equal(r.status, 403, JSON.stringify(r.json));
+  assert.equal(r.json.code, 'FEATURE_DISABLED');
+
+  const count = db.prepare("SELECT COUNT(*) as c FROM tasks WHERE release_month = ?")
+    .get(`regular:cycle${cycleId}:user${actor.userId}`) as { c: number };
+  assert.equal(count.c, 0, 'không được sinh bất kỳ task cá nhân nào cho teamC khi personal_task đang TẮT cho ĐÚNG team đó');
+});

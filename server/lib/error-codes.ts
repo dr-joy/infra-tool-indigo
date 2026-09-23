@@ -65,7 +65,7 @@ export const ERROR_CODE_REGISTRY: Record<string, ErrorCodeEntry> = {
   },
   FEATURE_DISABLED: {
     status: 403,
-    note: 'authorize() policyKind=team_feature: team_feature_visibility(teamId, feature) đang off (CR-20260913 FR-7/§6.2 tầng 2)'
+    note: 'team_feature_visibility(teamId, feature) đang off (CR-20260913 FR-7/§6.2 tầng 2) — dùng ở authorize() policyKind=team_feature, VÀ ở assertTeamFeatureOn() (server/lib/authorize.ts, Council review vòng 2 Lát 6) cho 2 route sinh task cá nhân từ Release cần lọc riêng đúng 1 teamId cụ thể'
   },
   NOT_TEAM_MEMBER: {
     status: 403,

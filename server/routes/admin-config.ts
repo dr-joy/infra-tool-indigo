@@ -104,8 +104,12 @@ router.put('/admin/release-coordinator', requireSession, requireActiveAccount, (
 
 // ── GET/PUT /admin/release-task-autogen — bật/tắt riêng "Tab cá nhân" cho từng team (FR-28a) ────
 // Điều kiện bắt buộc (route KHÔNG tự enforce ở đây, chỉ báo rõ cho FE): chỉ có tác dụng khi Task cá
-// nhân (`personal_task`) đang Bật cho ĐÚNG team đó — kiểm tra thật nằm ở route sinh task cá nhân khẩn
-// cấp (server/routes/release-schedule.ts), vì đây là hành vi lúc DÙNG, không phải lúc CẤU HÌNH.
+// nhân (`personal_task`) đang Bật cho ĐÚNG team đó — kiểm tra thật nằm ở 2 route sinh task cá nhân
+// khẩn cấp/định kỳ (server/routes/release-schedule.ts, gọi assertTeamFeatureOn() từ
+// server/lib/authorize.ts), vì đây là hành vi lúc DÙNG, không phải lúc CẤU HÌNH. Vá lỗ hổng Council
+// review vòng 2 (2026-09-23): trước đó lời hứa này KHÔNG được thực hiện thật — 2 route đó chỉ kiểm
+// personal_task Bật cho MỘT team BẤT KỲ của actor (qua policyKind 'personal_task'), không lọc riêng
+// đúng teamId đang thao tác.
 router.get('/admin/release-task-autogen', requireSession, requireActiveAccount, (req, res) => {
   authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'release_task_autogen_setting', action: 'read', scope: {} });
   const rows = db.prepare(`

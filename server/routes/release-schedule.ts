@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { db, withTransaction } from '../db.js';
 import { HttpError, sendRouteError } from '../lib/utils.js';
 import { requireSession, requireActiveAccount, actorFromRequest } from '../lib/auth-middleware.js';
-import { authorize } from '../lib/authorize.js';
+import { authorize, assertTeamFeatureOn } from '../lib/authorize.js';
 import { writeAudit } from '../lib/audit.js';
 import { vietnamDateKey } from '../lib/vn-time.js';
 import { VALID_EMERGENCY_SYSTEMS } from './schedules.js';
@@ -610,6 +610,13 @@ router.post('/release/schedule/personal-emergency-tasks', requireSession, requir
     if (!actor.memberships.some((m) => m.teamId === teamId)) {
       throw new HttpError(403, 'Bạn không phải thành viên của team này', 'NOT_TEAM_MEMBER');
     }
+    // Council review vòng 2 — authorize() ở trên (policyKind 'personal_task') chỉ kiểm actor thuộc ÍT
+    // NHẤT 1 team đang Bật personal_task (BẤT KỲ team nào, đúng chủ đích cho route CRUD template/
+    // definition khác) — KHÔNG lọc riêng đúng `teamId` route này đang thao tác. Thêm kiểm RIÊNG ở đây
+    // (assertTeamFeatureOn(), bắt chước khuôn bước 1 của authorizeTeamFeature()) để đóng đúng lỗ hổng:
+    // actor thuộc team A (đã Bật) + team B (đã TẮT nhưng autogen Bật riêng cho B) không được sinh task
+    // cá nhân cho team B chỉ vì team A đang Bật.
+    assertTeamFeatureOn(teamId, 'personal_task');
     const autogen = db.prepare('SELECT enabled FROM team_release_task_autogen_settings WHERE team_id = ?').get(teamId) as { enabled: number } | undefined;
     if (!autogen || !autogen.enabled) throw new HttpError(403, 'Admin chưa bật Tab cá nhân cho team này', 'FEATURE_DISABLED');
 
@@ -707,6 +714,9 @@ router.post('/release/schedule/personal-regular-tasks', requireSession, requireA
     if (!actor.memberships.some((m) => m.teamId === teamId)) {
       throw new HttpError(403, 'Bạn không phải thành viên của team này', 'NOT_TEAM_MEMBER');
     }
+    // Council review vòng 2 — cùng lỗ hổng/cùng cách vá như route personal-emergency-tasks ở trên: gate
+    // chung của authorize() (policyKind 'personal_task') không lọc riêng đúng teamId này.
+    assertTeamFeatureOn(teamId, 'personal_task');
     const autogen = db.prepare('SELECT enabled FROM team_release_task_autogen_settings WHERE team_id = ?').get(teamId) as { enabled: number } | undefined;
     if (!autogen || !autogen.enabled) throw new HttpError(403, 'Admin chưa bật Tab cá nhân cho team này', 'FEATURE_DISABLED');
 
