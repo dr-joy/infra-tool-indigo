@@ -10,7 +10,8 @@ import {
 import { useLang } from '../useLang';
 import type { TranslationKey } from '../i18n';
 import { InfoTip, TimeInput } from '../ui';
-import { api, ApiError } from '../api';
+import { api, apiTeam, ApiError } from '../api';
+import { useActiveTeamId } from '../auth-context';
 import { Modal } from '../components/Modal';
 import { CopyNoteButton, TaskLinkIcon, TaskLinkBadges, TaskLinkEditor, SortIcon } from '../components/task-atoms';
 import { PopupTaoProjectTask, PopupXacNhanXoa } from '../components/dialogs';
@@ -178,6 +179,9 @@ function thuTrongTuanGantt(value: string) {
 
 export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?: boolean }) {
   const { t } = useLang();
+  // CR-20260913 FR-13 — mọi màn nghiệp vụ hiển thị theo đúng team đang chọn (server/routes/projects.ts
+  // §6.2: GET /projects, GET /projects/closed, POST /projects, PATCH /projects/reorder bắt buộc teamId).
+  const activeTeamId = useActiveTeamId();
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   // Cho phép deep-link tới 1 project qua ?project=<id>
   const [projectDangChon, setProjectDangChon] = useState(() => new URLSearchParams(window.location.search).get('project') || '');
@@ -245,9 +249,10 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
   }, [projectTasks]);
 
   async function taiProjects() {
+    if (activeTeamId == null) return;
     setDangTaiProject(true);
     try {
-      const data = await api<ProjectItem[]>('/api/projects');
+      const data = await apiTeam<ProjectItem[]>(activeTeamId, '/api/projects');
       setProjects(data);
       setProjectDangChon((current) => current && data.some((project) => project.id === current) ? current : data[0]?.id || '');
       setProjectError('');
@@ -261,21 +266,23 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
   // Badge 🎯 = mục tiêu của tuần có mục tiêu mới nhất, chưa 100%.
   // Báo đỏ = carry-over chưa xử lý (không được duyệt tiếp, chưa reschedule).
   async function taiBadgeIds() {
+    if (activeTeamId == null) return;
     try {
       const [goalIds, riskIds] = await Promise.all([
-        api<string[]>('/api/weeks/goal-badge-ids'),
-        api<string[]>('/api/weeks/at-risk-ids')
+        apiTeam<string[]>(activeTeamId, '/api/weeks/goal-badge-ids'),
+        apiTeam<string[]>(activeTeamId, '/api/weeks/at-risk-ids')
       ]);
       setGoalTaskIds(new Set(goalIds));
       setAtRiskTaskIds(new Set(riskIds));
     } catch { /* ignore */ }
   }
 
-  // Component này mount lại mỗi lần mở tab project nên badge luôn được làm mới
+  // Component này mount lại mỗi lần mở tab project nên badge luôn được làm mới. Thêm activeTeamId vào
+  // dependency (FR-13): đổi team ở bộ chọn phải tự nạp lại, KHÔNG tải lại trang.
   useEffect(() => {
     taiProjects();
     void taiBadgeIds();
-  }, []);
+  }, [activeTeamId]);
 
   useEffect(() => {
     if (!projectDangChon) {
@@ -287,7 +294,8 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
   }, [projectDangChon]);
 
   async function taoProject(project: ProjectCreateBody) {
-    const newProject = await api<ProjectItem>('/api/projects', {
+    if (activeTeamId == null) throw new Error('Chưa chọn team hiện tại');
+    const newProject = await apiTeam<ProjectItem>(activeTeamId, '/api/projects', {
       method: 'POST',
       body: JSON.stringify(project)
     });
@@ -356,9 +364,10 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
       .filter((project): project is ProjectItem => Boolean(project));
     if (nextProjects.length !== projects.length) return;
 
+    if (activeTeamId == null) return;
     setProjects(nextProjects);
     try {
-      const data = await api<ProjectItem[]>('/api/projects/reorder', {
+      const data = await apiTeam<ProjectItem[]>(activeTeamId, '/api/projects/reorder', {
         method: 'PATCH',
         body: JSON.stringify({ projectIds })
       });
@@ -585,10 +594,11 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
   }
 
   async function taiClosedProjects() {
+    if (activeTeamId == null) return;
     setDangTaiClosedProjects(true);
     setClosedProjectsError('');
     try {
-      const data = await api<ProjectItem[]>('/api/projects/closed');
+      const data = await apiTeam<ProjectItem[]>(activeTeamId, '/api/projects/closed');
       setClosedProjects(data);
     } catch (error) {
       setClosedProjectsError(error instanceof Error ? error.message : t('err.closed_projects'));

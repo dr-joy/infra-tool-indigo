@@ -16,7 +16,8 @@ import { CopyNoteButton, TaskLinkBadges, TaskLinkEditor, SortIcon } from '../com
 import { PopupTaoProjectTask } from '../components/dialogs';
 import { useToast } from '../context';
 import { Modal } from '../components/Modal';
-import { api } from '../api';
+import { api, apiTeam } from '../api';
+import { useActiveTeamId } from '../auth-context';
 import type {
   LoaiTask, TrangThai, TaskLink, Task, ProjectItem, ProjectTaskItem, ProjectTaskCreateBody,
   DuLieuDashboard, SortState
@@ -1287,6 +1288,9 @@ function PopupThemTaskNhanh({
 }) {
   const { t } = useLang();
   const toast = useToast();
+  // Task cá nhân (FR-31/FR-14) tự nó không gắn team gì — nhưng khu "chuyển thành task project" trong
+  // popup này gọi thẳng route GET /api/projects (CR §6.2), nay bắt buộc teamId (FR-13).
+  const activeTeamId = useActiveTeamId();
   const [mode, setMode] = useState<'personal' | 'project'>('personal');
   const [loaiTask, setLoaiTask] = useState<LoaiTask>('don_le');
   const [tenTask, setTenTask] = useState('');
@@ -1329,8 +1333,9 @@ function PopupThemTaskNhanh({
   }, [moDropdownThu]);
 
   useEffect(() => {
+    if (activeTeamId == null) { setProjects([]); return; }
     let alive = true;
-    api<ProjectItem[]>('/api/projects')
+    apiTeam<ProjectItem[]>(activeTeamId, '/api/projects')
       .then((data) => {
         if (!alive) return;
         setProjects(data);
@@ -1340,7 +1345,7 @@ function PopupThemTaskNhanh({
         if (alive) setProjectError(error instanceof Error ? error.message : t('err.project_list'));
       });
     return () => { alive = false; };
-  }, [t]);
+  }, [t, activeTeamId]);
 
   useEffect(() => {
     if (!selectedProjectId) {
