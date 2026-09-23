@@ -44,6 +44,9 @@ import { ManHinhBaoCaoTuan } from './screens/weekly';
 import { ManHinhQuanLyDanhMuc } from './screens/settings';
 import { ManHinhTaskCaNhan, type ManHinhTaskCaNhanHandle } from './screens/personal-task';
 import { PicProvider, ToastProvider, useToast } from './context';
+import { AuthProvider } from './auth-context';
+import { AuthShell } from './screens/auth-shell';
+import { TeamSwitcher } from './components/team-switcher';
 import { ApiError } from './api';
 import {
   VIETNAM_TIME_ZONE, dateTimePartsInVietnam, congNgayInput, congThangInput,
@@ -143,8 +146,8 @@ export function App() {
               </button>
             ))}
           </div>
-          {tabDangMo === 'task_ca_nhan' && supportsBrowserNotifications() && notificationPermission !== 'granted' && (
-            <div className="menu-tab-actions">
+          <div className="menu-tab-actions">
+            {tabDangMo === 'task_ca_nhan' && supportsBrowserNotifications() && notificationPermission !== 'granted' && (
               <button
                 className="nut-phu"
                 disabled={notificationPermission === 'denied'}
@@ -154,8 +157,11 @@ export function App() {
                 <Bell size={18} />
                 {notificationPermission === 'denied' ? t('header.notify_blocked') : t('header.notify_enable')}
               </button>
-            </div>
-          )}
+            )}
+            {/* CR-20260913 FR-13 — bộ chọn team, góc trên cạnh tên người dùng (kiểu chuyển workspace
+                Slack/Notion), chuyển ngay không tải lại trang. */}
+            <TeamSwitcher />
+          </div>
         </nav>
 
         <ManHinhTaskCaNhan
@@ -224,6 +230,19 @@ export function App() {
 const rootEl = document.getElementById('root');
 if (rootEl) {
   createRoot(rootEl).render(
-    <LangProvider><PicProvider><ToastProvider><App /></ToastProvider></PicProvider></LangProvider>
+    // CR-20260913 (nền tảng đa người dùng) — AuthProvider bọc ngoài cùng (trừ LangProvider): mọi
+    // Provider/màn hình bên trong đều có thể cần biết trạng thái đăng nhập/team đang chọn. AuthShell
+    // tự quyết định hiện màn nào theo `phase` (logged_out/disabled/pending/active/...) — chỉ khi
+    // active mới mount PicProvider + App thật (PicProvider cần activeTeamId từ AuthContext, xem
+    // src/context.tsx).
+    <LangProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <AuthShell>
+            <PicProvider><App /></PicProvider>
+          </AuthShell>
+        </ToastProvider>
+      </AuthProvider>
+    </LangProvider>
   );
 }
