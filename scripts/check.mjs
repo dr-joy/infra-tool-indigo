@@ -98,15 +98,6 @@ chay('BE error-code registry', 'node scripts/check-error-codes.mjs');
 // DELETE theo `ten_task`. Rule "không match theo tên" chỉ có người gác thì sẽ lại lọt.
 chay('Đồng bộ release không match theo tên', 'node scripts/check-release-sync.mjs');
 
-// ── 5f. Exe còn khớp code không (bài học L-009) ──────────────────────────────
-// Sửa xong + commit + push mà quên `npm run package` thì app người dùng vẫn là bản cũ — với họ là
-// CHƯA SỬA. Cảnh báo, không chặn: lúc đang code thì exe cũ là bình thường.
-kiem('Exe khớp code chạy thật', () => {
-  const out = execSync('node scripts/check-exe-fresh.mjs', { cwd: root, encoding: 'utf8' });
-  process.stdout.write(out);
-  return out.includes('⚠'); // true -> đánh dấu '!' ở bảng tổng kết
-});
-
 // ── 6. File nguồn quên `git add` ─────────────────────────────────────────────
 // Máy này có sẵn mọi file trên đĩa nên test vẫn xanh dù bạn quên add — đây đúng là lớp lỗi
 // mà CI trên máy sạch sẽ bắt được. Không có CI thì kiểm thủ công ở đây.

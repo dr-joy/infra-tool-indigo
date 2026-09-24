@@ -183,7 +183,7 @@ governance: nguyên tắc bất di bất dịch, RACI (mục 7), hợp đồng b
 | **⑤ Bàn giao để test** | Dev → Tester | Commit trên nhánh + test của Dev + specs cập nhật | Build+test xanh; **đã tự soi `git diff` toàn bộ thay đổi**; commit message ghi `Ref: CR-… (FR-x)` + cách thử. Không dùng PR — [ADR-P1](#adr-p1--không-dùng-pull-request-merge-thẳng-main) |
 | **⑥ Cổng hạ tầng** | Infra review | [security §9](security-standard.md) + [performance §6](performance-standard.md) | Không phá baseline; trong budget; nợ được ghi |
 | **⑦ Nghiệm thu** | Tester → **BA** | Kết quả chạy qua **từng AC** + ca lỗi/biên | BA xác nhận **đạt yêu cầu gốc**; bug đã có test tái hiện |
-| **⑧ Chốt & ship** | BA → Leader → **người dùng** | Docs `01–09` cập nhật, CR → "Đã nghiệm thu", **exe đã đóng gói lại** | Không nợ doc; quyết định phát sinh có ADR; **đụng `server/`/`src/` thì `npm run package` + bật lại `TaskManager.exe`** — commit+push chưa phải đã giao, người dùng chạy exe chứ không chạy repo (`L-009`) |
+| **⑧ Chốt & ship** | BA → Leader → **người dùng** | Docs `01–09` cập nhật, CR → "Đã nghiệm thu" | Không nợ doc; quyết định phát sinh có ADR. (Trước 24/09 cổng này còn bắt buộc `npm run package` + bật lại `TaskManager.exe` mỗi lần đụng `server/`/`src/` — `L-009` — Leader đã chủ động bỏ, xem [delivery/README.md §5b cập nhật 2026-09-24](../delivery/README.md#5b-sổ-sai-lệch--bài-học-lesson)) |
 
 **Quy tắc bàn giao:** mỗi lần giao đính kèm *artifact* + *một câu tóm tắt "cái này làm gì, kiểm thế nào"*. Người nhận **xác nhận hiểu** (tick cổng) trước khi bắt đầu.
 
