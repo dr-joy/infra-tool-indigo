@@ -342,6 +342,12 @@ router.delete('/projects/:projectId', requireSession, requireActiveAccount, (req
 
   try {
     withTransaction(() => {
+      // BL-20260924-004: weekly_project_risks.project_id là FK cứng NOT NULL (không ON DELETE) —
+      // để sót dù chỉ 1 dòng (kể cả tuần đã qua) là DB chặn thẳng xoá project bằng lỗi FK, khác
+      // weekly_goals (FK mềm, không chặn) nên không áp dụng được nguyên tắc "chỉ dọn tuần hiện
+      // tại/tương lai, giữ tuần đã qua làm hồ sơ" đang dùng khi xoá 1 task project (xem hàm xoá
+      // task project ở dưới) — project không còn tồn tại thì Risk gắn với nó không thể giữ lại.
+      db.prepare('DELETE FROM weekly_project_risks WHERE project_id = ?').run(projectId);
       db.prepare('DELETE FROM project_tasks WHERE project_id = ?').run(projectId);
       db.prepare('DELETE FROM projects WHERE id = ?').run(projectId);
       writeAudit(actor.userId, project.team_id, 'project.delete', `project:${projectId}`, { projectId });
