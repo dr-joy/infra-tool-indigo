@@ -19,14 +19,23 @@ RUN npm run build
 
 FROM node:24-slim AS runtime
 WORKDIR /app
+# DATA_DIR=/data/app (không phải /data): server/lib/secret.ts đặt secret.key ở dirname(DATA_DIR)
+# = /data/secret.key — nằm TRONG volume /data, không bị sinh key mới mỗi lần recreate container
+# (BL-20260921-003).
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=4000 \
-    DATA_DIR=/data \
-    ENABLE_LUYEN_DE=false
+    DATA_DIR=/data/app \
+    ENABLE_LUYEN_DE=false \
+    TZ=Asia/Ho_Chi_Minh
+
+# Chạy user không root UID 1001 — cùng UID với infra-tool-be/fe để quadlet dùng
+# UserNS=keep-id:uid=1001 giống nhau.
+RUN groupadd -g 1001 app && useradd -u 1001 -g app -M -s /usr/sbin/nologin app \
+ && mkdir -p /data/app && chown -R app:app /data
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev && npm cache clean --force
 
 COPY server ./server
 COPY --from=builder /app/dist ./dist
@@ -36,9 +45,13 @@ COPY --from=builder /app/dist ./dist
 # trắng ngay (không thay thế việc hạ tầng cấp ổ bền thật, xem README).
 VOLUME ["/data"]
 
+USER app
+
 EXPOSE 4000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||4000)+'/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
-CMD ["npm", "start"]
+# Gọi node trực tiếp (không qua `npm start`): node là PID 1 nhận thẳng SIGTERM từ
+# `systemctl stop` → chạy đúng luồng graceful shutdown ở server/index.ts.
+CMD ["node", "--import", "tsx", "server/index.ts"]
