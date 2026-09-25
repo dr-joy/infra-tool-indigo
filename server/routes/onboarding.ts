@@ -83,6 +83,10 @@ router.post('/onboarding/join-request', requireSession, (req, res) => {
       const now = new Date().toISOString();
 
       if (newTeamName) {
+        // Kiểm trước: để UNIQUE(teams.name) rơi xuống catch bên dưới sẽ bị báo nhầm thành "đã có đơn chờ".
+        if (db.prepare('SELECT 1 FROM teams WHERE name = ?').get(newTeamName)) {
+          throw new HttpError(409, 'Tên team này đã tồn tại — chọn team có sẵn hoặc đặt tên khác');
+        }
         teamId = provisionTeam(db, newTeamName, null, now);
       }
 

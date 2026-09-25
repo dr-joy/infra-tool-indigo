@@ -243,6 +243,25 @@ describe('ManHinhAdmin — mục Tài khoản', () => {
     await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.url === '/api/admin/users/3/demote-admin')).toBe(true));
     expect(calls.find((c) => c.url === '/api/admin/users/3/demote-admin')?.body).toMatchObject({ rowVersion: 1 });
   });
+
+  it('Admin thứ 2 đã bị khoá không tính -> Admin active duy nhất vẫn không hạ quyền được; user pending không có nút Gán quyền Admin', async () => {
+    baseFetchMock({
+      'GET /api/admin/users': () => jsonResponse({
+        users: [
+          ...USERS,
+          { id: 3, email: 'admin2@drjoy.jp', display_name: 'Admin Bị Khoá', avatar: null, status: 'disabled', system_role: 'admin', row_version: 1, created_at: '', last_login_at: null },
+          { id: 4, email: 'moi@drjoy.jp', display_name: 'Người Chờ Duyệt', avatar: null, status: 'pending', system_role: 'user', row_version: 1, created_at: '', last_login_at: null }
+        ]
+      })
+    });
+    renderAdmin();
+    fireEvent.click(screen.getByRole('button', { name: 'Tài khoản' }));
+    await waitFor(() => expect(screen.getByText('Người Chờ Duyệt')).toBeInTheDocument());
+
+    expect(within(screen.getByText('Admin Thật').closest('tr')!).getByRole('button', { name: 'Hạ quyền Admin' })).toBeDisabled();
+    expect(within(screen.getByText('Admin Bị Khoá').closest('tr')!).getByRole('button', { name: 'Hạ quyền Admin' })).not.toBeDisabled();
+    expect(within(screen.getByText('Người Chờ Duyệt').closest('tr')!).queryByRole('button', { name: 'Gán quyền Admin' })).toBeNull();
+  });
 });
 
 describe('ManHinhAdmin — mục Nhật ký', () => {

@@ -641,7 +641,7 @@ function AdminUsers() {
     }
   }
 
-  const soAdmin = items.filter((u) => u.system_role === 'admin').length;
+  const soAdminHoatDong = items.filter((u) => u.system_role === 'admin' && u.status === 'active').length;
 
   if (loading) return <div className="p-4 text-sm text-slate-400">Đang tải…</div>;
 
@@ -689,21 +689,24 @@ function AdminUsers() {
                         </button>
                       )}
                       <button type="button" className={btnSecondary} disabled={busyId === u.id} onClick={() => thuHoiPhien(u)}>Thu hồi phiên</button>
-                      {u.system_role === 'admin' ? (
-                        <button
-                          type="button"
-                          className={btnDanger}
-                          disabled={busyId === u.id || soAdmin <= 1}
-                          title={soAdmin <= 1 ? 'Đây là Admin cuối cùng — gán thêm Admin khác trước khi hạ quyền' : undefined}
-                          onClick={() => doiQuyenAdmin(u, 'demote')}
-                        >
-                          Hạ quyền Admin
-                        </button>
-                      ) : (
+                      {u.system_role === 'admin' ? (() => {
+                        const laAdminCuoi = u.status === 'active' && soAdminHoatDong <= 1;
+                        return (
+                          <button
+                            type="button"
+                            className={btnDanger}
+                            disabled={busyId === u.id || laAdminCuoi}
+                            title={laAdminCuoi ? 'Đây là Admin cuối cùng còn hoạt động — gán thêm Admin khác trước khi hạ quyền' : undefined}
+                            onClick={() => doiQuyenAdmin(u, 'demote')}
+                          >
+                            Hạ quyền Admin
+                          </button>
+                        );
+                      })() : u.status === 'active' ? (
                         <button type="button" className={btnSecondary} disabled={busyId === u.id} onClick={() => doiQuyenAdmin(u, 'promote')}>
                           Gán quyền Admin
                         </button>
-                      )}
+                      ) : null}
                     </div>
                   </td>
                 </tr>

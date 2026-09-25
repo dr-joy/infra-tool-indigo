@@ -390,3 +390,94 @@ test('FR-1: /users/me timeout -> vẫn đăng nhập được, dùng tạm email
   const me = await (await fetch(`${base}/api/auth/me`, { headers: { Cookie: `__Host-tm_session=${sessionCookie}` } })).json();
   assert.equal(me.user.email, email, 'email fallback lấy từ claim JWT khi /users/me không trả lời được');
 });
+
+// ── Gán/hạ quyền Admin (docs/exchanges/2026-09-25.md) ────────────────────────────────
+async function activeUser(adminHeader: string, email: string, name: string): Promise<{ header: string; id: number }> {
+  const { sessionCookie } = await loginAs(email, name);
+  const header = `__Host-tm_session=${sessionCookie}`;
+  const me = await (await fetch(`${base}/api/auth/me`, { headers: { Cookie: header } })).json();
+  const team = await (await fetch(`${base}/api/admin/teams`, {
+    method: 'POST', headers: { Cookie: adminHeader, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: `Team ${email} ${Date.now()}` })
+  })).json();
+  await fetch(`${base}/api/onboarding/join-request`, {
+    method: 'POST', headers: { Cookie: header, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ teamId: team.id, role: 'member' })
+  });
+  const list = await (await fetch(`${base}/api/admin/join-requests`, { headers: { Cookie: adminHeader } })).json();
+  const jr = list.joinRequests.find((r: { user_id: number }) => r.user_id === me.user.id);
+  const ok = await fetch(`${base}/api/admin/join-requests/${jr.id}/approve`, {
+    method: 'POST', headers: { Cookie: adminHeader, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rowVersion: jr.row_version })
+  });
+  assert.equal(ok.status, 200);
+  return { header, id: me.user.id };
+}
+
+function rowVersionOf(id: number): number {
+  return (db.prepare('SELECT row_version FROM users WHERE id = ?').get(id) as { row_version: number }).row_version;
+}
+
+function adminPost(adminHeader: string, id: number, action: string) {
+  return fetch(`${base}/api/admin/users/${id}/${action}`, {
+    method: 'POST', headers: { Cookie: adminHeader, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rowVersion: rowVersionOf(id) })
+  });
+}
+
+test('promote-admin: tài khoản còn pending -> 409, không mở lối tự duyệt/tự lập team của Admin bootstrap', async () => {
+  const adminHeader = `__Host-tm_session=${(await loginAsAdmin()).sessionCookie}`;
+  const { sessionCookie } = await loginAs('pending-promote@drjoy.jp', 'Chưa duyệt');
+  const me = await (await fetch(`${base}/api/auth/me`, { headers: { Cookie: `__Host-tm_session=${sessionCookie}` } })).json();
+
+  const res = await adminPost(adminHeader, me.user.id, 'promote-admin');
+  assert.equal(res.status, 409);
+  const row = db.prepare('SELECT system_role FROM users WHERE id = ?').get(me.user.id) as { system_role: string };
+  assert.equal(row.system_role, 'user');
+});
+
+test('LAST_ADMIN: Admin bị khoá không tính — hạ/khoá Admin cuối còn active bị chặn; còn 2 Admin active thì hạ được', async () => {
+  const adminHeader = `__Host-tm_session=${(await loginAsAdmin()).sessionCookie}`;
+  const adminId = (await (await fetch(`${base}/api/auth/me`, { headers: { Cookie: adminHeader } })).json()).user.id;
+  const second = await activeUser(adminHeader, 'second-admin@drjoy.jp', 'Admin thứ hai');
+
+  assert.equal((await adminPost(adminHeader, second.id, 'promote-admin')).status, 200);
+  assert.equal((await adminPost(adminHeader, second.id, 'disable')).status, 200);
+
+  const selfDemote = await adminPost(adminHeader, adminId, 'demote-admin');
+  assert.equal(selfDemote.status, 409);
+  assert.equal((await selfDemote.json()).code, 'LAST_ADMIN');
+  const selfDisable = await adminPost(adminHeader, adminId, 'disable');
+  assert.equal(selfDisable.status, 409);
+  assert.equal((await selfDisable.json()).code, 'LAST_ADMIN');
+
+  assert.equal((await adminPost(adminHeader, second.id, 'enable')).status, 200);
+  assert.equal((await adminPost(adminHeader, second.id, 'demote-admin')).status, 200);
+  const row = db.prepare('SELECT system_role FROM users WHERE id = ?').get(second.id) as { system_role: string };
+  assert.equal(row.system_role, 'user');
+});
+
+test('Admin đang pending gõ trùng tên team có sẵn -> 409 báo đúng "tên team đã tồn tại", không báo nhầm "đã có đơn chờ"', async () => {
+  const adminHeader = `__Host-tm_session=${(await loginAsAdmin()).sessionCookie}`;
+  const teamName = `Team trùng tên ${Date.now()}`;
+  await fetch(`${base}/api/admin/teams`, {
+    method: 'POST', headers: { Cookie: adminHeader, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: teamName })
+  });
+  // Mô phỏng Admin đang pending (chỉ Admin bootstrap mới có trạng thái này ngoài đời thật).
+  const { sessionCookie } = await loginAs('pending-admin-dup@drjoy.jp', 'Admin pending');
+  const header = `__Host-tm_session=${sessionCookie}`;
+  const me = await (await fetch(`${base}/api/auth/me`, { headers: { Cookie: header } })).json();
+  db.prepare("UPDATE users SET system_role = 'admin' WHERE id = ?").run(me.user.id);
+
+  const res = await fetch(`${base}/api/onboarding/join-request`, {
+    method: 'POST', headers: { Cookie: header, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ newTeamName: teamName, role: 'member' })
+  });
+  assert.equal(res.status, 409);
+  const body = await res.json();
+  assert.notEqual(body.code, 'JOIN_REQUEST_PENDING_EXISTS');
+  assert.match(body.message, /đã tồn tại/);
+  const status = db.prepare('SELECT status FROM users WHERE id = ?').get(me.user.id) as { status: string };
+  assert.equal(status.status, 'pending', 'lỗi phải rollback, vẫn còn nguyên lượt pending');
+  db.prepare("UPDATE users SET system_role = 'user' WHERE id = ?").run(me.user.id);
+});

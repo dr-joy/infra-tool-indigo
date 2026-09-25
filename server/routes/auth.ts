@@ -214,6 +214,20 @@ router.get('/admin/users', requireSession, requireActiveAccount, (req, res) => {
 
 // disable/enable tách 2 route riêng (không gộp PATCH .../status) — khớp CR §6.2 đã chốt: đây là 2
 // resource.action riêng trong AUTHORIZATION_POLICY, có thể sau này cấp quyền khác nhau (Council f0a0e1bb).
+// Chỉ Admin ĐANG HOẠT ĐỘNG mới duyệt được gì — Admin bị khoá/đang chờ không tính khi giữ bất biến
+// "luôn còn ≥1 Admin", nếu không thì khoá/hạ nốt người cuối vẫn lọt khi còn 1 Admin đã bị khoá.
+function assertNotLastActiveAdmin(targetId: number) {
+  const target = db.prepare('SELECT system_role, status FROM users WHERE id = ?').get(targetId) as
+    { system_role: string; status: string } | undefined;
+  if (!target) throw new HttpError(404, 'Không tìm thấy tài khoản');
+  if (target.system_role !== 'admin' || target.status !== 'active') return;
+  const activeAdmins = (db.prepare("SELECT COUNT(*) as n FROM users WHERE system_role = 'admin' AND status = 'active'")
+    .get() as { n: number }).n;
+  if (activeAdmins <= 1) {
+    throw new HttpError(409, 'Đây là Admin cuối cùng còn hoạt động — phải gán thêm ít nhất 1 Admin khác trước', 'LAST_ADMIN');
+  }
+}
+
 function setUserStatus(status: 'active' | 'disabled') {
   return (req: import('express').Request, res: import('express').Response) => {
     const id = Number(req.params.id);
@@ -221,6 +235,7 @@ function setUserStatus(status: 'active' | 'disabled') {
     if (!Number.isInteger(id)) return res.status(400).json({ message: 'id không hợp lệ' });
     try {
       withTransaction(() => {
+        if (status === 'disabled') assertNotLastActiveAdmin(id);
         const result = db.prepare(`
           UPDATE users SET status = ?, row_version = row_version + 1 WHERE id = ? AND row_version = ?
         `).run(status, id, body.rowVersion ?? -1);
@@ -275,6 +290,13 @@ router.post('/admin/users/:id/promote-admin', requireSession, requireActiveAccou
   if (!Number.isInteger(id)) return res.status(400).json({ message: 'id không hợp lệ' });
   try {
     withTransaction(() => {
+      // Chỉ tài khoản đã active: Admin đang 'pending' được server coi là Admin bootstrap (tự duyệt đơn,
+      // tự lập team ở server/routes/onboarding.ts) — không được mở lối đó cho user chưa được duyệt.
+      const target = db.prepare('SELECT status FROM users WHERE id = ?').get(id) as { status: string } | undefined;
+      if (!target) throw new HttpError(404, 'Không tìm thấy tài khoản');
+      if (target.status !== 'active') {
+        throw new HttpError(409, 'Chỉ gán quyền Admin cho tài khoản đang hoạt động (đã được duyệt vào team, không bị khoá)');
+      }
       const result = db.prepare(`
         UPDATE users SET system_role = 'admin', row_version = row_version + 1 WHERE id = ? AND row_version = ?
       `).run(id, body.rowVersion ?? -1);
@@ -296,12 +318,7 @@ router.post('/admin/users/:id/demote-admin', requireSession, requireActiveAccoun
   if (!Number.isInteger(id)) return res.status(400).json({ message: 'id không hợp lệ' });
   try {
     withTransaction(() => {
-      const adminCount = (db.prepare("SELECT COUNT(*) as n FROM users WHERE system_role = 'admin'").get() as { n: number }).n;
-      const target = db.prepare('SELECT system_role FROM users WHERE id = ?').get(id) as { system_role: string } | undefined;
-      if (!target) throw new HttpError(404, 'Không tìm thấy tài khoản');
-      if (target.system_role === 'admin' && adminCount <= 1) {
-        throw new HttpError(409, 'Đây là Admin cuối cùng — phải gán thêm ít nhất 1 Admin khác trước khi hạ quyền người này', 'LAST_ADMIN');
-      }
+      assertNotLastActiveAdmin(id);
       const result = db.prepare(`
         UPDATE users SET system_role = 'user', row_version = row_version + 1 WHERE id = ? AND row_version = ?
       `).run(id, body.rowVersion ?? -1);

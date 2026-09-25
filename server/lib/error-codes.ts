@@ -105,6 +105,6 @@ export const ERROR_CODE_REGISTRY: Record<string, ErrorCodeEntry> = {
   },
   LAST_ADMIN: {
     status: 409,
-    note: 'Hạ quyền Admin (POST /admin/users/:id/demote-admin) khi đây là Admin cuối cùng — chặn cứng, phải gán thêm Admin khác trước (docs/exchanges/2026-09-25.md)'
+    note: 'Hạ quyền (POST /admin/users/:id/demote-admin) hoặc khoá (POST /admin/users/:id/disable) Admin cuối cùng còn active — chặn cứng, phải gán thêm Admin khác trước (docs/exchanges/2026-09-25.md)'
   }
 };
