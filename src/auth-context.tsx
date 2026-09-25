@@ -40,6 +40,9 @@ export interface MyTeam {
   name: string;
   description: string | null;
   role: TeamRole;
+  // Feature (personal_task/project/weekly_report/release/mind_map) đang 'on' cho team này — FE dùng
+  // để ẩn hẳn tab tương ứng thay vì hiện tab rồi mới báo lỗi FEATURE_DISABLED bên trong.
+  features: string[];
 }
 
 export interface JoinRequestInfo {

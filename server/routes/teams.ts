@@ -133,14 +133,32 @@ router.post('/admin/teams/:id/leader', requireSession, requireActiveAccount, (re
 });
 
 // ── GET /me/teams — actor tự xem team mình thuộc, kèm role ─────────────────────────
+// Kèm `features` (danh sách feature đang 'on' của team đó) — FE dùng để ẩn hẳn tab thay vì hiện tab
+// rồi mới báo lỗi 403 FEATURE_DISABLED bên trong (đọc được: chỉ giới hạn ở team actor ĐÃ là thành
+// viên, không phải toàn bộ team_feature_visibility như /admin/feature-visibility — không nới quyền).
 router.get('/me/teams', requireSession, requireActiveAccount, (req, res) => {
   authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'team_member', action: 'list_own', scope: {} });
   const rows = db.prepare(`
     SELECT t.id, t.name, t.description, tm.role
     FROM team_members tm JOIN teams t ON t.id = tm.team_id
     WHERE tm.user_id = ? ORDER BY t.name
-  `).all(req.user!.id);
-  res.json({ teams: rows });
+  `).all(req.user!.id) as { id: number; name: string; description: string | null; role: string }[];
+
+  const teamIds = rows.map((r) => r.id);
+  const featuresByTeam = new Map<number, string[]>();
+  if (teamIds.length > 0) {
+    const placeholders = teamIds.map(() => '?').join(',');
+    const onRows = db.prepare(`
+      SELECT team_id, feature FROM team_feature_visibility WHERE level = 'on' AND team_id IN (${placeholders})
+    `).all(...teamIds) as { team_id: number; feature: string }[];
+    for (const row of onRows) {
+      const list = featuresByTeam.get(row.team_id) ?? [];
+      list.push(row.feature);
+      featuresByTeam.set(row.team_id, list);
+    }
+  }
+
+  res.json({ teams: rows.map((r) => ({ ...r, features: featuresByTeam.get(r.id) ?? [] })) });
 });
 
 // ── GET /admin/teams/:id/members — Admin xem roster để chọn Leader mới (Giai đoạn 2 FE, FR-10) ──────

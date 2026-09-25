@@ -1,4 +1,4 @@
-﻿import { lazy, Suspense, useCallback, useState } from 'react';
+﻿import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useRef } from 'react';
 import { useLayoutEffect } from 'react';
@@ -87,6 +87,19 @@ const tabsChinh: { key: TabChinh; i18nKey: TranslationKey }[] = [
   { key: 'admin', i18nKey: 'tab.admin' }
 ];
 
+// 2026-09-25: tab nào ứng với 1 feature trong team_feature_visibility (CR-20260913 FR-7) thì đưa vào
+// đây — team mới (provisionTeam) mặc định TẮT cả 5 feature này. Tab KHÔNG có mặt ở map (luyen_de,
+// quan_ly_pic, quan_ly_team, admin) không bị gate theo team, giữ nguyên logic hiện có. Trước đây các
+// tab này vẫn hiện, bấm vào mới thấy lỗi "Chức năng này đang bị tắt cho team của bạn" (403
+// FEATURE_DISABLED từ server) — giờ ẩn hẳn nút, không để user bấm vào rồi mới biết.
+const TAB_FEATURE: Partial<Record<TabChinh, string>> = {
+  task_ca_nhan: 'personal_task',
+  project: 'project',
+  bao_cao_tuan: 'weekly_report',
+  len_lich: 'release',
+  so_do: 'mind_map'
+};
+
 
 
 // Bản sao nhỏ, cố ý trùng với hàm cùng tên trong screens/personal-task.tsx: shell cần hàm này cho
@@ -101,17 +114,35 @@ function supportsBrowserNotifications() {
 // §8.3 — không được lấy unit test reducer/store làm thay cho việc chưa từng render `main.tsx`).
 export function App() {
   const { t } = useLang();
-  const { actor } = useAuth();
+  const { actor, myTeams, activeTeamId } = useAuth();
   const laAdmin = actor?.systemRole === 'admin';
-  // Tab 'admin' chỉ hiện/mở được cho Admin — lọc cả lúc hiện nút LẪN lúc nhận ?tab=admin từ URL, để
-  // không ai mở thẳng bằng URL rồi thấy màn admin render lỗi 403 rải rác (main.tsx tabsChinh giữ đủ
-  // mọi key cho phím tắt/URL nhận diện, tabsHienThi mới là danh sách thật sự render nút + cho phép mở).
-  const tabsHienThi = tabsChinh.filter((tab) => tab.key !== 'admin' || laAdmin);
+  // Feature đang 'on' của team đang chọn (FR-7) — team mới mặc định tắt cả 5, xem TAB_FEATURE.
+  const activeTeam = myTeams.find((team) => team.id === activeTeamId);
+  const enabledFeatures = new Set(activeTeam?.features ?? []);
+  // Tab 'admin' chỉ hiện/mở được cho Admin; tab có trong TAB_FEATURE chỉ hiện khi feature tương ứng
+  // đang 'on' cho team đang chọn — lọc cả lúc hiện nút LẪN lúc nhận ?tab=... từ URL, để không ai mở
+  // thẳng bằng URL rồi thấy màn render lỗi 403 rải rác (tabsChinh giữ đủ mọi key cho phím tắt/URL nhận
+  // diện, tabsHienThi mới là danh sách thật sự render nút + cho phép mở).
+  const tabsHienThi = tabsChinh.filter((tab) => {
+    if (tab.key === 'admin' && !laAdmin) return false;
+    const feature = TAB_FEATURE[tab.key];
+    if (feature && !enabledFeatures.has(feature)) return false;
+    return true;
+  });
   // Cho phép mở thẳng tab qua URL: ?tab=project / len_lich / bao_cao_tuan
   const [tabDangMo, setTabDangMo] = useState<TabChinh>(() => {
     const fromUrl = new URLSearchParams(window.location.search).get('tab');
     return tabsHienThi.some((tab) => tab.key === fromUrl) ? (fromUrl as TabChinh) : 'task_ca_nhan';
   });
+  // Đổi team (TeamSwitcher) có thể làm tab đang mở biến mất khỏi tabsHienThi (feature team mới tắt) —
+  // tự chuyển về tab đầu tiên còn hiện, không để lại màn trống không ai bấm được.
+  const tabsHienThiKeys = tabsHienThi.map((tab) => tab.key).join(',');
+  useEffect(() => {
+    if (!tabsHienThi.some((tab) => tab.key === tabDangMo) && tabsHienThi.length > 0) {
+      setTabDangMo(tabsHienThi[0].key);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabsHienThiKeys]);
   // Chặn chuyển tab khi MindMap có thay đổi chưa lưu.
   const toast = useToast();
   const mmGuard = useRef<{ dirty: boolean; luu: () => Promise<void> } | null>(null);
@@ -185,21 +216,24 @@ export function App() {
 
         <ManHinhTaskCaNhan
           ref={personalTaskRef}
-          active={tabDangMo === 'task_ca_nhan'}
+          active={tabDangMo === 'task_ca_nhan' && enabledFeatures.has('personal_task')}
           notificationPermission={notificationPermission}
         />
 
-        {tabDangMo === 'project' && (
+        {/* Chốt kép cùng enabledFeatures (không chỉ ẩn nút ở nav) — cùng lý do đã áp cho tab 'admin'
+            bên dưới: phòng trường hợp tabDangMo còn sót lại đúng 1 tick trước khi effect đổi team tự
+            chuyển tab (xem tabsHienThiKeys ở trên), không để lọt 1 tick render nội dung tab đã tắt. */}
+        {tabDangMo === 'project' && enabledFeatures.has('project') && (
           <ManHinhProject openGanttOnMount />
         )}
 
-        {tabDangMo === 'len_lich' && (
+        {tabDangMo === 'len_lich' && enabledFeatures.has('release') && (
           <Suspense fallback={<div className="p-6 text-sm">{t('loading.data')}</div>}>
             <ManHinhLenLich onTasksCreated={(date) => personalTaskRef.current?.refresh(date) ?? Promise.resolve()} />
           </Suspense>
         )}
 
-        {tabDangMo === 'bao_cao_tuan' && (
+        {tabDangMo === 'bao_cao_tuan' && enabledFeatures.has('weekly_report') && (
           <ManHinhBaoCaoTuan />
         )}
 
@@ -213,7 +247,7 @@ export function App() {
           </Suspense>
         )}
 
-        {tabDangMo === 'so_do' && (
+        {tabDangMo === 'so_do' && enabledFeatures.has('mind_map') && (
           <Suspense fallback={<div className="p-6 text-sm">{t('loading.data')}</div>}>
             <ManHinhMindMap toast={toast} guardRef={mmGuard} />
           </Suspense>
