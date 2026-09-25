@@ -114,21 +114,23 @@ describe('ManHinhAdmin — mục Team', () => {
 });
 
 describe('ManHinhAdmin — mục Hiển thị chức năng', () => {
-  it('bấm toggle Bật/Tắt gọi đúng PATCH kèm team/feature/level/rowVersion', async () => {
+  it('bấm toggle dạng switch gọi đúng PATCH kèm team/feature/level/rowVersion', async () => {
     const calls = baseFetchMock();
     renderAdmin();
     fireEvent.click(screen.getByRole('button', { name: 'Hiển thị chức năng' }));
-    await waitFor(() => expect(screen.getAllByText('Bật').length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Task cá nhân — Dev5' })).toBeInTheDocument());
 
-    // Dev5 x personal_task đang 'on' -> bấm nút "Bật" đầu tiên (Dev5 hàng đầu, cột personal_task) để tắt.
-    const rows = screen.getAllByRole('row');
-    const dev5Row = rows.find((r) => within(r).queryByText('Dev5'));
-    expect(dev5Row).toBeTruthy();
-    fireEvent.click(within(dev5Row!).getByText('Bật'));
+    // Dev5 x personal_task đang 'on' -> bấm để tắt.
+    const switchEl = screen.getByRole('switch', { name: 'Task cá nhân — Dev5' });
+    expect(switchEl).toHaveAttribute('aria-checked', 'true');
+    fireEvent.click(switchEl);
 
     await waitFor(() => expect(calls.some((c) => c.method === 'PATCH' && c.url === '/api/admin/feature-visibility')).toBe(true));
     const call = calls.find((c) => c.method === 'PATCH' && c.url === '/api/admin/feature-visibility');
     expect(call?.body).toMatchObject({ teamId: 1, feature: 'personal_task', level: 'off', rowVersion: 1 });
+
+    // Dev5 x project đang 'off' -> đúng aria-checked="false".
+    expect(screen.getByRole('switch', { name: 'Project — Dev5' })).toHaveAttribute('aria-checked', 'false');
   });
 });
 
