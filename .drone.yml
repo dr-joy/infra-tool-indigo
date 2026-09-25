@@ -1,0 +1,59 @@
+# CI/CD: Drone CI — Cần khai báo secret trong Drone (Settings → Secrets):
+#   dockerconfigjson  — push image lên docker-hub.drjoy.vn
+#   ssh-private-key   — SSH vào server deploy (user svcs)
+kind: pipeline
+type: docker
+name: infra-tool-indigo
+
+steps:
+  # 2026-09-25: bỏ `npm test` khỏi cổng CI (Leader quyết định — bộ test tích hợp quá chậm trên
+  # runner ít CPU của Drone, ~22 phút/lần dù đã giới hạn concurrency ở package.json). Vẫn giữ
+  # `npm run build` (tsc --noEmit + vite build) làm cổng nhanh chặn lỗi cú pháp/type cơ bản trước
+  # deploy — KHÔNG còn gì chặn lỗi logic/bảo mật nữa, `npm test` vẫn phải tự chạy tay
+  # (`npm run check`) trước khi push nếu muốn chắc chắn.
+  - name: typecheck
+    image: node:24-slim
+    commands:
+      - npm ci
+      - npm run build
+    when:
+      event:
+        - push
+        - pull_request
+
+  - name: build
+    image: plugins/kaniko
+    settings:
+      repo: docker-hub.drjoy.vn/infra-tool/indigo
+      tags: ['${DRONE_BUILD_NUMBER}', 'latest']
+      dockerfile: Dockerfile
+      context: .
+      config:
+        from_secret: dockerconfigjson
+    when:
+      event:
+        - push
+
+  - name: deploy
+    image: appleboy/drone-ssh
+    settings:
+      host: 192.168.4.7
+      port: 22
+      username: svcs
+      key:
+        from_secret: ssh-private-key
+      script:
+        - /home/svcs/.config/containers/systemd/infra/restart-service.sh ${DRONE_REPO_NAME} ${DRONE_BUILD_NUMBER}
+    when:
+      event:
+        - push
+
+image_pull_secrets:
+  - dockerconfigjson
+
+trigger:
+  branch:
+    - master
+  event:
+    - push
+    - pull_request

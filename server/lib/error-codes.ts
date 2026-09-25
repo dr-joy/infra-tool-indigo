@@ -51,6 +51,10 @@ export const ERROR_CODE_REGISTRY: Record<string, ErrorCodeEntry> = {
     status: 400,
     note: 'Cookie login_nonce thiếu/hết hạn lúc /auth/callback — vá lỗ hổng login-CSRF thật (CR-20260913 FR-1)'
   },
+  AUTH_CALLBACK_INVALID: {
+    status: 400,
+    note: 'Thiếu access_token/refresh_token trên query /auth/callback — flow "legacy" thật của auth.drjoy.vn (đổi 25/09 từ flow "code" giả định ban đầu, xem docs/exchanges/2026-09-25.md)'
+  },
   JOIN_REQUEST_PENDING_EXISTS: {
     status: 409,
     note: 'User đã có 1 đơn xin tham gia team đang chờ duyệt (unique index (user_id) WHERE status=pending)'
@@ -98,5 +102,9 @@ export const ERROR_CODE_REGISTRY: Record<string, ErrorCodeEntry> = {
   REGULAR_CYCLE_NOT_FOUND: {
     status: 404,
     note: 'CR-20260913 Lát 6 (FR-28a nhánh Định kỳ): cycleId gửi lên không khớp release_cycles kind=regular status=open nào — chọn lại đợt, không tự đoán'
+  },
+  LAST_ADMIN: {
+    status: 409,
+    note: 'Hạ quyền Admin (POST /admin/users/:id/demote-admin) khi đây là Admin cuối cùng — chặn cứng, phải gán thêm Admin khác trước (docs/exchanges/2026-09-25.md)'
   }
 };

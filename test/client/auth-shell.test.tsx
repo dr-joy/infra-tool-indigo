@@ -46,6 +46,33 @@ describe('AuthShell — luồng onboarding (FR-2/FR-3/FR-3a)', () => {
     expect(screen.getByText('Member')).toBeInTheDocument();
   });
 
+  it('2026-09-25: Admin bootstrap pending + chưa có team nào -> tự bật "Tự lập team mới", gửi kèm newTeamName', async () => {
+    let submittedBody: unknown = null;
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input), 'http://localhost');
+      if (url.pathname === '/api/auth/me') {
+        return jsonResponse({ user: { id: 1, email: 'admin@drjoy.jp', displayName: 'Admin Thật', avatar: null, status: 'pending', systemRole: 'admin', memberships: [] } });
+      }
+      if (url.pathname === '/api/onboarding/my-join-request') return jsonResponse({ joinRequest: null });
+      if (url.pathname === '/api/teams') return jsonResponse({ teams: [] });
+      if (url.pathname === '/api/onboarding/join-request' && init?.method === 'POST') {
+        submittedBody = JSON.parse(String(init.body));
+        return jsonResponse({ id: 1, autoApproved: true }, 201);
+      }
+      return jsonResponse({ message: `unmocked ${url.pathname}` }, 404);
+    }) as unknown as typeof fetch;
+
+    render(<AuthProvider><AuthShell><div>App thật</div></AuthShell></AuthProvider>);
+
+    await waitFor(() => expect(screen.getByText('Chọn team và vai trò')).toBeInTheDocument());
+    // Team rỗng + là Admin -> tự bật radio "Tự lập team mới", không còn dropdown chọn team để chờ nạp.
+    await waitFor(() => expect(screen.getByPlaceholderText('Ví dụ: Dev13')).toBeInTheDocument());
+    fireEvent.change(screen.getByPlaceholderText('Ví dụ: Dev13'), { target: { value: 'Team của Admin' } });
+    fireEvent.submit(screen.getByRole('button', { name: /Tạo và tham gia/ }).closest('form')!);
+
+    await waitFor(() => expect(submittedBody).toMatchObject({ newTeamName: 'Team của Admin', role: 'member' }));
+  });
+
   it('active -> render children (app thật), không hiện màn onboarding nào', async () => {
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = new URL(String(input), 'http://localhost');

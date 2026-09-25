@@ -624,6 +624,25 @@ function AdminUsers() {
     }
   }
 
+  // 2026-09-25 (docs/exchanges/2026-09-25.md) — gán/hạ quyền Admin cho nhau.
+  async function doiQuyenAdmin(u: UserRow, action: 'promote' | 'demote') {
+    setBusyId(u.id);
+    setError('');
+    try {
+      await api(`/api/admin/users/${u.id}/${action === 'promote' ? 'promote-admin' : 'demote-admin'}`, {
+        method: 'POST', body: JSON.stringify({ rowVersion: u.row_version })
+      });
+      await tai();
+      toast(action === 'promote' ? 'Đã gán quyền Admin' : 'Đã hạ quyền Admin');
+    } catch (e) {
+      setError(loiThanThien(e));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  const soAdmin = items.filter((u) => u.system_role === 'admin').length;
+
   if (loading) return <div className="p-4 text-sm text-slate-400">Đang tải…</div>;
 
   return (
@@ -670,6 +689,21 @@ function AdminUsers() {
                         </button>
                       )}
                       <button type="button" className={btnSecondary} disabled={busyId === u.id} onClick={() => thuHoiPhien(u)}>Thu hồi phiên</button>
+                      {u.system_role === 'admin' ? (
+                        <button
+                          type="button"
+                          className={btnDanger}
+                          disabled={busyId === u.id || soAdmin <= 1}
+                          title={soAdmin <= 1 ? 'Đây là Admin cuối cùng — gán thêm Admin khác trước khi hạ quyền' : undefined}
+                          onClick={() => doiQuyenAdmin(u, 'demote')}
+                        >
+                          Hạ quyền Admin
+                        </button>
+                      ) : (
+                        <button type="button" className={btnSecondary} disabled={busyId === u.id} onClick={() => doiQuyenAdmin(u, 'promote')}>
+                          Gán quyền Admin
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

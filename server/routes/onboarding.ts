@@ -4,6 +4,7 @@ import { HttpError, sendRouteError } from '../lib/utils.js';
 import { requireSession, requireActiveAccount, actorFromRequest } from '../lib/auth-middleware.js';
 import { authorize } from '../lib/authorize.js';
 import { writeAudit } from '../lib/audit.js';
+import { provisionTeam } from '../lib/team-provisioning.js';
 
 // FR-2/FR-3/FR-3a — chọn team lúc đăng nhập lần đầu, Admin duyệt/từ chối, không cấp quyền nghiệp vụ
 // nào cho tới khi được duyệt (users.status chuyển active). `teams`/`team_members` ở đây là bản kéo
@@ -41,9 +42,18 @@ router.get('/onboarding/my-join-request', requireSession, (req, res) => {
 
 interface JoinRequestBody {
   teamId?: number;
+  newTeamName?: string;
   role?: string;
 }
 
+// 2026-09-25 (docs/exchanges/2026-09-25.md) — Admin bootstrap giờ cũng phải `pending` và đi qua đúng
+// màn "Chọn team và vai trò" như user thường (trước đây bootstrap set 'active' ngay, bỏ qua bước này).
+// 2 điểm KHÁC user thường, chỉ áp dụng khi actor CHÍNH LÀ Admin đang pending (tại thời điểm này chắc
+// chắn là Admin bootstrap — không có đường nào khác để có system_role='admin' mà vẫn pending):
+//   1. Được gửi `newTeamName` thay cho `teamId` để tự lập team đầu tiên (hệ thống mới tinh chưa có team
+//      nào để chọn) — user thường KHÔNG được, giữ đúng FR-2 "không tự tạo team".
+//   2. Đơn tự động DUYỆT NGAY trong cùng request (ghi thẳng team_members + users.status='active'),
+//      không tạo dòng 'pending' chờ ai duyệt — vì chắc chắn không có Admin nào khác để duyệt hộ.
 router.post('/onboarding/join-request', requireSession, (req, res) => {
   // FR-2 mô tả join-request là bước onboarding của "người đăng nhập lần đầu" — chỉ tài khoản
   // pending mới được gửi. User đã active muốn tham gia thêm team khác là nhu cầu Lát 3 (ngữ cảnh
@@ -52,17 +62,49 @@ router.post('/onboarding/join-request', requireSession, (req, res) => {
     return res.status(409).json({ message: 'Chỉ tài khoản đang chờ duyệt mới gửi được đơn xin tham gia team' });
   }
   const body = req.body as JoinRequestBody;
-  const teamId = Number(body.teamId);
   const role = body.role;
-  if (!Number.isInteger(teamId)) return res.status(400).json({ message: 'teamId không hợp lệ' });
   if (role !== 'leader' && role !== 'member') return res.status(400).json({ message: 'role phải là leader hoặc member' });
 
-  const team = db.prepare('SELECT id FROM teams WHERE id = ?').get(teamId);
-  if (!team) return res.status(404).json({ message: 'Không tìm thấy team' });
+  const isBootstrapAdmin = req.user!.systemRole === 'admin';
+  const newTeamName = typeof body.newTeamName === 'string' ? body.newTeamName.trim() : '';
+  if (newTeamName && !isBootstrapAdmin) {
+    return res.status(400).json({ message: 'Chỉ Admin mới lập được team mới ngay tại bước này — chọn 1 team có sẵn' });
+  }
+
+  let teamId = Number(body.teamId);
+  if (!newTeamName) {
+    if (!Number.isInteger(teamId)) return res.status(400).json({ message: 'teamId không hợp lệ' });
+    const team = db.prepare('SELECT id FROM teams WHERE id = ?').get(teamId);
+    if (!team) return res.status(404).json({ message: 'Không tìm thấy team' });
+  }
 
   try {
-    const joinRequestId = withTransaction(() => {
+    const result = withTransaction(() => {
       const now = new Date().toISOString();
+
+      if (newTeamName) {
+        teamId = provisionTeam(db, newTeamName, null, now);
+      }
+
+      if (isBootstrapAdmin) {
+        // Tự động duyệt — không tạo dòng 'pending' chờ ai (không ai duyệt được). Vẫn ghi join_requests
+        // ở trạng thái 'approved' NGAY để giữ dấu vết lịch sử giống mọi đơn khác, không lặng lẽ bỏ qua.
+        if (role === 'leader') {
+          const hasLeader = db.prepare("SELECT 1 FROM team_members WHERE team_id = ? AND role = 'leader'").get(teamId);
+          if (hasLeader) throw new HttpError(409, 'Team này đã có Leader, không thể gán thêm', 'TEAM_ALREADY_HAS_LEADER');
+        }
+        const jr = db.prepare(`
+          INSERT INTO join_requests (user_id, requested_team_id, requested_role, status, approved_team_id, approved_role, reviewed_by, reviewed_at, created_at)
+          VALUES (?, ?, ?, 'approved', ?, ?, ?, ?, ?)
+        `).run(req.user!.id, teamId, role, teamId, role, req.user!.id, now, now);
+        db.prepare("UPDATE users SET status = 'active', row_version = row_version + 1 WHERE id = ?").run(req.user!.id);
+        db.prepare('INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, ?)').run(teamId, req.user!.id, role);
+        writeAudit(req.user!.id, teamId, 'join_request.self_approve_bootstrap', `join_request:${jr.lastInsertRowid}`, {
+          teamId, role, createdTeam: Boolean(newTeamName)
+        });
+        return { id: Number(jr.lastInsertRowid), autoApproved: true };
+      }
+
       const result = db.prepare(`
         INSERT INTO join_requests (user_id, requested_team_id, requested_role, status, created_at)
         VALUES (?, ?, ?, 'pending', ?)
@@ -77,9 +119,9 @@ router.post('/onboarding/join-request', requireSession, (req, res) => {
       `);
       const payload = JSON.stringify({ joinRequestId: result.lastInsertRowid, userId: req.user!.id, teamId, role });
       for (const admin of admins) insertNotif.run(admin.id, payload, now);
-      return result.lastInsertRowid;
+      return { id: Number(result.lastInsertRowid), autoApproved: false };
     });
-    res.status(201).json({ id: Number(joinRequestId) });
+    res.status(201).json(result);
   } catch (error) {
     // Unique index (user_id) WHERE status='pending' -> đã có đơn đang chờ.
     if (error instanceof Error && /UNIQUE/.test(error.message)) {

@@ -43,10 +43,6 @@ nào ⇒ thêm skill `security-gate`. Đụng `docs/`/`README.md`/`CLAUDE.md` �
 ## Cổng chất lượng luôn áp dụng (không thuộc skill riêng)
 
 - Trước khi coi là xong: **`npm run check` phải xanh** (tsc + test + build + budget bundle + link markdown).
-- **Đụng `server/` hoặc `src/` ⇒ chưa xong khi chưa `npm run package` + tắt/bật lại `TaskManager.exe`.**
-  Code đã sửa mà app người dùng chưa đổi thì với họ là **chưa sửa** (bài học `L-009`: lỗi cấu hình automation
-  đã vá 14/08 nhưng exe không đóng gói lại nên tái diễn nguyên vẹn 17/08). `npm run check` có cảnh báo
-  "Exe khớp code chạy thật" nhắc việc này.
 - **Không dùng Pull Request — merge thẳng `main`** ([ADR-P1](docs/standards/team-operating-standard.md)).
   Bù lại: **tự soi `git diff --staged`** trước mỗi commit như review code người khác; commit message ghi
   `Ref: CR-… (FR-x)` (nếu có CR) + đã chạy test gì — đây là nơi DUY NHẤT giữ ngữ cảnh này.

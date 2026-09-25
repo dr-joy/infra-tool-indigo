@@ -1,6 +1,11 @@
 // CR-20260913 FR-1→FR-4a, Lát 2 — login/callback/logout/me, bootstrap Admin, thu hồi/disable tài
-// khoản. Dựng 1 server giả đóng vai auth.drjoy.vn thật (token exchange, JWKS, /users/me) — không mock
-// fetch toàn cục, để test đi qua đúng đường HTTP thật như code sản phẩm sẽ gọi.
+// khoản. Dựng 1 server giả đóng vai auth.drjoy.vn thật (JWKS, /users/me) — không mock fetch toàn cục,
+// để test đi qua đúng đường HTTP thật như code sản phẩm sẽ gọi.
+//
+// 2026-09-25: bỏ mô phỏng /auth/token/exchange (flow "code" — thiết kế gốc, chưa từng đúng thật) —
+// xác nhận auth.drjoy.vn cấu hình client "indigo" ở flow "legacy": redirect thẳng
+// ?access_token=&refresh_token=, không có code/exchange. Đổi mock theo đúng thực tế đang chạy, xem
+// docs/exchanges/2026-09-25.md.
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import os from 'node:os';
@@ -20,8 +25,6 @@ const jwk = { ...(await exportJWK(keyPair.publicKey)), kid: 'kid-1', alg: 'RS256
 const jwksBody = { keys: [jwk] };
 
 interface FakeUsersMe { email: string; name: string; avatar: string }
-const pendingCodes = new Map<string, { accessToken: string; refreshToken: string }>();
-const malformedCodes = new Set<string>(); // exchange trả 200 nhưng thiếu access_token/refresh_token
 const usersMeByToken = new Map<string, FakeUsersMe>();
 const slowMeTokens = new Set<string>(); // /users/me KHÔNG BAO GIỜ trả lời -> buộc client tự timeout
 
@@ -30,27 +33,6 @@ const authServer: Server = http.createServer(async (req, res) => {
   if (url.pathname === '/.well-known/jwks.json') {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify(jwksBody));
-    return;
-  }
-  if (url.pathname === '/auth/token/exchange' && req.method === 'POST') {
-    const chunks: Buffer[] = [];
-    for await (const c of req) chunks.push(c as Buffer);
-    const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') as { code?: string };
-    if (body.code && malformedCodes.has(body.code)) {
-      malformedCodes.delete(body.code);
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({ access_token: '' })); // thiếu refresh_token, access_token rỗng
-      return;
-    }
-    const entry = body.code ? pendingCodes.get(body.code) : undefined;
-    if (!entry) {
-      res.statusCode = 400;
-      res.end(JSON.stringify({ error: 'invalid_code' }));
-      return;
-    }
-    pendingCodes.delete(body.code!); // code dùng 1 lần, đúng thật (TTL 120s)
-    res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ access_token: entry.accessToken, refresh_token: entry.refreshToken }));
     return;
   }
   if (url.pathname === '/users/me' && req.method === 'GET') {
@@ -109,7 +91,7 @@ let subjectCounter = 0;
 // subOverride: dùng khi test cần ĐĂNG NHẬP LẠI ĐÚNG 1 danh tính đã có (vd Admin thật, để gọi tiếp
 // /api/admin/*) — không dùng subjectCounter (mỗi lần gọi mặc định tạo 1 danh tính (issuer,subject) MỚI
 // hoàn toàn, đúng nghĩa "user khác nhau dùng chung 1 email", không phải "cùng 1 người đăng nhập lại").
-async function issueAuthCode(email: string, name: string, avatar = '', subOverride?: string): Promise<string> {
+async function issueAuthCode(email: string, name: string, avatar = '', subOverride?: string): Promise<{ accessToken: string; refreshToken: string }> {
   subjectCounter += 1;
   const sub = subOverride || `sub-${subjectCounter}`;
   const accessToken = await new SignJWT({ email })
@@ -120,11 +102,12 @@ async function issueAuthCode(email: string, name: string, avatar = '', subOverri
     .setSubject(sub)
     .setExpirationTime('1h')
     .sign(keyPair.privateKey);
-  const refreshToken = `refresh-${sub}`;
   usersMeByToken.set(accessToken, { email, name, avatar });
-  const code = `code-${sub}-${Math.random().toString(36).slice(2)}`;
-  pendingCodes.set(code, { accessToken, refreshToken });
-  return code;
+  return { accessToken, refreshToken: `refresh-${sub}` };
+}
+
+function callbackUrl(accessToken: string, refreshToken: string): string {
+  return `${base}/api/auth/callback?access_token=${encodeURIComponent(accessToken)}&refresh_token=${encodeURIComponent(refreshToken)}`;
 }
 
 async function startLogin(): Promise<string> {
@@ -138,8 +121,8 @@ async function startLogin(): Promise<string> {
 
 async function loginAs(email: string, name: string, subOverride?: string): Promise<{ sessionCookie: string; status: number }> {
   const nonce = await startLogin();
-  const code = await issueAuthCode(email, name, '', subOverride);
-  const res = await fetch(`${base}/api/auth/callback?code=${code}`, {
+  const { accessToken, refreshToken } = await issueAuthCode(email, name, '', subOverride);
+  const res = await fetch(callbackUrl(accessToken, refreshToken), {
     redirect: 'manual',
     headers: { Cookie: `login_nonce=${nonce}` }
   });
@@ -153,7 +136,23 @@ async function loginAs(email: string, name: string, subOverride?: string): Promi
 // định như trước — sub cứng giả định luôn thắng race, nhưng bản chất chỉ có 1 trong N người thắng, và
 // race PHẢI được kiểm khi DB thật sự chưa có Admin nào, không phải sau khi đã có 1 Admin từ test khác).
 let adminSub = '';
-const loginAsAdmin = () => loginAs(ADMIN_EMAIL, 'Admin Thật', adminSub);
+// 2026-09-25 (docs/exchanges/2026-09-25.md): Admin bootstrap giờ tạo ra ở trạng thái 'pending', phải tự
+// nộp đơn xin tham gia (tự động duyệt vì là Admin) trước khi dùng được /api/admin/*. Tự hoàn tất bước
+// này ở đây (idempotent — bỏ qua nếu đã active từ lần gọi trước) để mọi test SAU race test đầu tiên vẫn
+// nhận lại phiên dùng NGAY được, không phải tự lo việc onboard ở từng test.
+async function loginAsAdmin(): Promise<{ sessionCookie: string; status: number }> {
+  const result = await loginAs(ADMIN_EMAIL, 'Admin Thật', adminSub);
+  const meH = { Cookie: `__Host-tm_session=${result.sessionCookie}` };
+  const me = await (await fetch(`${base}/api/auth/me`, { headers: meH })).json() as { user: { status: string } };
+  if (me.user.status === 'pending') {
+    const jr = await fetch(`${base}/api/onboarding/join-request`, {
+      method: 'POST', headers: { ...meH, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newTeamName: '[bootstrap] Admin Thật', role: 'leader' })
+    });
+    assert.ok(jr.ok, `tự hoàn tất onboarding cho Admin bootstrap thất bại (${jr.status})`);
+  }
+  return result;
+}
 
 // ── Test ───────────────────────────────────────────────────────────────────────────
 
@@ -161,13 +160,13 @@ test('FR-1a: DB CHƯA có Admin nào, 2 danh tính MỚI khác nhau cùng khớp
   const subA = 'race-first-admin-A';
   const subB = 'race-first-admin-B';
   const nonceA = await startLogin();
-  const codeA = await issueAuthCode(ADMIN_EMAIL, 'Ứng viên Admin A', '', subA);
+  const tokensA = await issueAuthCode(ADMIN_EMAIL, 'Ứng viên Admin A', '', subA);
   const nonceB = await startLogin();
-  const codeB = await issueAuthCode(ADMIN_EMAIL, 'Ứng viên Admin B', '', subB);
+  const tokensB = await issueAuthCode(ADMIN_EMAIL, 'Ứng viên Admin B', '', subB);
 
   const [resA, resB] = await Promise.all([
-    fetch(`${base}/api/auth/callback?code=${codeA}`, { redirect: 'manual', headers: { Cookie: `login_nonce=${nonceA}` } }),
-    fetch(`${base}/api/auth/callback?code=${codeB}`, { redirect: 'manual', headers: { Cookie: `login_nonce=${nonceB}` } })
+    fetch(callbackUrl(tokensA.accessToken, tokensA.refreshToken), { redirect: 'manual', headers: { Cookie: `login_nonce=${nonceA}` } }),
+    fetch(callbackUrl(tokensB.accessToken, tokensB.refreshToken), { redirect: 'manual', headers: { Cookie: `login_nonce=${nonceB}` } })
   ]);
   assert.equal(resA.status, 302);
   assert.equal(resB.status, 302);
@@ -179,11 +178,46 @@ test('FR-1a: DB CHƯA có Admin nào, 2 danh tính MỚI khác nhau cùng khớp
 
   const winners = [meA, meB].filter((m) => m.user.systemRole === 'admin');
   assert.equal(winners.length, 1, 'đúng 1 trong 2 danh tính cạnh tranh phải thành Admin, không phải 0 hay 2');
-  assert.equal(winners[0].user.status, 'active');
+  // 2026-09-25: Admin bootstrap KHÔNG còn 'active' ngay — phải đi qua đúng màn "Chọn team và vai trò"
+  // như user thường trước (docs/exchanges/2026-09-25.md). `system_role='admin'` có ngay, `status` vẫn
+  // 'pending' cho tới khi họ tự nộp đơn (xem test riêng "Admin bootstrap tự hoàn tất onboarding" bên dưới).
+  assert.equal(winners[0].user.status, 'pending');
   adminSub = meA.user.systemRole === 'admin' ? subA : subB;
 
   const totalAdmins = db.prepare("SELECT COUNT(*) as n FROM users WHERE system_role = 'admin'").get() as { n: number };
   assert.equal(totalAdmins.n, 1);
+});
+
+test('2026-09-25: Admin bootstrap tự hoàn tất onboarding — tự lập team mới, đơn tự động duyệt, KHÔNG cần ai duyệt hộ', async () => {
+  const { sessionCookie } = await loginAs(ADMIN_EMAIL, 'Admin Thật', adminSub);
+  const H = { Cookie: `__Host-tm_session=${sessionCookie}`, 'Content-Type': 'application/json' };
+
+  const meBefore = await (await fetch(`${base}/api/auth/me`, { headers: H })).json();
+  assert.equal(meBefore.user.status, 'pending', 'vẫn pending cho tới khi tự nộp đơn — đăng nhập lại không tự nâng cấp');
+
+  const jr = await fetch(`${base}/api/onboarding/join-request`, {
+    method: 'POST', headers: H, body: JSON.stringify({ newTeamName: `[itest] Team cua Admin ${Date.now()}`, role: 'leader' })
+  });
+  assert.equal(jr.status, 201);
+  const jrBody = await jr.json();
+  assert.equal(jrBody.autoApproved, true, 'đơn của Admin bootstrap phải tự động duyệt ngay, không chờ ai');
+
+  const meAfter = await (await fetch(`${base}/api/auth/me`, { headers: H })).json();
+  assert.equal(meAfter.user.status, 'active', 'active ngay sau khi tự nộp đơn, không cần ai duyệt hộ');
+
+  const myTeams = await (await fetch(`${base}/api/me/teams`, { headers: H })).json();
+  assert.equal(myTeams.teams.length, 1);
+  assert.equal(myTeams.teams[0].role, 'leader');
+});
+
+test('2026-09-25: user thường (không phải Admin) gửi newTeamName -> 400, không tự tạo team được (giữ đúng FR-2)', async () => {
+  const { sessionCookie } = await loginAs('regular-newteam-attempt@drjoy.jp', 'User thường');
+  const res = await fetch(`${base}/api/onboarding/join-request`, {
+    method: 'POST',
+    headers: { Cookie: `__Host-tm_session=${sessionCookie}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ newTeamName: 'Team tự chế', role: 'member' })
+  });
+  assert.equal(res.status, 400);
 });
 
 test('FR-2: đăng nhập lần đầu email KHÔNG khớp bootstrap -> pending + system_role user', async () => {
@@ -195,28 +229,27 @@ test('FR-2: đăng nhập lần đầu email KHÔNG khớp bootstrap -> pending 
 });
 
 test('FR-1: callback thiếu cookie login_nonce -> 400 LOGIN_NONCE_INVALID, không tạo session', async () => {
-  const code = await issueAuthCode('nonce-test@drjoy.jp', 'X');
-  const res = await fetch(`${base}/api/auth/callback?code=${code}`, { redirect: 'manual' });
+  const { accessToken, refreshToken } = await issueAuthCode('nonce-test@drjoy.jp', 'X');
+  const res = await fetch(callbackUrl(accessToken, refreshToken), { redirect: 'manual' });
   assert.equal(res.status, 400);
   const body = await res.json();
   assert.equal(body.code, 'LOGIN_NONCE_INVALID');
 });
 
-test('callback thiếu ?code= -> 400', async () => {
+// 2026-09-25: thay "callback thiếu ?code=" (flow "code", không còn tồn tại) bằng đúng validate hiện
+// hành cho flow "legacy" — callback đòi cả access_token LẪN refresh_token trên query.
+test('callback thiếu ?access_token=/?refresh_token= -> 400 AUTH_CALLBACK_INVALID, không tạo user', async () => {
   const nonce = await startLogin();
   const res = await fetch(`${base}/api/auth/callback`, { headers: { Cookie: `login_nonce=${nonce}` } });
   assert.equal(res.status, 400);
+  const body = await res.json();
+  assert.equal(body.code, 'AUTH_CALLBACK_INVALID');
 });
 
-test('code auth.drjoy.vn bị dùng lại (single-use) -> lần 2 thất bại rõ ràng, không sập', async () => {
-  const nonce = await startLogin();
-  const code = await issueAuthCode('reuse@drjoy.jp', 'Y');
-  const first = await fetch(`${base}/api/auth/callback?code=${code}`, { redirect: 'manual', headers: { Cookie: `login_nonce=${nonce}` } });
-  assert.equal(first.status, 302);
-  const nonce2 = await startLogin();
-  const second = await fetch(`${base}/api/auth/callback?code=${code}`, { redirect: 'manual', headers: { Cookie: `login_nonce=${nonce2}` } });
-  assert.equal(second.status, 502);
-});
+// 2026-09-25: bỏ test "code dùng lại 1 lần" — flow "code" (single-use, TTL 120s) không còn tồn tại.
+// Flow "legacy" giao thẳng access_token/refresh_token thật (JWT sống theo `exp`, không có khái niệm
+// single-use ở tầng này) — rủi ro token bị replay nếu lộ URL là đánh đổi đã biết của phương án B, xem
+// docs/exchanges/2026-09-25.md, không phải điều app cố tình chặn.
 
 test('GET /auth/me không có cookie phiên -> 401 SESSION_REQUIRED', async () => {
   const res = await fetch(`${base}/api/auth/me`);
@@ -236,13 +269,13 @@ test('POST /auth/logout huỷ đúng phiên -> session cũ không dùng lại đ
 
 test('FR-1a: đã có Admin từ trước -> 2 danh tính MỚI khác nhau cùng khớp email bootstrap đăng nhập đồng thời -> KHÔNG ai thành Admin thêm', async () => {
   const nonceA = await startLogin();
-  const codeA = await issueAuthCode(ADMIN_EMAIL, 'Admin C (danh tính khác, tới sau)', '', 'race-second-admin-A');
+  const tokensA = await issueAuthCode(ADMIN_EMAIL, 'Admin C (danh tính khác, tới sau)', '', 'race-second-admin-A');
   const nonceB = await startLogin();
-  const codeB = await issueAuthCode(ADMIN_EMAIL, 'Admin D (danh tính khác, tới sau)', '', 'race-second-admin-B');
+  const tokensB = await issueAuthCode(ADMIN_EMAIL, 'Admin D (danh tính khác, tới sau)', '', 'race-second-admin-B');
 
   const [resA, resB] = await Promise.all([
-    fetch(`${base}/api/auth/callback?code=${codeA}`, { redirect: 'manual', headers: { Cookie: `login_nonce=${nonceA}` } }),
-    fetch(`${base}/api/auth/callback?code=${codeB}`, { redirect: 'manual', headers: { Cookie: `login_nonce=${nonceB}` } })
+    fetch(callbackUrl(tokensA.accessToken, tokensA.refreshToken), { redirect: 'manual', headers: { Cookie: `login_nonce=${nonceA}` } }),
+    fetch(callbackUrl(tokensB.accessToken, tokensB.refreshToken), { redirect: 'manual', headers: { Cookie: `login_nonce=${nonceB}` } })
   ]);
   assert.equal(resA.status, 302);
   assert.equal(resB.status, 302);
@@ -325,28 +358,30 @@ test('POST /admin/users/:id/revoke-sessions: phiên cũ của user đó bị t�
   assert.equal(meAfter.status, 401);
 });
 
-test('FR-1: /auth/token/exchange trả response thiếu access_token/refresh_token -> 502 rõ ràng, không 500/lưu rác', async () => {
+// 2026-09-25: thay "response /auth/token/exchange thiếu access_token/refresh_token" (endpoint không
+// còn tồn tại) bằng đúng ca lỗi tương đương của flow "legacy" — callback nhận refresh_token RỖNG
+// (auth.drjoy.vn gửi thiếu 1 trong 2 tham số) vẫn phải chặn 400, không tạo user rác.
+test('FR-1: callback nhận refresh_token rỗng -> 400 AUTH_CALLBACK_INVALID, không tạo user', async () => {
   const nonce = await startLogin();
-  const code = await issueAuthCode('malformed-exchange@drjoy.jp', 'Response hỏng');
-  malformedCodes.add(code);
-  const res = await fetch(`${base}/api/auth/callback?code=${code}`, {
+  const { accessToken } = await issueAuthCode('malformed-callback@drjoy.jp', 'Thiếu refresh_token');
+  const res = await fetch(`${base}/api/auth/callback?access_token=${encodeURIComponent(accessToken)}&refresh_token=`, {
     redirect: 'manual',
     headers: { Cookie: `login_nonce=${nonce}` }
   });
-  assert.equal(res.status, 502);
-  const row = db.prepare('SELECT 1 FROM users WHERE email = ?').get('malformed-exchange@drjoy.jp');
-  assert.equal(row, undefined, 'không được tạo user khi response exchange không hợp lệ');
+  assert.equal(res.status, 400);
+  const body = await res.json();
+  assert.equal(body.code, 'AUTH_CALLBACK_INVALID');
+  const row = db.prepare('SELECT 1 FROM users WHERE email = ?').get('malformed-callback@drjoy.jp');
+  assert.equal(row, undefined, 'không được tạo user khi thiếu refresh_token');
 });
 
 test('FR-1: /users/me timeout -> vẫn đăng nhập được, dùng tạm email/tên từ JWT (không chặn đăng nhập)', async () => {
   const nonce = await startLogin();
   const email = 'slow-users-me@drjoy.jp';
-  const code = await issueAuthCode(email, 'Tên thật (không lấy được vì timeout)');
-  const entry = pendingCodes.get(code);
-  assert.ok(entry, 'phải còn pending trước khi gọi callback');
-  slowMeTokens.add(entry!.accessToken);
+  const { accessToken, refreshToken } = await issueAuthCode(email, 'Tên thật (không lấy được vì timeout)');
+  slowMeTokens.add(accessToken);
 
-  const res = await fetch(`${base}/api/auth/callback?code=${code}`, {
+  const res = await fetch(callbackUrl(accessToken, refreshToken), {
     redirect: 'manual',
     headers: { Cookie: `login_nonce=${nonce}` }
   });

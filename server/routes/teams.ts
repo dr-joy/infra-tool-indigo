@@ -4,13 +4,11 @@ import { HttpError, sendRouteError } from '../lib/utils.js';
 import { requireSession, requireActiveAccount, actorFromRequest } from '../lib/auth-middleware.js';
 import { authorize } from '../lib/authorize.js';
 import { writeAudit } from '../lib/audit.js';
-import { seedWeeklyReportKindsForTeam } from '../db-seed.js';
+import { provisionTeam } from '../lib/team-provisioning.js';
 
 // Lát 3 (FR-6, FR-12) — Admin quản lý team/Leader (toàn cục, policyKind 'team_feature' với
 // scope.teamId bỏ trống), Leader/Member tự quản thành viên đúng team mình (scope.teamId thật).
 const router = Router();
-
-const FEATURES = ['personal_task', 'project', 'weekly_report', 'release', 'mind_map'] as const;
 
 interface TeamRow {
   id: number;
@@ -54,23 +52,7 @@ router.post('/admin/teams', requireSession, requireActiveAccount, (req, res) => 
   try {
     const teamId = withTransaction(() => {
       const now = new Date().toISOString();
-      const result = db.prepare('INSERT INTO teams (name, description, created_at) VALUES (?, ?, ?)')
-        .run(name, body.description || null, now);
-      const id = Number(result.lastInsertRowid);
-      const insertVisibility = db.prepare(`
-        INSERT INTO team_feature_visibility (team_id, feature, level, updated_at) VALUES (?, ?, 'off', ?)
-      `);
-      for (const feature of FEATURES) insertVisibility.run(id, feature, now);
-      // CR-20260913 Lát 4 (§6.3): project hệ thống "Khác" giờ là 1 dòng MỖI team (trước Lát 4 là 1
-      // dòng toàn app) — tạo ngay trong cùng transaction, giống cách seed 5 dòng feature-visibility
-      // phía trên, để team mới có ngay chỗ chứa mục tiêu/việc lẻ ngoài project.
-      db.prepare(`
-        INSERT INTO projects (ten_project, pic, team_id, ngay_bat_dau, sort_order, is_system, created_at, updated_at)
-        VALUES ('Khác', '', ?, ?, 1, 1, ?, ?)
-      `).run(id, now.slice(0, 10), now, now);
-      // CR-20260913 Lát 5 (FR-22): 2 loại báo cáo tuần mặc định ngay trong cùng transaction tạo team,
-      // giống cách seed project hệ thống "Khác" ở trên — team mới có ngay danh sách dùng được.
-      seedWeeklyReportKindsForTeam(db, id, now);
+      const id = provisionTeam(db, name, body.description || null, now);
       writeAudit(req.user!.id, id, 'team.create', `team:${id}`, { name, description: body.description || null });
       return id;
     });

@@ -1,7 +1,12 @@
 // Harness dùng chung cho test tích hợp cần đăng nhập thật (CR-20260913 Lát 2/3/4) — giả lập
-// auth.drjoy.vn (JWKS + /auth/token/exchange + /users/me) y hệt boilerplate đã có ở
-// test/integration/teams.test.ts/auth.test.ts. Tách ra đây để các file test route project/task/weekly
-// (Lát 4 — giờ đòi hỏi phiên đăng nhập thật) không phải chép lại ~80 dòng cho mỗi file.
+// auth.drjoy.vn (JWKS + /users/me) y hệt boilerplate đã có ở test/integration/teams.test.ts/auth.test.ts.
+// Tách ra đây để các file test route project/task/weekly (Lát 4 — giờ đòi hỏi phiên đăng nhập thật)
+// không phải chép lại ~80 dòng cho mỗi file.
+//
+// 2026-09-25: đổi mô phỏng từ flow "code" (redirect ?code=, app POST /auth/token/exchange đổi lấy
+// token) sang flow "legacy" thật của auth.drjoy.vn (redirect thẳng ?access_token=&refresh_token=,
+// không có bước code/exchange nào) — khớp đúng hành vi server/routes/auth.ts đang xử lý sau khi đổi.
+// Xem docs/exchanges/2026-09-25.md.
 //
 // LƯU Ý bắt buộc: phải gọi `createMockAuthServer()` rồi set các biến môi trường AUTH_*/APPDATA
 // TRƯỚC khi `await import('../../server/app.js')` — server/lib/auth-config.ts đọc process.env một lần
@@ -14,21 +19,22 @@ import { parse as parseCookie } from 'cookie';
 export interface MockAuthServer {
   authServer: Server;
   authBaseUrl: string;
-  issueAuthCode(email: string, name: string, subOverride?: string): Promise<string>;
+  // Tên giữ nguyên "issueAuthCode" cho khỏi phải sửa ~20 file test chỉ TRUYỀN THAM CHIẾU hàm này
+  // (không tự gọi) — nhưng từ 25/09 trả thẳng cặp token, không còn "code" nào cả (flow "legacy").
+  issueAuthCode(email: string, name: string, subOverride?: string): Promise<{ accessToken: string; refreshToken: string }>;
   close(): Promise<void>;
 }
 
-// Dựng 1 server giả đóng vai auth.drjoy.vn thật: JWKS (RS256), /auth/token/exchange (đổi code lấy
-// access_token JWT tự ký + refresh_token giả), /users/me (trả email/tên đã "issue" cho đúng token đó).
-// `fixedPort` (mặc định: OS tự cấp, cổng ngẫu nhiên) — chỉ dùng khi test cần `authBaseUrl` (issuer)
-// ỔN ĐỊNH giữa nhiều lần khởi động tiến trình con riêng biệt (vd redmine-secret-key-child.mjs, xem
-// comment ở đó) — vì (issuer, subject) là khoá định danh user thật, cổng đổi giữa 2 lần chạy sẽ tạo
-// ra 2 "issuer" khác nhau, tức 2 user khác nhau trong DB, dù cùng subject/email.
+// Dựng 1 server giả đóng vai auth.drjoy.vn thật: JWKS (RS256), /users/me (trả email/tên đã "issue"
+// cho đúng token đó). `fixedPort` (mặc định: OS tự cấp, cổng ngẫu nhiên) — chỉ dùng khi test cần
+// `authBaseUrl` (issuer) ỔN ĐỊNH giữa nhiều lần khởi động tiến trình con riêng biệt (vd
+// redmine-secret-key-child.mjs, xem comment ở đó) — vì (issuer, subject) là khoá định danh user thật,
+// cổng đổi giữa 2 lần chạy sẽ tạo ra 2 "issuer" khác nhau, tức 2 user khác nhau trong DB, dù cùng
+// subject/email.
 export async function createMockAuthServer(fixedPort?: number): Promise<MockAuthServer> {
   const keyPair = await generateKeyPair('RS256');
   const jwk = { ...(await exportJWK(keyPair.publicKey)), kid: 'kid-1', alg: 'RS256', use: 'sig' };
   const jwksBody = { keys: [jwk] };
-  const pendingCodes = new Map<string, { accessToken: string; refreshToken: string }>();
   const usersMeByToken = new Map<string, { email: string; name: string; avatar: string }>();
   let subjectCounter = 0;
 
@@ -37,17 +43,6 @@ export async function createMockAuthServer(fixedPort?: number): Promise<MockAuth
     if (url.pathname === '/.well-known/jwks.json') {
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify(jwksBody));
-      return;
-    }
-    if (url.pathname === '/auth/token/exchange' && req.method === 'POST') {
-      const chunks: Buffer[] = [];
-      for await (const c of req) chunks.push(c as Buffer);
-      const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') as { code?: string };
-      const entry = body.code ? pendingCodes.get(body.code) : undefined;
-      if (!entry) { res.statusCode = 400; res.end(JSON.stringify({ error: 'invalid_code' })); return; }
-      pendingCodes.delete(body.code!);
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({ access_token: entry.accessToken, refresh_token: entry.refreshToken }));
       return;
     }
     if (url.pathname === '/users/me' && req.method === 'GET') {
@@ -70,7 +65,7 @@ export async function createMockAuthServer(fixedPort?: number): Promise<MockAuth
     });
   });
 
-  async function issueAuthCode(email: string, name: string, subOverride?: string): Promise<string> {
+  async function issueAuthCode(email: string, name: string, subOverride?: string): Promise<{ accessToken: string; refreshToken: string }> {
     subjectCounter += 1;
     const sub = subOverride || `sub-${subjectCounter}`;
     const accessToken = await new SignJWT({ email })
@@ -78,9 +73,7 @@ export async function createMockAuthServer(fixedPort?: number): Promise<MockAuth
       .setIssuedAt().setIssuer(authBaseUrl).setAudience('indigo').setSubject(sub).setExpirationTime('1h')
       .sign(keyPair.privateKey);
     usersMeByToken.set(accessToken, { email, name, avatar: '' });
-    const code = `code-${sub}-${Math.random().toString(36).slice(2)}`;
-    pendingCodes.set(code, { accessToken, refreshToken: `refresh-${sub}` });
-    return code;
+    return { accessToken, refreshToken: `refresh-${sub}` };
   }
 
   return {
@@ -109,10 +102,26 @@ export function loginFlow(getBase: () => string, issueAuthCode: MockAuthServer['
   }
   async function loginAs(email: string, name: string, subOverride?: string): Promise<string> {
     const nonce = await startLogin();
-    const code = await issueAuthCode(email, name, subOverride);
-    const res = await fetch(`${getBase()}/api/auth/callback?code=${code}`, { redirect: 'manual', headers: { Cookie: `login_nonce=${nonce}` } });
+    const { accessToken, refreshToken } = await issueAuthCode(email, name, subOverride);
+    const cbUrl = `${getBase()}/api/auth/callback?access_token=${encodeURIComponent(accessToken)}&refresh_token=${encodeURIComponent(refreshToken)}`;
+    const res = await fetch(cbUrl, { redirect: 'manual', headers: { Cookie: `login_nonce=${nonce}` } });
     const sessionCookie = parseCookie(res.headers.get('set-cookie') || '')['__Host-tm_session'];
     if (!sessionCookie) throw new Error(`loginAs(): đăng nhập thất bại cho ${email}`);
+    const H = { Cookie: `__Host-tm_session=${sessionCookie}`, 'Content-Type': 'application/json' };
+
+    // 2026-09-25 (docs/exchanges/2026-09-25.md): Admin bootstrap giờ tạo ra ở trạng thái 'pending' —
+    // phải tự nộp đơn xin tham gia (tự động duyệt vì họ là Admin) mới dùng được, giống hệt user thường.
+    // Tự hoàn tất bước này Ở ĐÂY để ~20 file test gọi loginAs(ADMIN_EMAIL, ...) qua harness dùng chung
+    // KHÔNG phải sửa gì — vẫn nhận lại 1 phiên dùng được NGAY như hành vi cũ. Chỉ áp dụng khi actor vừa
+    // đăng nhập là Admin (bootstrap) VÀ đang pending; user thường vẫn dừng lại ở pending như thiết kế.
+    const me = await (await fetch(`${getBase()}/api/auth/me`, { headers: H })).json() as
+      { user: { status: string; systemRole: string } };
+    if (me.user.status === 'pending' && me.user.systemRole === 'admin') {
+      const jr = await fetch(`${getBase()}/api/onboarding/join-request`, {
+        method: 'POST', headers: H, body: JSON.stringify({ newTeamName: `[bootstrap] ${email}`, role: 'leader' })
+      });
+      if (!jr.ok) throw new Error(`loginAs(): tự hoàn tất onboarding cho Admin bootstrap ${email} thất bại (${jr.status})`);
+    }
     return sessionCookie;
   }
   function H(session: string): Record<string, string> {

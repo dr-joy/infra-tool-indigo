@@ -12,19 +12,13 @@ import {
   LOGIN_NONCE_COOKIE_NAME,
   LOGIN_NONCE_TTL_MS,
   SESSION_TTL_MS,
-  USERS_ME_TIMEOUT_MS,
-  TOKEN_EXCHANGE_TIMEOUT_MS
+  USERS_ME_TIMEOUT_MS
 } from '../lib/auth-config.js';
 import { requireSession, requireActiveAccount, actorFromRequest } from '../lib/auth-middleware.js';
 import { authorize } from '../lib/authorize.js';
 import { writeAudit } from '../lib/audit.js';
 
 const router = Router();
-
-interface TokenPair {
-  access_token: string;
-  refresh_token: string;
-}
 
 interface UsersMeResponse {
   user_id: string;
@@ -87,8 +81,16 @@ router.get('/auth/login', (_req, res) => {
   res.redirect(url.toString());
 });
 
-// ── GET /auth/callback — bước 2+3 của FR-1: nhận ?code=, đổi code lấy token, verify JWT, gọi
+// ── GET /auth/callback — bước 2+3 của FR-1: nhận access_token/refresh_token, verify JWT, gọi
 // /users/me, tạo/cập nhật user, set cookie phiên riêng của app.
+//
+// 2026-09-25: thiết kế gốc CR-20260913 FR-1 giả định `client_flows.indigo = "code"` (redirect kèm
+// ?code=, app tự POST /auth/token/exchange đổi lấy token — token KHÔNG bao giờ lộ ra trình duyệt).
+// Xác nhận thật với đội quản auth.drjoy.vn (25/09): client "indigo" đang cấu hình flow **"legacy"**,
+// trả thẳng access_token/refresh_token trên query của chính redirect_uri — không có bước code/exchange
+// nào cả. Leader chọn PHƯƠNG ÁN B (đổi app theo đúng cấu hình thật đang chạy, chấp nhận đánh đổi bảo
+// mật: token thật lộ ra URL — vào log truy cập của proxy/server — thay vì nhờ đổi cấu hình phía họ
+// sang "code"). Xem docs/exchanges/2026-09-25.md.
 router.get('/auth/callback', asyncHandler(async (req, res) => {
   const cookies = parseCookie(req.headers.cookie || '');
   const nonce = cookies[LOGIN_NONCE_COOKIE_NAME];
@@ -100,34 +102,11 @@ router.get('/auth/callback', asyncHandler(async (req, res) => {
     throw new HttpError(400, 'Thiếu hoặc hết hạn cookie chống giả mạo đăng nhập, vui lòng đăng nhập lại', 'LOGIN_NONCE_INVALID');
   }
 
-  const code = String(req.query.code || '');
-  if (!code) throw new HttpError(400, 'Thiếu mã đăng nhập (code) từ auth.drjoy.vn');
-
-  const exchangeController = new AbortController();
-  const exchangeTimer = setTimeout(() => exchangeController.abort(), TOKEN_EXCHANGE_TIMEOUT_MS);
-  let exchangeRes: Response;
-  try {
-    exchangeRes = await fetch(`${authConfig.baseUrl}/auth/token/exchange`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code }),
-      signal: exchangeController.signal
-    });
-  } catch {
-    // Timeout hoặc lỗi mạng — KHÁC /users/me: không có dữ liệu cũ để dùng tạm, phải báo lỗi rõ.
-    throw new HttpError(502, 'Không kết nối được tới auth.drjoy.vn để đổi mã đăng nhập, vui lòng thử lại');
-  } finally {
-    clearTimeout(exchangeTimer);
+  const accessToken = String(req.query.access_token || '');
+  const refreshToken = String(req.query.refresh_token || '');
+  if (!accessToken || !refreshToken) {
+    throw new HttpError(400, 'Thiếu access_token/refresh_token từ auth.drjoy.vn', 'AUTH_CALLBACK_INVALID');
   }
-  if (!exchangeRes.ok) throw new HttpError(502, 'Không đổi được mã đăng nhập lấy token từ auth.drjoy.vn');
-  const tokens = (await exchangeRes.json()) as Partial<TokenPair>;
-  // auth.drjoy.vn là hệ thống ngoài — không tin response luôn đúng hình dạng dù status 200 (Codex
-  // phát hiện: ép kiểu thẳng sang TokenPair mà không kiểm có thể lưu refresh_token rỗng/undefined
-  // hoặc verifyAuthJwt nhận access_token không phải string, lỗi ra không rõ nghĩa).
-  if (typeof tokens.access_token !== 'string' || !tokens.access_token || typeof tokens.refresh_token !== 'string' || !tokens.refresh_token) {
-    throw new HttpError(502, 'auth.drjoy.vn trả về dữ liệu token không hợp lệ');
-  }
-  const { access_token: accessToken, refresh_token: refreshToken } = tokens as TokenPair;
 
   const claims = await verifyAuthJwt(accessToken);
   const usersMe = await fetchUsersMe(accessToken);
@@ -163,14 +142,19 @@ router.get('/auth/callback', asyncHandler(async (req, res) => {
       console.warn(`[auth] Danh tính mới (issuer=${claims.iss}, subject=${claims.sub}) khớp email bootstrap Admin nhưng đã có Admin khác -> fail-closed, tạo tài khoản user/pending thay vì admin`);
     }
 
+    // 2026-09-25 (docs/exchanges/2026-09-25.md): Leader xác nhận Admin bootstrap phải trải qua ĐÚNG màn
+    // "Chọn team và vai trò" như user thường, không được vào thẳng — nên `status` LUÔN là 'pending' bất
+    // kể có phải bootstrap Admin hay không (đổi so với bản trước: bootstrap trước đây set 'active' ngay,
+    // bỏ qua bước chọn team). `system_role='admin'` vẫn gán ngay lúc này (không đợi tới lúc chọn xong
+    // team) — cần biết ngay để đơn xin tham gia CỦA CHÍNH HỌ tự động duyệt được (server/routes/
+    // onboarding.ts), vì tại thời điểm này chắc chắn chưa có Admin nào khác để duyệt hộ.
     const displayName = usersMe?.name || email;
     const avatar = usersMe?.avatar ?? null;
     const info = db.prepare(`
       INSERT INTO users (issuer, subject, email, display_name, avatar, status, system_role, created_at, last_login_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?)
     `).run(
       claims.iss, claims.sub, email, displayName, avatar,
-      isBootstrapAdmin ? 'active' : 'pending',
       isBootstrapAdmin ? 'admin' : 'user',
       now, now
     );
@@ -276,6 +260,60 @@ router.post('/admin/users/:id/revoke-sessions', requireSession, requireActiveAcc
     writeAudit(req.user!.id, null, 'user_account.revoke_sessions', `user:${id}`, {});
   });
   res.json({ ok: true });
+});
+
+// ── Gán/hạ quyền Admin (2026-09-25, docs/exchanges/2026-09-25.md) ───────────────────────────────────
+// 2 route riêng (không gộp PATCH .../role) — cùng lý do đã áp cho disable/enable phía trên: 2
+// resource.action riêng trong AUTHORIZATION_POLICY. `demote-admin` chặn cứng hạ Admin CUỐI CÙNG (Leader
+// xác nhận trực tiếp) — tránh lặp lại đúng vấn đề "không còn ai duyệt được gì" vừa phát hiện ở Admin
+// bootstrap. Admin ĐƯỢC tự hạ quyền chính mình, miễn còn ≥1 Admin khác sau khi hạ (kiểm tra đếm, không
+// phân biệt actor có phải chính target hay không — cùng 1 điều kiện áp cho mọi trường hợp).
+router.post('/admin/users/:id/promote-admin', requireSession, requireActiveAccount, (req, res) => {
+  authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'user_account', action: 'promote_admin', scope: {} });
+  const id = Number(req.params.id);
+  const body = req.body as { rowVersion?: number };
+  if (!Number.isInteger(id)) return res.status(400).json({ message: 'id không hợp lệ' });
+  try {
+    withTransaction(() => {
+      const result = db.prepare(`
+        UPDATE users SET system_role = 'admin', row_version = row_version + 1 WHERE id = ? AND row_version = ?
+      `).run(id, body.rowVersion ?? -1);
+      if (result.changes === 0) {
+        throw new HttpError(409, 'Có người vừa thay đổi tài khoản này, vui lòng tải lại', 'VERSION_CONFLICT');
+      }
+      writeAudit(req.user!.id, null, 'user_account.promote_admin', `user:${id}`, {});
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    sendRouteError(res, error, 'Không gán được quyền Admin');
+  }
+});
+
+router.post('/admin/users/:id/demote-admin', requireSession, requireActiveAccount, (req, res) => {
+  authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'user_account', action: 'demote_admin', scope: {} });
+  const id = Number(req.params.id);
+  const body = req.body as { rowVersion?: number };
+  if (!Number.isInteger(id)) return res.status(400).json({ message: 'id không hợp lệ' });
+  try {
+    withTransaction(() => {
+      const adminCount = (db.prepare("SELECT COUNT(*) as n FROM users WHERE system_role = 'admin'").get() as { n: number }).n;
+      const target = db.prepare('SELECT system_role FROM users WHERE id = ?').get(id) as { system_role: string } | undefined;
+      if (!target) throw new HttpError(404, 'Không tìm thấy tài khoản');
+      if (target.system_role === 'admin' && adminCount <= 1) {
+        throw new HttpError(409, 'Đây là Admin cuối cùng — phải gán thêm ít nhất 1 Admin khác trước khi hạ quyền người này', 'LAST_ADMIN');
+      }
+      const result = db.prepare(`
+        UPDATE users SET system_role = 'user', row_version = row_version + 1 WHERE id = ? AND row_version = ?
+      `).run(id, body.rowVersion ?? -1);
+      if (result.changes === 0) {
+        throw new HttpError(409, 'Có người vừa thay đổi tài khoản này, vui lòng tải lại', 'VERSION_CONFLICT');
+      }
+      writeAudit(req.user!.id, null, 'user_account.demote_admin', `user:${id}`, {});
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    sendRouteError(res, error, 'Không hạ được quyền Admin');
+  }
 });
 
 export default router;

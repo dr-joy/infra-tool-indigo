@@ -43,6 +43,15 @@ function baseFetchMock(overrides?: Record<string, (url: URL, init?: RequestInit)
     if (typeof init?.body === 'string') { try { parsedBody = JSON.parse(init.body); } catch { /* ignore */ } }
     calls.push({ url: url.pathname + url.search, method, body: parsedBody });
 
+    // Override đi TRƯỚC mọi mặc định cứng bên dưới — nếu không, 1 route đã có mặc định (vd GET
+    // /api/admin/users) sẽ luôn "thắng" trước khi override kịp chạy tới.
+    const key = `${method} ${url.pathname}`;
+    if (overrides) {
+      for (const [pattern, handler] of Object.entries(overrides)) {
+        if (key === pattern || url.pathname === pattern) return handler(url, init);
+      }
+    }
+
     if (url.pathname === '/api/auth/me') {
       return jsonResponse({ user: { id: 1, email: 'admin@drjoy.jp', displayName: 'Admin Thật', avatar: null, status: 'active', systemRole: 'admin', memberships: [] } });
     }
@@ -57,12 +66,6 @@ function baseFetchMock(overrides?: Record<string, (url: URL, init?: RequestInit)
     if (url.pathname === '/api/audit') return jsonResponse({ entries: [{ id: 1, actorUserId: 1, teamId: 1, action: 'team.create', createdAt: '2026-09-22T00:00:00.000Z' }], nextCursor: null });
     if (url.pathname === '/api/admin/redmine-url' && method === 'GET') return jsonResponse({ baseUrl: 'https://redmine.example.com' });
 
-    const key = `${method} ${url.pathname}`;
-    if (overrides) {
-      for (const [pattern, handler] of Object.entries(overrides)) {
-        if (key === pattern || url.pathname === pattern) return handler(url, init);
-      }
-    }
     return jsonResponse({ message: `unmocked ${key}` }, 404);
   }) as unknown as typeof fetch;
   return calls;
@@ -197,6 +200,48 @@ describe('ManHinhAdmin — mục Tài khoản', () => {
 
     await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.url === '/api/admin/users/2/disable')).toBe(true));
     expect(calls.find((c) => c.url === '/api/admin/users/2/disable')?.body).toMatchObject({ rowVersion: 2 });
+  });
+
+  it('chỉ còn 1 Admin -> nút Hạ quyền Admin bị disable (chặn phía client, khớp luật server)', async () => {
+    baseFetchMock();
+    renderAdmin();
+    fireEvent.click(screen.getByRole('button', { name: 'Tài khoản' }));
+    await waitFor(() => expect(screen.getByText('Admin Thật')).toBeInTheDocument());
+
+    const adminRow = screen.getByText('Admin Thật').closest('tr')!;
+    expect(within(adminRow).getByRole('button', { name: 'Hạ quyền Admin' })).toBeDisabled();
+  });
+
+  it('gán quyền Admin cho user thường -> POST promote-admin kèm rowVersion', async () => {
+    const calls = baseFetchMock();
+    renderAdmin();
+    fireEvent.click(screen.getByRole('button', { name: 'Tài khoản' }));
+    await waitFor(() => expect(screen.getByText('Nguyễn Văn A')).toBeInTheDocument());
+
+    const otherRow = screen.getByText('Nguyễn Văn A').closest('tr')!;
+    fireEvent.click(within(otherRow).getByRole('button', { name: 'Gán quyền Admin' }));
+
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.url === '/api/admin/users/2/promote-admin')).toBe(true));
+    expect(calls.find((c) => c.url === '/api/admin/users/2/promote-admin')?.body).toMatchObject({ rowVersion: 2 });
+  });
+
+  it('còn ≥2 Admin -> hạ quyền Admin của người khác gọi đúng POST demote-admin', async () => {
+    const calls = baseFetchMock({
+      'GET /api/admin/users': () => jsonResponse({
+        users: [...USERS, { id: 3, email: 'admin2@drjoy.jp', display_name: 'Admin Hai', avatar: null, status: 'active', system_role: 'admin', row_version: 1, created_at: '', last_login_at: null }]
+      })
+    });
+    renderAdmin();
+    fireEvent.click(screen.getByRole('button', { name: 'Tài khoản' }));
+    await waitFor(() => expect(screen.getByText('Admin Hai')).toBeInTheDocument());
+
+    const secondAdminRow = screen.getByText('Admin Hai').closest('tr')!;
+    const btn = within(secondAdminRow).getByRole('button', { name: 'Hạ quyền Admin' });
+    expect(btn).not.toBeDisabled();
+    fireEvent.click(btn);
+
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.url === '/api/admin/users/3/demote-admin')).toBe(true));
+    expect(calls.find((c) => c.url === '/api/admin/users/3/demote-admin')?.body).toMatchObject({ rowVersion: 1 });
   });
 });
 

@@ -28,7 +28,12 @@ export const AUTHORIZATION_POLICY: Record<string, Record<string, PolicyEntry>> =
     list: { feature: null, roles: ['admin'] },
     disable: { feature: null, roles: ['admin'] },
     enable: { feature: null, roles: ['admin'] },
-    revoke_sessions: { feature: null, roles: ['admin'] }
+    revoke_sessions: { feature: null, roles: ['admin'] },
+    // 2026-09-25 (docs/exchanges/2026-09-25.md) — Admin gán/hạ quyền Admin cho nhau. 2 action riêng,
+    // cùng khuôn disable/enable phía trên (không gộp PATCH .../role). Luật "không hạ Admin cuối cùng"
+    // nằm trong route (đếm động lúc chạy), không khai được ở bảng tĩnh này.
+    promote_admin: { feature: null, roles: ['admin'] },
+    demote_admin: { feature: null, roles: ['admin'] }
   },
 
   // Lát 3 mới — toàn cục (Admin quản trị team/cấu hình hệ thống).

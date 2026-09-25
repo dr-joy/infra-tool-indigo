@@ -82,22 +82,41 @@ function ChooseTeamScreen() {
   const [role, setRole] = useState<TeamRole>('member');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  // 2026-09-25 (docs/exchanges/2026-09-25.md) — Admin bootstrap giờ đi qua ĐÚNG màn này như user
+  // thường (trước đây vào thẳng app, bỏ qua bước chọn team). Chỉ Admin mới được tự lập team mới ngay
+  // tại đây (server chặn 400 nếu user thường gửi `newTeamName` — FR-2 vẫn giữ nguyên "không tự tạo
+  // team" cho user thường). Cần cho hệ thống mới tinh chưa có team nào để mà chọn.
+  const laAdmin = actor?.systemRole === 'admin';
+  const [tuLapTeam, setTuLapTeam] = useState(false);
+  const [newTeamName, setNewTeamName] = useState('');
 
   useEffect(() => {
     let alive = true;
     api<{ teams: TeamOption[] }>('/api/teams')
-      .then((res) => { if (alive) { setTeams(res.teams); setTeamId(res.teams[0]?.id ?? ''); } })
+      .then((res) => {
+        if (!alive) return;
+        setTeams(res.teams);
+        setTeamId(res.teams[0]?.id ?? '');
+        // Team rỗng + là Admin -> không có gì để chọn, tự bật sẵn chế độ "tự lập team mới" luôn.
+        if (res.teams.length === 0 && actor?.systemRole === 'admin') setTuLapTeam(true);
+      })
       .catch((error) => { if (alive) setLoadError(error instanceof Error ? error.message : 'Không tải được danh sách team'); });
     return () => { alive = false; };
-  }, []);
+  }, [actor?.systemRole]);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (teamId === '') { setSubmitError('Hãy chọn một team'); return; }
+    if (tuLapTeam) {
+      if (!newTeamName.trim()) { setSubmitError('Hãy nhập tên team'); return; }
+    } else if (teamId === '') {
+      setSubmitError('Hãy chọn một team');
+      return;
+    }
     setSubmitting(true);
     setSubmitError('');
     try {
-      await api('/api/onboarding/join-request', { method: 'POST', body: JSON.stringify({ teamId, role }) });
+      const body = tuLapTeam ? { newTeamName: newTeamName.trim(), role } : { teamId, role };
+      await api('/api/onboarding/join-request', { method: 'POST', body: JSON.stringify(body) });
       await reload();
     } catch (error) {
       if (error instanceof ApiError && error.code === 'JOIN_REQUEST_PENDING_EXISTS') {
@@ -116,21 +135,47 @@ function ChooseTeamScreen() {
       <form onSubmit={submit} className="popup w-full max-w-lg">
         <h1 className="mb-1 text-xl font-bold text-muc">Chọn team và vai trò</h1>
         <p className="mb-4 text-sm text-phu">
-          Xin chào {actor?.displayName}. Chọn team bạn muốn tham gia và vai trò mong muốn — Admin sẽ xem
-          và duyệt yêu cầu này. Đây chỉ là gửi yêu cầu, bạn chưa có quyền thao tác gì cho tới khi được duyệt.
+          Xin chào {actor?.displayName}. Chọn team bạn muốn tham gia và vai trò mong muốn{laAdmin ? '' : ' — Admin sẽ xem và duyệt yêu cầu này'}.
+          {laAdmin
+            ? ' Vì bạn là Admin, yêu cầu này tự động được duyệt ngay, không cần chờ.'
+            : ' Đây chỉ là gửi yêu cầu, bạn chưa có quyền thao tác gì cho tới khi được duyệt.'}
         </p>
 
         {loadError && <p className="mb-3 text-sm text-rose-600">{loadError}</p>}
 
-        <label className="field">
-          Team
-          <select value={teamId} disabled={submitting} onChange={(e) => setTeamId(e.target.value ? Number(e.target.value) : '')} required>
-            <option value="" disabled>— chọn team —</option>
-            {teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}
-          </select>
-        </label>
-        {teamId !== '' && teams.find((t) => t.id === teamId)?.description && (
-          <p className="mb-2 text-xs text-phu">{teams.find((t) => t.id === teamId)?.description}</p>
+        {laAdmin && (
+          <div className="field mb-3 flex gap-4 text-sm font-normal">
+            <label className="inline-flex items-center gap-1.5">
+              <input type="radio" name="team-mode" checked={!tuLapTeam} onChange={() => setTuLapTeam(false)} disabled={teams.length === 0} /> Chọn team có sẵn
+            </label>
+            <label className="inline-flex items-center gap-1.5">
+              <input type="radio" name="team-mode" checked={tuLapTeam} onChange={() => setTuLapTeam(true)} /> Tự lập team mới
+            </label>
+          </div>
+        )}
+
+        {tuLapTeam ? (
+          <label className="field">
+            Tên team mới
+            <input
+              type="text" value={newTeamName} disabled={submitting}
+              onChange={(e) => setNewTeamName(e.target.value)}
+              placeholder="Ví dụ: Dev13" required
+            />
+          </label>
+        ) : (
+          <>
+            <label className="field">
+              Team
+              <select value={teamId} disabled={submitting} onChange={(e) => setTeamId(e.target.value ? Number(e.target.value) : '')} required>
+                <option value="" disabled>— chọn team —</option>
+                {teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}
+              </select>
+            </label>
+            {teamId !== '' && teams.find((t) => t.id === teamId)?.description && (
+              <p className="mb-2 text-xs text-phu">{teams.find((t) => t.id === teamId)?.description}</p>
+            )}
+          </>
         )}
 
         <fieldset className="field" disabled={submitting}>
@@ -146,8 +191,8 @@ function ChooseTeamScreen() {
         {submitError && <p className="mb-3 text-sm text-rose-600">{submitError}</p>}
 
         <div className="mt-4 flex justify-end">
-          <button type="submit" className="nut-chinh" disabled={submitting || teamId === ''}>
-            {submitting ? 'Đang gửi…' : 'Gửi yêu cầu tham gia'}
+          <button type="submit" className="nut-chinh" disabled={submitting || (tuLapTeam ? !newTeamName.trim() : teamId === '')}>
+            {submitting ? 'Đang gửi…' : laAdmin ? (tuLapTeam ? 'Tạo và tham gia' : 'Tham gia ngay') : 'Gửi yêu cầu tham gia'}
           </button>
         </div>
       </form>

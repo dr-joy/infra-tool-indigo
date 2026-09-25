@@ -2,6 +2,39 @@
 
 Ứng dụng full-stack gồm React + TypeScript + Tailwind CSS ở frontend và Node.js + TypeScript + SQLite local ở backend.
 
+## Cấu trúc thư mục (root)
+
+### Core — app thật, đụng vào là ảnh hưởng build/deploy
+
+| Thư mục/file | Là gì |
+|---|---|
+| `server/` | Backend (Express + SQLite) — route, schema/migration DB, logic nghiệp vụ |
+| `src/` | Frontend (React + Vite) — màn hình, component |
+| `test/` | Test tự động (backend `node:test` + frontend Vitest) |
+| `scripts/` | Script vận hành: build/đóng gói exe, backup DB, các cổng kiểm tra của `npm run check` |
+| `docs/` | **Tài liệu canonical** — backlog, CR/BUG, spec, rule, playbook. Xem [docs/README.md](docs/README.md) để biết đọc gì ở đâu |
+| `Dockerfile`, `.dockerignore` | Đóng gói container cho bản server dùng chung nhiều team |
+| `public/`, `index.html` | Asset tĩnh + entry point cho Vite |
+| `assets/` | Icon dùng khi đóng gói exe (`app-icon.ico`) |
+| `package.json`, `tsconfig.json`, `vite.config.ts`, `vitest.config.ts`, `tailwind.config.js`, `postcss.config.js` | Config chuẩn của dự án Node/Vite, không tự sửa tay trừ khi biết rõ |
+| `conclave/` | Nhật ký các phiên Council review (Claude+Codex đối chiếu code) — lưu lại làm bằng chứng, có link từ `docs/exchanges/` |
+| `AGENTS.md`, `CLAUDE.md` | Hướng dẫn vận hành cho AI agent (Codex/Claude) khi làm việc trong repo này |
+| `Task Manager.bat`, `backup-db.bat` | Launcher chạy app / backup DB bằng cách double-click (Windows, dùng cho bản desktop) |
+
+### Sinh ra tự động — KHÔNG commit, tự tạo lại được, không cần dọn tay
+
+`build/`, `dist/`, `release/`, `data/`, `tmp/`, `.relay-state/`, `_backup_recovery/`, `node_modules/` —
+đều nằm trong `.gitignore`. Xoá thoải mái nếu cần dọn ổ đĩa, chạy lại `npm install`/`npm run build`/
+`npm run package` là có lại.
+
+### Tool phụ không liên quan Task Manager — lẫn ở root vì lịch sử, không phải core app
+
+| Thư mục/file | Là gì |
+|---|---|
+| `glossaries/` | Dữ liệu JSON (thuật ngữ AWS/PMP/PSM) cho 1 tool quiz phụ, không route/code nào của Task Manager đọc tới |
+| `instroduction/` | Tên gõ sai từ đầu, giữ nguyên vì đã có script tham chiếu (`scripts/check-docs.mjs`). Chỉ còn 2 file HTML mockup màu/theme cũ — tự ghi chú "Non-canonical", nội dung thật đã chuyển hết sang `docs/` |
+| `HTML Quiz To JSON Tool.bat` | Launcher cho tool quiz phụ ở trên, không phải Task Manager |
+
 ## Chạy local
 
 ```bash
