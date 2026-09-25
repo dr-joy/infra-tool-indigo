@@ -52,7 +52,11 @@ after(() => {
 
 test('BUG-006: instance thứ hai trên cùng port tự thoát, không thành tiến trình rác', async () => {
   const thu1 = moApp();
-  assert.ok(await doiChu(thu1, `App running at http://localhost:${PORT}`, 30000), 'instance 1 phải lên được');
+  // 90s (không phải 30s): trên CI ít CPU (xác nhận thật 25/09 — nhiều file test chạy song song làm
+  // cold-start tsx+migration DB của tiến trình con này giãn ra nhiều lần so với máy dev), 30s không đủ,
+  // test fail oan dù instance thật sự lên được, chỉ là chậm. Đây chỉ là TRẦN CHỜ, không phải thời gian
+  // chờ thật mỗi lần chạy — vẫn resolve ngay khi thấy đúng chuỗi.
+  assert.ok(await doiChu(thu1, `App running at http://localhost:${PORT}`, 90000), 'instance 1 phải lên được');
 
   const thu2 = moApp();
   assert.ok(await doiChu(thu2, 'app đã chạy sẵn', 20000), 'instance 2 phải báo app đã chạy sẵn');

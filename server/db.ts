@@ -12,6 +12,12 @@ mkdirSync(dataDir, { recursive: true });
 export const db = new DatabaseSync(join(dataDir, 'tasks.sqlite'));
 db.exec('PRAGMA journal_mode = WAL');
 db.exec('PRAGMA foreign_keys = ON');
+// BL-20260924-006: thiếu busy_timeout khiến 1 kết nối khác đụng đúng lúc (backup/migrate chạy song
+// song, hoặc — xác nhận thật trong CI 25/09 — nhiều file test chạy đồng thời trên máy ít CPU làm
+// khoảng hở giữa "mở kết nối" và "đóng kết nối trước" giãn ra) bị chặn NGAY bằng lỗi "database is
+// locked" thay vì tự chờ. 5s đủ cho các thao tác ngắn hạn (transaction 1 request), không che được
+// deadlock thật (deadlock sẽ vẫn timeout rồi báo lỗi, không treo vô hạn).
+db.exec('PRAGMA busy_timeout = 5000');
 
 // Bọc 1 khối thao tác trong transaction: BEGIN luôn nằm trong try, lỗi -> ROLLBACK
 // rồi ném lại để route xử lý (sendRouteError). Thay cho pattern BEGIN/COMMIT/ROLLBACK lặp lại.
