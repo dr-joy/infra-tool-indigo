@@ -193,5 +193,18 @@ export function applyReleaseSchema(db: DatabaseSync): void {
       updated_by INTEGER REFERENCES users(id),
       row_version INTEGER NOT NULL DEFAULT 1
     );
+
+    -- 2026-09-25 (docs/exchanges/2026-09-25.md) — Leader chốt: Admin bật "Tab cá nhân" ở trên chỉ mở
+    -- KHẢ NĂNG cho cả team, KHÔNG tự động bật cho từng người — mỗi user PHẢI tự bật riêng cho mình
+    -- (giống tinh thần user_redmine_config: cấu hình cá nhân, tự quản). Không có dòng = coi như Tắt
+    -- (mặc định Tắt với MỌI user, không seed sẵn lúc join team).
+    CREATE TABLE IF NOT EXISTS user_release_task_autogen_prefs (
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      enabled INTEGER NOT NULL DEFAULT 0 CHECK (enabled IN (0, 1)),
+      updated_at TEXT NOT NULL,
+      row_version INTEGER NOT NULL DEFAULT 1,
+      PRIMARY KEY (user_id, team_id)
+    );
   `);
 }

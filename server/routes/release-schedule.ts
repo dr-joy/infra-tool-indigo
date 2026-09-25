@@ -621,6 +621,23 @@ router.get('/release/schedule-board', requireSession, requireActiveAccount, (req
   }
 });
 
+// Admin bật "Tab cá nhân" (team_release_task_autogen_settings) chỉ mở KHẢ NĂNG cho cả team — KHÔNG tự
+// bật cho từng người (2026-09-25, docs/exchanges/2026-09-25.md, Leader chốt sau khi thấy team-wide
+// on/off là quá thô cho 1 tính năng tự nhận là "cá nhân"). `teamCapable` = feature `personal_task` +
+// autogen team đang bật (điều kiện CŨ, giữ nguyên ý nghĩa). `userEnabled` = teamCapable VÀ chính actor
+// đã tự bật ở `user_release_task_autogen_prefs` (mặc định KHÔNG có dòng = Tắt, seed rỗng lúc join team).
+function teamAutogenCapable(teamId: number): boolean {
+  const featureRow = db.prepare('SELECT level FROM team_feature_visibility WHERE team_id = ? AND feature = ?')
+    .get(teamId, 'personal_task') as { level: string } | undefined;
+  const autogen = db.prepare('SELECT enabled FROM team_release_task_autogen_settings WHERE team_id = ?').get(teamId) as { enabled: number } | undefined;
+  return Boolean(featureRow && featureRow.level === 'on' && autogen && autogen.enabled);
+}
+
+function userAutogenPref(userId: number, teamId: number): boolean {
+  const row = db.prepare('SELECT enabled FROM user_release_task_autogen_prefs WHERE user_id = ? AND team_id = ?').get(userId, teamId) as { enabled: number } | undefined;
+  return Boolean(row && row.enabled);
+}
+
 // ── 2026-09-23 (nối Tab cá nhân FR-28a vào release.tsx) — actor tự kiểm team đang chọn có dùng được
 // "áp dụng checklist cá nhân theo lịch team" không, để FE ẩn/hiện nút cho gọn (KHÔNG phải nguồn phân
 // quyền — 2 route personal-emergency-tasks/personal-regular-tasks bên dưới vẫn tự kiểm lại đầy đủ
@@ -634,12 +651,37 @@ router.get('/release/schedule/personal-task-status', requireSession, requireActi
     if (!actor.memberships.some((m) => m.teamId === teamId)) {
       throw new HttpError(403, 'Bạn không phải thành viên của team này', 'NOT_TEAM_MEMBER');
     }
-    const featureRow = db.prepare('SELECT level FROM team_feature_visibility WHERE team_id = ? AND feature = ?')
-      .get(teamId, 'personal_task') as { level: string } | undefined;
-    const autogen = db.prepare('SELECT enabled FROM team_release_task_autogen_settings WHERE team_id = ?').get(teamId) as { enabled: number } | undefined;
-    res.json({ enabled: Boolean(featureRow && featureRow.level === 'on' && autogen && autogen.enabled) });
+    const teamCapable = teamAutogenCapable(teamId);
+    res.json({ teamCapable, enabled: teamCapable && userAutogenPref(actor.userId, teamId) });
   } catch (error) {
     sendRouteError(res, error, 'Không thể kiểm tra trạng thái Tab cá nhân');
+  }
+});
+
+// ── Tự bật/tắt CHO CHÍNH MÌNH tính năng "áp dụng checklist cá nhân theo lịch team" (2026-09-25) — self
+// service, không cần quyền Admin: mỗi member tự quyết có muốn dùng hay không, miễn đang là thành viên
+// team đó. Cho phép ghi dù `teamCapable` đang false (vô hại — điều kiện cuối cùng vẫn cần CẢ 2, xem
+// `teamAutogenCapable`) để không phải tra thêm 1 lần nữa chỉ để chặn ghi.
+router.put('/release/schedule/personal-task-pref', requireSession, requireActiveAccount, (req, res) => {
+  try {
+    const actor = actorFromRequest(req);
+    const body = req.body as { teamId?: number; enabled?: boolean };
+    const teamId = parseIntIdOrThrow(body.teamId, 'teamId');
+    if (!actor.memberships.some((m) => m.teamId === teamId)) {
+      throw new HttpError(403, 'Bạn không phải thành viên của team này', 'NOT_TEAM_MEMBER');
+    }
+    const enabled = Boolean(body.enabled);
+    const now = new Date().toISOString();
+    withTransaction(() => {
+      db.prepare(`
+        INSERT INTO user_release_task_autogen_prefs (user_id, team_id, enabled, updated_at) VALUES (?, ?, ?, ?)
+        ON CONFLICT(user_id, team_id) DO UPDATE SET enabled = excluded.enabled, updated_at = excluded.updated_at, row_version = row_version + 1
+      `).run(actor.userId, teamId, enabled ? 1 : 0, now);
+      writeAudit(actor.userId, teamId, 'release_task_autogen_pref.update', `user:${actor.userId}`, { enabled });
+    });
+    res.json({ teamCapable: teamAutogenCapable(teamId), enabled: teamAutogenCapable(teamId) && enabled });
+  } catch (error) {
+    sendRouteError(res, error, 'Không thể đổi tuỳ chọn tự sinh task cá nhân');
   }
 });
 
@@ -665,6 +707,8 @@ router.post('/release/schedule/personal-emergency-tasks', requireSession, requir
     assertTeamFeatureOn(teamId, 'personal_task');
     const autogen = db.prepare('SELECT enabled FROM team_release_task_autogen_settings WHERE team_id = ?').get(teamId) as { enabled: number } | undefined;
     if (!autogen || !autogen.enabled) throw new HttpError(403, 'Admin chưa bật Tab cá nhân cho team này', 'FEATURE_DISABLED');
+    // 2026-09-25: Admin bật ở trên chỉ mở khả năng cho cả team — actor còn phải tự bật riêng cho mình.
+    if (!userAutogenPref(actor.userId, teamId)) throw new HttpError(403, 'Bạn chưa tự bật tính năng này cho mình', 'FEATURE_DISABLED');
 
     const registration = db.prepare(`SELECT * FROM team_release_registrations WHERE cycle_id = ? AND team_id = ? AND status != 'cancelled'`)
       .get(cycleId, teamId) as RegistrationRow | undefined;
@@ -765,6 +809,8 @@ router.post('/release/schedule/personal-regular-tasks', requireSession, requireA
     assertTeamFeatureOn(teamId, 'personal_task');
     const autogen = db.prepare('SELECT enabled FROM team_release_task_autogen_settings WHERE team_id = ?').get(teamId) as { enabled: number } | undefined;
     if (!autogen || !autogen.enabled) throw new HttpError(403, 'Admin chưa bật Tab cá nhân cho team này', 'FEATURE_DISABLED');
+    // 2026-09-25: Admin bật ở trên chỉ mở khả năng cho cả team — actor còn phải tự bật riêng cho mình.
+    if (!userAutogenPref(actor.userId, teamId)) throw new HttpError(403, 'Bạn chưa tự bật tính năng này cho mình', 'FEATURE_DISABLED');
 
     // Chỉ chấp nhận cycle ĐANG MỞ do actor CHỌN ĐÚNG — chọn id không tồn tại/không phải regular/đã đóng
     // đều 404 rõ ràng, không tự suy đoán/rơi về đợt khác (CR §6.3: "phải CHỌN ĐÚNG đợt").

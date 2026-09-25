@@ -100,6 +100,15 @@ async function enableAutogen(teamId: number): Promise<void> {
   if (!res.ok) throw new Error(`enableAutogen thất bại: ${res.status}`);
 }
 
+// 2026-09-25 (docs/exchanges/2026-09-25.md) — Admin bật autogen team chỉ mở khả năng, actor còn phải tự
+// bật riêng cho mình mới thật sự sinh task được.
+async function setOwnPref(teamId: number, enabled: boolean, headers: Record<string, string> = authHeaders): Promise<void> {
+  const res = await fetch(`${base}/api/release/schedule/personal-task-pref`, {
+    method: 'PUT', headers, body: JSON.stringify({ teamId, enabled })
+  });
+  if (!res.ok) throw new Error(`setOwnPref thất bại: ${res.status}`);
+}
+
 async function makeRegularCycle(date: string): Promise<number> {
   const r = await req('POST', '/api/release/schedule/regular-cycles', { regularReleaseDate: date }, coordHeaders);
   assert.equal(r.status, 201, JSON.stringify(r.json));
@@ -129,8 +138,19 @@ test('POST personal-regular-tasks: actor không thuộc team -> 403 NOT_TEAM_MEM
   assert.equal(r.json.code, 'NOT_TEAM_MEMBER');
 });
 
+// 2026-09-25 (docs/exchanges/2026-09-25.md) — Admin bật autogen cho team chỉ mở khả năng, KHÔNG tự bật
+// hộ từng actor.
+test('POST personal-regular-tasks: Admin đã bật Tab cá nhân cho team NHƯNG actor CHƯA tự bật riêng -> vẫn 403', async () => {
+  await enableAutogen(teamWork);
+  const cycleId = await makeRegularCycle('2026-11-14');
+  const r = await req('POST', '/api/release/schedule/personal-regular-tasks', { teamId: teamWork, cycleId });
+  assert.equal(r.status, 403);
+  assert.equal(r.json.code, 'FEATURE_DISABLED');
+});
+
 test('POST personal-regular-tasks: cycleId không tồn tại -> 404 REGULAR_CYCLE_NOT_FOUND', async () => {
   await enableAutogen(teamWork);
+  await setOwnPref(teamWork, true);
   const r = await req('POST', '/api/release/schedule/personal-regular-tasks', { teamId: teamWork, cycleId: 999999 });
   assert.equal(r.status, 404);
   assert.equal(r.json.code, 'REGULAR_CYCLE_NOT_FOUND');
@@ -138,6 +158,7 @@ test('POST personal-regular-tasks: cycleId không tồn tại -> 404 REGULAR_CYC
 
 test('POST personal-regular-tasks: cycleId trỏ đúng 1 cycle KHẨN CẤP (khác kind) -> 404, không lẫn sang định kỳ', async () => {
   await enableAutogen(teamWork);
+  await setOwnPref(teamWork, true);
   // Tạo 1 cycle khẩn cấp thật qua đúng luồng FR-23a (tự tìm-hoặc-tạo) để có id cycle kind='emergency'.
   // Đăng ký lịch khẩn cấp chỉ Leader team đó làm được (policy team_release_registration.create — dùng
   // workLeaderHeaders, khác actor 'member' của các test khác trong file này).
@@ -154,6 +175,7 @@ test('POST personal-regular-tasks: cycleId trỏ đúng 1 cycle KHẨN CẤP (kh
 
 test('FR-28a Định kỳ: sinh task cá nhân đúng ngày tính từ regular_release_date của cycle đã chọn, không cho tự nhập ngày', async () => {
   await enableAutogen(teamWork);
+  await setOwnPref(teamWork, true);
   const regularDate = '2026-11-13'; // 1 thứ Sáu — dùng để tinhNgayRelease() tính ra staging.friday = chính ngày này
   const cycleId = await makeRegularCycle(regularDate);
 
@@ -181,6 +203,7 @@ test('FR-28a Định kỳ: sinh task cá nhân đúng ngày tính từ regular_r
 
 test('CR §6.3 cảnh báo kỹ thuật: 2 cycle định kỳ CÙNG tháng dương lịch cùng mở -> task cá nhân KHÔNG lẫn nhau, phải CHỌN ĐÚNG đợt', async () => {
   await enableAutogen(teamWork);
+  await setOwnPref(teamWork, true);
   const dateA = '2026-12-05';
   const dateB = '2026-12-19'; // cùng tháng 2026-12 với dateA — trước đây (khoá release_month=YYYY-MM) sẽ lẫn nhóm
   const cycleA = await makeRegularCycle(dateA);

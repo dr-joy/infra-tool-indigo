@@ -85,6 +85,15 @@ async function enableAutogen(teamId: number): Promise<void> {
   if (!res.ok) throw new Error(`enableAutogen thất bại: ${res.status}`);
 }
 
+// 2026-09-25 (docs/exchanges/2026-09-25.md) — Admin bật autogen team chỉ mở KHẢ NĂNG, actor còn phải tự
+// bật riêng cho mình mới thật sự `enabled`.
+async function setOwnPref(teamId: number, enabled: boolean, headers: Record<string, string> = authHeaders) {
+  const res = await fetch(`${base}/api/release/schedule/personal-task-pref`, {
+    method: 'PUT', headers, body: JSON.stringify({ teamId, enabled })
+  });
+  if (!res.ok) throw new Error(`setOwnPref thất bại: ${res.status}`);
+}
+
 test('GET personal-task-status: chưa đăng nhập -> 401', async () => {
   const r = await fetch(`${base}/api/release/schedule/personal-task-status?teamId=${teamWork}`);
   assert.equal(r.status, 401);
@@ -96,22 +105,41 @@ test('GET personal-task-status: actor không thuộc team -> 403 NOT_TEAM_MEMBER
   assert.equal(r.json.code, 'NOT_TEAM_MEMBER');
 });
 
-test('GET personal-task-status: personal_task TẮT + autogen TẮT -> enabled=false', async () => {
+test('GET personal-task-status: personal_task TẮT + autogen TẮT -> teamCapable=false, enabled=false', async () => {
   const r = await req('GET', `/api/release/schedule/personal-task-status?teamId=${teamWork}`);
   assert.equal(r.status, 200);
+  assert.equal(r.json.teamCapable, false);
   assert.equal(r.json.enabled, false);
 });
 
-test('GET personal-task-status: personal_task BẬT nhưng autogen còn TẮT -> vẫn enabled=false', async () => {
+test('GET personal-task-status: personal_task BẬT nhưng autogen còn TẮT -> vẫn teamCapable=false', async () => {
   await onboarding.setFeatureVisibility(adminSession, teamWork, 'personal_task', 'on');
   const r = await req('GET', `/api/release/schedule/personal-task-status?teamId=${teamWork}`);
   assert.equal(r.status, 200);
-  assert.equal(r.json.enabled, false, 'thiếu autogen Bật riêng cho team vẫn phải là false');
+  assert.equal(r.json.teamCapable, false, 'thiếu autogen Bật riêng cho team vẫn phải là false');
+  assert.equal(r.json.enabled, false);
 });
 
-test('GET personal-task-status: personal_task BẬT + autogen BẬT -> enabled=true', async () => {
+test('GET personal-task-status: personal_task BẬT + autogen team BẬT nhưng actor CHƯA tự bật -> teamCapable=true, enabled=false', async () => {
   await enableAutogen(teamWork);
   const r = await req('GET', `/api/release/schedule/personal-task-status?teamId=${teamWork}`);
   assert.equal(r.status, 200);
+  assert.equal(r.json.teamCapable, true);
+  assert.equal(r.json.enabled, false, 'Admin bật cho team không tự bật hộ từng actor');
+});
+
+test('GET personal-task-status: actor tự bật riêng cho mình -> enabled=true', async () => {
+  await setOwnPref(teamWork, true);
+  const r = await req('GET', `/api/release/schedule/personal-task-status?teamId=${teamWork}`);
+  assert.equal(r.status, 200);
+  assert.equal(r.json.teamCapable, true);
   assert.equal(r.json.enabled, true);
+});
+
+test('PUT personal-task-pref: actor tự tắt lại -> enabled=false ngay, không cần Admin', async () => {
+  await setOwnPref(teamWork, false);
+  const r = await req('GET', `/api/release/schedule/personal-task-status?teamId=${teamWork}`);
+  assert.equal(r.status, 200);
+  assert.equal(r.json.enabled, false);
+  await setOwnPref(teamWork, true); // trả lại true cho các test sau (nếu file này có thêm test sau này)
 });
