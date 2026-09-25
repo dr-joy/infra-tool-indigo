@@ -23,7 +23,3 @@ export const LOGIN_NONCE_COOKIE_NAME = 'login_nonce';
 export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 1 tuần (FR-4)
 export const LOGIN_NONCE_TTL_MS = 5 * 60 * 1000; // vài phút, đủ cho cả vòng Google OAuth
 export const USERS_ME_TIMEOUT_MS = 5000; // FR-1: lỗi/timeout thì dùng tạm dữ liệu cũ, không chặn đăng nhập
-// Khác /users/me: đổi code lấy token KHÔNG có nhánh dự phòng — timeout ở đây phải hiện lỗi rõ ràng
-// (502) cho người dùng thử đăng nhập lại, không được treo request vô thời hạn (Codex phát hiện lúc
-// review Lát 2 — bản đầu chỉ có timeout cho /users/me, thiếu ở bước exchange).
-export const TOKEN_EXCHANGE_TIMEOUT_MS = 8000;

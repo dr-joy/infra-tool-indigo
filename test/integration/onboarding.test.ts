@@ -16,7 +16,6 @@ const ADMIN_EMAIL = 'admin@drjoy.jp';
 const keyPair = await generateKeyPair('RS256');
 const jwk = { ...(await exportJWK(keyPair.publicKey)), kid: 'kid-1', alg: 'RS256', use: 'sig' };
 const jwksBody = { keys: [jwk] };
-const pendingCodes = new Map<string, { accessToken: string; refreshToken: string }>();
 const usersMeByToken = new Map<string, { email: string; name: string; avatar: string }>();
 
 const authServer: Server = http.createServer(async (req, res) => {
@@ -24,17 +23,6 @@ const authServer: Server = http.createServer(async (req, res) => {
   if (url.pathname === '/.well-known/jwks.json') {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify(jwksBody));
-    return;
-  }
-  if (url.pathname === '/auth/token/exchange' && req.method === 'POST') {
-    const chunks: Buffer[] = [];
-    for await (const c of req) chunks.push(c as Buffer);
-    const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') as { code?: string };
-    const entry = body.code ? pendingCodes.get(body.code) : undefined;
-    if (!entry) { res.statusCode = 400; res.end(JSON.stringify({ error: 'invalid_code' })); return; }
-    pendingCodes.delete(body.code!);
-    res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ access_token: entry.accessToken, refresh_token: entry.refreshToken }));
     return;
   }
   if (url.pathname === '/users/me' && req.method === 'GET') {
@@ -85,7 +73,7 @@ after(async () => {
 
 // ── Helpers (giống test/integration/auth.test.ts) ───────────────────────────────────
 let subjectCounter = 0;
-async function issueAuthCode(email: string, name: string, subOverride?: string): Promise<string> {
+async function issueAuthCode(email: string, name: string, subOverride?: string): Promise<{ accessToken: string; refreshToken: string }> {
   subjectCounter += 1;
   const sub = subOverride || `sub-${subjectCounter}`;
   const accessToken = await new SignJWT({ email })
@@ -96,11 +84,8 @@ async function issueAuthCode(email: string, name: string, subOverride?: string):
     .setSubject(sub)
     .setExpirationTime('1h')
     .sign(keyPair.privateKey);
-  const refreshToken = `refresh-${sub}`;
   usersMeByToken.set(accessToken, { email, name, avatar: '' });
-  const code = `code-${sub}-${Math.random().toString(36).slice(2)}`;
-  pendingCodes.set(code, { accessToken, refreshToken });
-  return code;
+  return { accessToken, refreshToken: `refresh-${sub}` };
 }
 
 async function startLogin(): Promise<string> {
@@ -112,8 +97,8 @@ async function startLogin(): Promise<string> {
 
 async function loginAs(email: string, name: string, subOverride?: string): Promise<string> {
   const nonce = await startLogin();
-  const code = await issueAuthCode(email, name, subOverride);
-  const res = await fetch(`${base}/api/auth/callback?code=${code}`, {
+  const { accessToken, refreshToken } = await issueAuthCode(email, name, subOverride);
+  const res = await fetch(`${base}/api/auth/callback?access_token=${encodeURIComponent(accessToken)}&refresh_token=${encodeURIComponent(refreshToken)}`, {
     redirect: 'manual',
     headers: { Cookie: `login_nonce=${nonce}` }
   });

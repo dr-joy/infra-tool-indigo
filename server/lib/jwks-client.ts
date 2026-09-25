@@ -17,16 +17,19 @@ export interface AuthJwtClaims extends JWTPayload {
 export class JwtVerifyError extends Error {}
 
 // Ràng buộc CHẶT issuer/audience/algorithm — theo đúng rủi ro Codex nêu (không chỉ tin JWKS ký đúng
-// là đủ, phải khớp cả issuer/audience). `audience` mặc định bằng client id "indigo" — GIẢ ĐỊNH chưa
-// xác nhận trực tiếp bằng một JWT thật (auth.drjoy.vn chưa cấp được token thử qua flow thật lúc thiết
-// kế); có thể ghi đè bằng AUTH_EXPECTED_AUDIENCE nếu JWT thật cho giá trị khác — cần xác nhận lại ở lần
-// đăng nhập thật đầu tiên trên môi trường dev trước khi coi là chốt.
+// là đủ, phải khớp cả issuer/audience). GIẢ ĐỊNH lúc thiết kế (chưa có JWT thật để đối chiếu):
+// issuer = `authConfig.baseUrl` (URL auth.drjoy.vn), audience = client id "indigo". Xác nhận 25/09
+// bằng JWT thật (đăng nhập thật đầu tiên): SAI cả hai — `iss` thật là chuỗi cố định `"auth-service"`
+// (không phải URL), `aud` thật là `"api-gateway"`. Cả hai đều KHÔNG cấu hình theo từng client mà là
+// hằng số chung của toàn hệ `auth.drjoy.vn` — phải ghi đè qua env, `authConfig.baseUrl` giữ nguyên vai
+// trò gốc JWKS (không đổi ý nghĩa) nên tách override issuer riêng, không tái dùng baseUrl.
+const expectedIssuer = process.env.AUTH_EXPECTED_ISSUER || authConfig.baseUrl;
 const expectedAudience = process.env.AUTH_EXPECTED_AUDIENCE || authConfig.client;
 
 export async function verifyAuthJwt(token: string): Promise<AuthJwtClaims> {
   try {
     const { payload } = await jwtVerify(token, jwks, {
-      issuer: authConfig.baseUrl,
+      issuer: expectedIssuer,
       audience: expectedAudience,
       algorithms: ['RS256']
     });

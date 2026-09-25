@@ -12,19 +12,13 @@ import {
   LOGIN_NONCE_COOKIE_NAME,
   LOGIN_NONCE_TTL_MS,
   SESSION_TTL_MS,
-  USERS_ME_TIMEOUT_MS,
-  TOKEN_EXCHANGE_TIMEOUT_MS
+  USERS_ME_TIMEOUT_MS
 } from '../lib/auth-config.js';
 import { requireSession, requireActiveAccount, actorFromRequest } from '../lib/auth-middleware.js';
 import { authorize } from '../lib/authorize.js';
 import { writeAudit } from '../lib/audit.js';
 
 const router = Router();
-
-interface TokenPair {
-  access_token: string;
-  refresh_token: string;
-}
 
 interface UsersMeResponse {
   user_id: string;
@@ -87,8 +81,16 @@ router.get('/auth/login', (_req, res) => {
   res.redirect(url.toString());
 });
 
-// ── GET /auth/callback — bước 2+3 của FR-1: nhận ?code=, đổi code lấy token, verify JWT, gọi
+// ── GET /auth/callback — bước 2+3 của FR-1: nhận access_token/refresh_token, verify JWT, gọi
 // /users/me, tạo/cập nhật user, set cookie phiên riêng của app.
+//
+// 2026-09-25: thiết kế gốc CR-20260913 FR-1 giả định `client_flows.indigo = "code"` (redirect kèm
+// ?code=, app tự POST /auth/token/exchange đổi lấy token — token KHÔNG bao giờ lộ ra trình duyệt).
+// Xác nhận thật với đội quản auth.drjoy.vn (25/09): client "indigo" đang cấu hình flow **"legacy"**,
+// trả thẳng access_token/refresh_token trên query của chính redirect_uri — không có bước code/exchange
+// nào cả. Leader chọn PHƯƠNG ÁN B (đổi app theo đúng cấu hình thật đang chạy, chấp nhận đánh đổi bảo
+// mật: token thật lộ ra URL — vào log truy cập của proxy/server — thay vì nhờ đổi cấu hình phía họ
+// sang "code"). Xem docs/exchanges/2026-09-25.md.
 router.get('/auth/callback', asyncHandler(async (req, res) => {
   const cookies = parseCookie(req.headers.cookie || '');
   const nonce = cookies[LOGIN_NONCE_COOKIE_NAME];
@@ -100,34 +102,11 @@ router.get('/auth/callback', asyncHandler(async (req, res) => {
     throw new HttpError(400, 'Thiếu hoặc hết hạn cookie chống giả mạo đăng nhập, vui lòng đăng nhập lại', 'LOGIN_NONCE_INVALID');
   }
 
-  const code = String(req.query.code || '');
-  if (!code) throw new HttpError(400, 'Thiếu mã đăng nhập (code) từ auth.drjoy.vn');
-
-  const exchangeController = new AbortController();
-  const exchangeTimer = setTimeout(() => exchangeController.abort(), TOKEN_EXCHANGE_TIMEOUT_MS);
-  let exchangeRes: Response;
-  try {
-    exchangeRes = await fetch(`${authConfig.baseUrl}/auth/token/exchange`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code }),
-      signal: exchangeController.signal
-    });
-  } catch {
-    // Timeout hoặc lỗi mạng — KHÁC /users/me: không có dữ liệu cũ để dùng tạm, phải báo lỗi rõ.
-    throw new HttpError(502, 'Không kết nối được tới auth.drjoy.vn để đổi mã đăng nhập, vui lòng thử lại');
-  } finally {
-    clearTimeout(exchangeTimer);
+  const accessToken = String(req.query.access_token || '');
+  const refreshToken = String(req.query.refresh_token || '');
+  if (!accessToken || !refreshToken) {
+    throw new HttpError(400, 'Thiếu access_token/refresh_token từ auth.drjoy.vn', 'AUTH_CALLBACK_INVALID');
   }
-  if (!exchangeRes.ok) throw new HttpError(502, 'Không đổi được mã đăng nhập lấy token từ auth.drjoy.vn');
-  const tokens = (await exchangeRes.json()) as Partial<TokenPair>;
-  // auth.drjoy.vn là hệ thống ngoài — không tin response luôn đúng hình dạng dù status 200 (Codex
-  // phát hiện: ép kiểu thẳng sang TokenPair mà không kiểm có thể lưu refresh_token rỗng/undefined
-  // hoặc verifyAuthJwt nhận access_token không phải string, lỗi ra không rõ nghĩa).
-  if (typeof tokens.access_token !== 'string' || !tokens.access_token || typeof tokens.refresh_token !== 'string' || !tokens.refresh_token) {
-    throw new HttpError(502, 'auth.drjoy.vn trả về dữ liệu token không hợp lệ');
-  }
-  const { access_token: accessToken, refresh_token: refreshToken } = tokens as TokenPair;
 
   const claims = await verifyAuthJwt(accessToken);
   const usersMe = await fetchUsersMe(accessToken);
