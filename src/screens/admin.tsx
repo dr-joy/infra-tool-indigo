@@ -449,11 +449,16 @@ function AdminReleaseConfig() {
                 <span className="text-sm">{team.name}</span>
                 <button
                   type="button"
+                  role="switch"
+                  aria-checked={on}
+                  aria-label={`Tab cá nhân Release — ${team.name}`}
                   disabled={busy}
                   onClick={() => toggleAutogen(team.id)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium ${on ? 'bg-teal-600 text-white hover:bg-teal-700' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'} disabled:opacity-50`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${on ? 'bg-teal-600' : 'bg-slate-300'}`}
                 >
-                  {on ? 'Bật' : 'Tắt'}
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${on ? 'translate-x-6' : 'translate-x-1'}`}
+                  />
                 </button>
               </div>
             );

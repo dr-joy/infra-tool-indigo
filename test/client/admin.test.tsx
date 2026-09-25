@@ -145,9 +145,10 @@ describe('ManHinhAdmin — mục Release', () => {
     await waitFor(() => expect(calls.some((c) => c.method === 'PUT' && c.url === '/api/admin/release-coordinator')).toBe(true));
     expect(calls.find((c) => c.method === 'PUT' && c.url === '/api/admin/release-coordinator')?.body).toMatchObject({ teamId: 2, rowVersion: 1 });
 
-    // Fixture: Dev5 autogen enabled=0 ("Tắt", nút duy nhất mang chữ này trong tab Release — Dev12 đang
-    // "Bật") -> bấm nút này để bật Dev5.
-    fireEvent.click(screen.getByText('Tắt'));
+    // Fixture: Dev5 autogen enabled=0 (switch chưa bật) -> bấm switch của Dev5 để bật.
+    const dev5Switch = screen.getByRole('switch', { name: 'Tab cá nhân Release — Dev5' });
+    expect(dev5Switch).toHaveAttribute('aria-checked', 'false');
+    fireEvent.click(dev5Switch);
     await waitFor(() => expect(calls.some((c) => c.method === 'PUT' && c.url === '/api/admin/release-task-autogen')).toBe(true));
     expect(calls.find((c) => c.method === 'PUT' && c.url === '/api/admin/release-task-autogen')?.body).toMatchObject({ teamId: 1, enabled: true, rowVersion: 1 });
   });
