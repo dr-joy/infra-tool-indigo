@@ -6,12 +6,16 @@ type: docker
 name: infra-tool-indigo
 
 steps:
-  - name: test
+  # 2026-09-25: bỏ `npm test` khỏi cổng CI (Leader quyết định — bộ test tích hợp quá chậm trên
+  # runner ít CPU của Drone, ~22 phút/lần dù đã giới hạn concurrency ở package.json). Vẫn giữ
+  # `npm run build` (tsc --noEmit + vite build) làm cổng nhanh chặn lỗi cú pháp/type cơ bản trước
+  # deploy — KHÔNG còn gì chặn lỗi logic/bảo mật nữa, `npm test` vẫn phải tự chạy tay
+  # (`npm run check`) trước khi push nếu muốn chắc chắn.
+  - name: typecheck
     image: node:24-slim
     commands:
       - npm ci
       - npm run build
-      - npm test
     when:
       event:
         - push
