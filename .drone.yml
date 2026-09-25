@@ -1,0 +1,55 @@
+# CI/CD: Drone CI — Cần khai báo secret trong Drone (Settings → Secrets):
+#   dockerconfigjson  — push image lên docker-hub.drjoy.vn
+#   ssh-private-key   — SSH vào server deploy (user svcs)
+kind: pipeline
+type: docker
+name: infra-tool-indigo
+
+steps:
+  - name: test
+    image: node:24-slim
+    commands:
+      - npm ci
+      - npm run build
+      - npm test
+    when:
+      event:
+        - push
+        - pull_request
+
+  - name: build
+    image: plugins/kaniko
+    settings:
+      repo: docker-hub.drjoy.vn/infra-tool/indigo
+      tags: ['${DRONE_BUILD_NUMBER}', 'latest']
+      dockerfile: Dockerfile
+      context: .
+      config:
+        from_secret: dockerconfigjson
+    when:
+      event:
+        - push
+
+  - name: deploy
+    image: appleboy/drone-ssh
+    settings:
+      host: 192.168.4.7
+      port: 22
+      username: svcs
+      key:
+        from_secret: ssh-private-key
+      script:
+        - /home/svcs/.config/containers/systemd/infra/restart-service.sh ${DRONE_REPO_NAME} ${DRONE_BUILD_NUMBER}
+    when:
+      event:
+        - push
+
+image_pull_secrets:
+  - dockerconfigjson
+
+trigger:
+  branch:
+    - master
+  event:
+    - push
+    - pull_request
