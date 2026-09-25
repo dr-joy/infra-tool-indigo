@@ -121,8 +121,12 @@
     @apply mb-1 px-1 text-sm font-black uppercase tracking-wide text-slate-600;
   }
 
+  /* 2026-09-25: bỏ `backdrop-blur` — thuộc tính này (giống `filter`) bắt trình duyệt vẽ riêng cả
+     .menu-tabs vào 1 buffer đúng bằng kích thước khung của nó, khiến popup TeamSwitcher (position:
+     absolute, tràn xuống dưới khung nav) bị cắt cụt chỉ còn thấy viền trên cùng — không phải bug ở
+     TeamSwitcher, mà do chính CSS của nav cha. */
   .menu-tabs {
-    @apply mb-2 flex min-h-10 items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white/75 p-1 backdrop-blur;
+    @apply mb-2 flex min-h-10 items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white/75 p-1;
   }
 
   .menu-tab-list {
