@@ -237,6 +237,11 @@ function PopupChonLeader({ team, onClose, onDone }: { team: TeamRow; onClose: ()
 // ── 2. Hiển thị chức năng (tầng 2, FR-7) ────────────────────────────────────────────────
 function AdminFeatureVisibility() {
   const toast = useToast();
+  // Admin đang xem/sửa feature-visibility có thể đang đứng ngay trong 1 team bị ảnh hưởng (vd Admin
+  // cũng là Member của Dev13) — myTeams của actor (dùng để ẩn/hiện tab ở src/main.tsx) chỉ tự fetch
+  // lúc load trang, không tự biết PATCH vừa xong ở đây. Gọi reload() để nav bar cập nhật ngay, không
+  // bắt Admin F5 mới thấy tab Project vừa bật.
+  const { reload } = useAuth();
   const [teams, setTeams] = useState<TeamRow[]>([]);
   const [rows, setRows] = useState<VisibilityRow[]>([]);
   const [error, setError] = useState('');
@@ -278,6 +283,7 @@ function AdminFeatureVisibility() {
         method: 'PATCH', body: JSON.stringify({ teamId, feature, level: nextLevel, rowVersion: row.row_version })
       });
       await tai();
+      void reload();
       toast(`Đã ${nextLevel === 'on' ? 'bật' : 'tắt'} ${feature} cho team`);
     } catch (e) {
       setError(loiThanThien(e));

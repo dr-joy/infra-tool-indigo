@@ -2,7 +2,7 @@
 // đang 'off' cho team đang chọn (team_feature_visibility, CR-20260913 FR-7), thay vì hiện tab rồi mới
 // báo lỗi 403 FEATURE_DISABLED bên trong. Team mới (provisionTeam) mặc định TẮT cả 5 feature.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { LangProvider } from '../../src/useLang';
 import { PicProvider, ToastProvider } from '../../src/context';
 import { AuthProvider } from '../../src/auth-context';
@@ -15,10 +15,13 @@ function jsonResponse(body: unknown, status = 200) {
 interface TeamStub { id: number; name: string; role: 'leader' | 'member'; features: string[] }
 
 // Mock fetch tối thiểu cho mọi endpoint App() (và các màn con nó luôn mount) có thể gọi — bất kỳ
-// route nào ngoài danh sách này trả rỗng, cùng quy ước với test/client/screens.test.tsx.
+// route nào ngoài danh sách này trả rỗng, cùng quy ước với test/client/screens.test.tsx. `teams` là
+// mảng SỐNG (mutate trực tiếp `features` của từng phần tử) để mô phỏng đúng chỗ vừa vá: PATCH
+// /api/admin/feature-visibility đổi state rồi phải phản ánh lại ở /api/me/teams sau khi reload().
 function mockApi(teams: TeamStub[], systemRole: 'user' | 'admin' = 'user') {
-  globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+  globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input), 'http://localhost');
+    const method = (init?.method || 'GET').toUpperCase();
     if (url.pathname === '/api/auth/me') {
       return jsonResponse({
         user: {
@@ -32,6 +35,26 @@ function mockApi(teams: TeamStub[], systemRole: 'user' | 'admin' = 'user') {
     }
     if (url.pathname === '/api/notifications') return jsonResponse({ notifications: [] });
     if (url.pathname.startsWith('/api/tasks')) return jsonResponse({ khoTask: [], taskHomNay: [], taskDinhKy: [], lichSu: [] });
+    if (url.pathname === '/api/admin/teams') {
+      return jsonResponse({ teams: teams.map((t) => ({ id: t.id, name: t.name, description: null, row_version: 1, created_at: '' })), nextCursor: null });
+    }
+    if (url.pathname === '/api/admin/feature-visibility' && method === 'GET') {
+      const ALL_FEATURES = ['personal_task', 'project', 'weekly_report', 'release', 'mind_map'];
+      const visibility = teams.flatMap((t) => ALL_FEATURES.map((feature) => ({
+        team_id: t.id, feature, level: t.features.includes(feature) ? 'on' : 'off', row_version: 1, updated_at: ''
+      })));
+      return jsonResponse({ visibility });
+    }
+    if (url.pathname === '/api/admin/feature-visibility' && method === 'PATCH') {
+      const body = JSON.parse(String(init?.body)) as { teamId: number; feature: string; level: 'on' | 'off' };
+      const team = teams.find((t) => t.id === body.teamId);
+      if (team) {
+        team.features = body.level === 'on'
+          ? [...new Set([...team.features, body.feature])]
+          : team.features.filter((f) => f !== body.feature);
+      }
+      return jsonResponse({ ok: true });
+    }
     return jsonResponse([]);
   }) as unknown as typeof fetch;
 }
@@ -97,5 +120,21 @@ describe('App() — ẩn tab theo team_feature_visibility (CR-20260913 FR-7)', (
     // Tasks (personal_task) cũng tắt ở Team B -> Reports (weekly_report, đang bật) phải là tab được
     // tự chuyển tới, không phải màn trống không tab nào active.
     await waitFor(() => expect(screen.getByRole('button', { name: 'Reports' })).toHaveClass('menu-tab-active'));
+  });
+
+  it('2026-09-25: Admin bật feature ở màn Hiển thị chức năng -> tab hiện ngay trên nav, không cần F5', async () => {
+    mockApi([{ id: 1, name: 'Dev13', role: 'leader', features: [] }], 'admin');
+    renderApp();
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Admin' })).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: 'Projects' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Admin' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Hiển thị chức năng' })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Hiển thị chức năng' }));
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Project — Dev13' })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('switch', { name: 'Project — Dev13' }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Projects' })).toBeInTheDocument());
   });
 });
