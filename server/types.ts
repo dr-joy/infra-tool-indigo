@@ -184,69 +184,6 @@ export const validReleaseTemplateTokens = new Set([
   'afterDemo.monday'
 ]);
 
-// ── Luyện đề thi ────────────────────────────────────────────────────────────────
-export type DeThiLoaiCauHoi = 'single' | 'multi';
-
-export interface DeThiDapAnImport {
-  noiDungEn: string;
-  noiDungVi?: string;
-  laDapAnDung?: boolean;
-}
-
-export interface DeThiCauHoiImport {
-  loai?: DeThiLoaiCauHoi;
-  noiDungEn: string;
-  noiDungVi?: string;
-  giaiThichEn?: string;
-  giaiThichVi?: string;
-  chuDe?: string;
-  doKho?: string;
-  dapAn: DeThiDapAnImport[];
-}
-
-export interface DeThiKyThiBody {
-  nhom?: string;
-  ten?: string;
-  ghiChu?: string;
-  // Cấu hình thi thử chuẩn của chứng chỉ (vd SAA-C03: 65 câu / 130 phút). null = chưa đặt.
-  examSoCau?: number | null;
-  examThoiGianPhut?: number | null;
-}
-
-export interface DeThiImportBody {
-  kyThiId?: number | null;
-  ten?: string;
-  nguon?: string;
-  ghiChu?: string;
-  fileName?: string;   // tên file gốc đã import (để chặn import trùng tên)
-  passPercent?: number | null;
-  durationSeconds?: number | null;
-  cauHoi?: DeThiCauHoiImport[];
-}
-
-export interface DeThiCapNhatCauHoiBody {
-  noiDungVi?: string;
-  giaiThichVi?: string;
-  chuDe?: string;
-  doKho?: string;
-  // Đánh dấu bản dịch đã sửa tay (để "Dịch lại" không ghi đè)
-  dichThuCong?: boolean;
-  dapAnVi?: { id: number; noiDungVi: string }[];
-}
-
-export interface DeThiLuuPhienBody {
-  boId?: number | null;
-  cheDo?: string;
-  thoiGianGiay?: number;
-  cauHinh?: Record<string, unknown>;
-  traLoi?: { cauHoiId: number; dapAnChon: number[]; dungSai: boolean }[];
-}
-
-export interface DeThiDichBody {
-  // Danh sách id câu hỏi cần dịch (bỏ qua câu đã dịch tay).
-  cauHoiIds?: number[];
-}
-
 export const validEmergencyReleaseTemplateTokens = new Set([
   'release.date', 'release.previousDate',
   'staging.deployDate', 'staging.deployAt',

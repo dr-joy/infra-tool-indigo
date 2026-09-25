@@ -333,9 +333,8 @@ export async function createVerifiedBackup(sourceDbPath: string, backupDir: stri
 
 // ── Bước 2: buildServerDatabaseFromDesktopSnapshot ───────────────────────────────────────────
 // Từ bản backup (bước 1), tạo ra 1 file DB server RIÊNG (không đụng bản backup gốc lẫn DB desktop
-// gốc — cả hai đều KHÔNG bị xoá bảng de_thi_*, giữ nguyên cho Luyện đề chạy tiếp trên desktop).
-// "Build server không mount de-thi.ts" là việc của server/app.ts (biến môi trường ENABLE_LUYEN_DE,
-// xem comment ở đó) — hàm này chỉ lo phần dữ liệu, không khởi động server.
+// gốc). 2026-09-25: tính năng Luyện đề (de_thi_*) đã bị xoá hoàn toàn khỏi app (không còn phân biệt
+// desktop/server nữa) — comment cũ ở đây nói về hành vi đó đã lỗi thời, xoá theo.
 export async function buildServerDatabaseFromDesktopSnapshot(backupPath: string, outputPath: string): Promise<{ outputPath: string; sha256: string }> {
   if (!existsSync(backupPath)) throw new Error(`buildServerDatabaseFromDesktopSnapshot: không tìm thấy backup tại ${backupPath}`);
   if (existsSync(outputPath)) throw new Error(`buildServerDatabaseFromDesktopSnapshot: file đích đã tồn tại ${outputPath}`);
@@ -1072,7 +1071,7 @@ export async function smokeBootMigratedServer(dataDirWithMigratedDb: string, lea
     }
   }
 
-  // ── Lần boot thứ nhất: health/Luyện đề + đăng nhập Leader + chọn Dev13 + đọc project/tree/weekly/
+  // ── Lần boot thứ nhất: health + đăng nhập Leader + chọn Dev13 + đọc project/tree/weekly/
   // tasks/mindmaps thật qua HTTP thật tới tiến trình con.
   const firstBoot = await bootServerChildProcess(dataDirWithMigratedDb);
   if ('error' in firstBoot) {
@@ -1085,10 +1084,6 @@ export async function smokeBootMigratedServer(dataDirWithMigratedDb: string, lea
 
     const ready = await fetch(`${firstBoot.baseUrl}/health/ready`);
     if (ready.status !== 200) problems.push(`GET /health/ready trả ${ready.status}, kỳ vọng 200`);
-
-    // Luyện đề không có route trên server (ENABLE_LUYEN_DE=false) -> 404, không phải SQL 500.
-    const luyenDe = await fetch(`${firstBoot.baseUrl}/api/de-thi/ky-thi`);
-    if (luyenDe.status !== 404) problems.push(`GET /api/de-thi/ky-thi trả ${luyenDe.status}, kỳ vọng 404 (Luyện đề không mount trên server)`);
 
     // "Đăng nhập Leader": xác nhận session vừa tạo thật sự hợp lệ và đúng đúng identity Leader.
     const meRes = await fetch(`${firstBoot.baseUrl}/api/auth/me`, { headers: authHeaders });

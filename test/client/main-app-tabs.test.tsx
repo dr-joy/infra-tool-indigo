@@ -76,7 +76,7 @@ beforeEach(() => {
 });
 
 describe('App() — ẩn tab theo team_feature_visibility (CR-20260913 FR-7)', () => {
-  it('team mới (mọi feature off) -> chỉ còn tab không bị gate (Certificates/Settings/Team), ẩn hết Tasks/Projects/Reports/Releases/MindMap', async () => {
+  it('team mới (mọi feature off) -> chỉ còn tab không bị gate (Settings/Team), ẩn hết Tasks/Projects/Reports/Releases/MindMap', async () => {
     mockApi([{ id: 1, name: 'Team Mới', role: 'leader', features: [] }]);
     renderApp();
 
@@ -86,7 +86,6 @@ describe('App() — ẩn tab theo team_feature_visibility (CR-20260913 FR-7)', (
     expect(screen.queryByRole('button', { name: 'Reports' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Releases' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'MindMap' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Certificates' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument();
   });
 

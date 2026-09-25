@@ -14,7 +14,6 @@ const dict = {
   'tab.schedule': 'Releases',
   'tab.weekly': 'Reports',
   'tab.pics': 'Settings',
-  'tab.luyen_de': 'Certificates',
   'tab.so_do': 'MindMap',
   'tab.admin': 'Admin',
   'tab.team': 'Team',

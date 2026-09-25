@@ -15,7 +15,6 @@ Ví dụ:
 |---|---|
 | Tasks | `/api/tasks` |
 | Project tasks | `/api/projects/:projectId/tasks` |
-| Luyện đề | `/api/de-thi/ky-thi` |
 | Weekly goals | `/api/weeks/:weekStart/goals` |
 
 ## 2. HTTP Method

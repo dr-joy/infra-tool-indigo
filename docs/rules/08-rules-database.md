@@ -64,7 +64,7 @@ Mapper phải parse phòng thủ: JSON hỏng không làm sập API.
 
 ## 7. FK & Soft Link
 
-- FK enforced chủ yếu ở assignment và luyện đề: `project_task_assignments`, `de_thi_cau_hoi`, `de_thi_dap_an`, `de_thi_phien`, `de_thi_tra_loi`.
+- FK enforced chủ yếu ở assignment: `project_task_assignments`.
 - Nhiều quan hệ là soft link: `projects.pic`, `tasks.related_ids`, weekly project/task ids, release refs.
 - Khi đổi/xóa dữ liệu soft link, route phải tự cascade hoặc chặn theo rule nghiệp vụ.
 

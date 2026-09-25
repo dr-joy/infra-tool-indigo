@@ -1,5 +1,5 @@
 // Context dùng chung toàn app: danh sách PIC (Gantt) + toast thông báo.
-// Tách khỏi main.tsx để mọi màn hình (kể cả luyen-de/mind-map) dùng
+// Tách khỏi main.tsx để mọi màn hình (kể cả mind-map) dùng
 // qua hook thay vì truyền toast qua props.
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Check, X } from 'lucide-react';

@@ -18,7 +18,6 @@ import releaseScheduleRouter from './routes/release-schedule.js';
 import schedulesRouter from './routes/schedules.js';
 import weeklyRouter from './routes/weekly.js';
 import picsRouter from './routes/pics.js';
-import deThiRouter from './routes/de-thi.js';
 import redmineRouter from './routes/redmine.js';
 import mindmapsRouter from './routes/mindmaps.js';
 import authRouter from './routes/auth.js';
@@ -68,7 +67,7 @@ app.get('/health/ready', (_req: Request, res: Response) => {
 });
 
 app.use(cors({ origin: /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/ }));
-// Giới hạn kích thước body: nới rộng để import/export ngân hàng câu hỏi JSON lớn không bị chặn.
+// Giới hạn kích thước body: nới rộng cho các payload JSON lớn (export/import dữ liệu, mindmap...).
 app.use(express.json({ limit: '32mb' }));
 
 app.use('/api', tasksRouter);
@@ -78,14 +77,6 @@ app.use('/api', releaseScheduleRouter);
 app.use('/api', schedulesRouter);
 app.use('/api', weeklyRouter);
 app.use('/api', picsRouter);
-// CR-20260913 Lát 4 (§6.3, di trú bước 2/7 "buildServerDatabaseFromDesktopSnapshot"/
-// "smokeBootMigratedServer"): Luyện đề ở lại bản desktop, KHÔNG lên server — bản server (container
-// triển khai nhiều team) phải KHÔNG mount router này, để endpoint trả 404 thay vì lỡ SQL 500 nếu DB
-// server không mang theo bảng de_thi_*. Trước Lát 4 không có cách nào tắt được (Dockerfile chỉ chạy
-// `npm start` không phân biệt server/desktop) — thêm đúng 1 biến môi trường, mặc định BẬT (giữ nguyên
-// hành vi hiện tại cho desktop/dev), Dockerfile server đặt `false`.
-const enableLuyenDe = process.env.ENABLE_LUYEN_DE !== 'false';
-if (enableLuyenDe) app.use('/api', deThiRouter);
 app.use('/api', redmineRouter);
 app.use('/api', mindmapsRouter);
 app.use('/api', authRouter);

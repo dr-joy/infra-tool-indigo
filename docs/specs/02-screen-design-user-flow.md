@@ -1,6 +1,6 @@
 # 02 - Screen Design & User Flow
 
-> Nguồn: `src/main.tsx`, `src/luyen-de.tsx`, `src/mind-map.tsx`, `src/shortcuts.tsx`, `src/ui.tsx`, `src/i18n.ts`, `src/styles.css`, và handoff "Screens & Flows Digest".
+> Nguồn: `src/main.tsx`, `src/mind-map.tsx`, `src/shortcuts.tsx`, `src/ui.tsx`, `src/i18n.ts`, `src/styles.css`, và handoff "Screens & Flows Digest".
 > Tài liệu mô tả UI/flow thực tế trong code. Chỗ còn là quyết định sản phẩm sẽ đánh dấu `> ⏳ User điền nốt`.
 
 ## 1. App Shell
@@ -8,7 +8,7 @@
 - App là workbench nội bộ, không có landing page.
 - Backend bind `127.0.0.1:4000`; frontend Vite trong dev; bản exe serve `dist/`.
 - Tab hiện tại sync với URL query `?tab=`.
-- Điều hướng nhanh: `Alt+1..7` đổi tab; `Ctrl+Q` mở thêm task nhanh.
+- Điều hướng nhanh: `Alt+1..6` đổi tab; `Ctrl+Q` mở thêm task nhanh.
 - Modal primitive dùng component `Modal` trong `src/main.tsx`; overlay khai báo `role="dialog"` và `aria-modal`.
 
 ## 2. Danh Sách Tab
@@ -19,7 +19,6 @@
 | `project` | Projects | Quản lý project | `ManHinhProject` |
 | `bao_cao_tuan` | Reports | Báo cáo tuần | `ManHinhBaoCaoTuan` |
 | `len_lich` | Releases | Lên lịch | `ManHinhLenLich` |
-| `luyen_de` | Certificates | Luyện đề | `ManHinhLuyenDe` |
 | `so_do` | MindMap | Sơ đồ | `ManHinhMindMap` |
 | `quan_ly_pic` | Settings | Cài đặt | `ManHinhQuanLyDanhMuc` |
 
@@ -79,22 +78,7 @@ Popup/modal: `QuanLyReleaseTemplate`, `QuanLyReleaseTask`, `QuanLyEmergencyRelea
 | Màn Release | `LayoutReleaseDinhKy` (bảng trên) | `driftCount > 0` (đọc `GET /schedules/release/drift`) | Badge `N task lệch definition` cạnh nút "Áp dụng thay đổi" |
 | Dashboard chính, dòng task định kỳ | `TaskDinhKy` (`src/main.tsx`) | `task.lechDefinition === true` (BE tính sẵn, bulk, xem docs/specs/03 mục 1) | Icon cảnh báo nhỏ (`.drift-flag`), `title` nói rõ lệch — CHỈ hiện khi CHẮC CHẮN lệch, không hiện khi không tra được definition |
 
-### 3.5 Luyện Đề
-
-State màn hình: `ky_thi`, `bo_list`, `ngan_hang`, `import`, `lich_su`, `quiz`.
-
-| Sub-screen | Nội dung / hành vi |
-|---|---|
-| `KyThiList` | Danh sách kỳ thi/chứng chỉ theo nhóm |
-| `DangKyKyThi` | Tạo/sửa kỳ thi |
-| `BoDeList` | Bộ đề theo kỳ thi |
-| `CauHinhLamBai` | Chọn chế độ, số câu, thời gian |
-| `ImportPanel` | Import HTML/JSON, chống trùng file |
-| `NganHangCauHoi` | Quản lý câu hỏi/đáp án |
-| `LichSuPanel` | Lịch sử phiên luyện |
-| `QuizRunner` | Làm bài, timer, chấm điểm, review |
-
-### 3.6 MindMap
+### 3.5 MindMap
 
 | Region | Nội dung / hành vi |
 |---|---|
@@ -104,14 +88,13 @@ State màn hình: `ky_thi`, `bo_list`, `ngan_hang`, `import`, `lich_su`, `quiz`.
 | Pen bar | Vẽ tay, undo/redo |
 | Export modal | Markdown/Mermaid và tạo task từ node |
 
-### 3.7 Settings
+### 3.6 Settings
 
-Sub-tab: PIC, Chứng chỉ, Redmine, Phím tắt.
+Sub-tab: PIC, Redmine, Phím tắt.
 
 | Sub-tab | Nội dung / hành vi |
 |---|---|
 | PIC | CRUD, reorder, màu; đổi tên cascade; xóa bị chặn nếu đang dùng |
-| Chứng chỉ | CRUD category, reorder; đổi tên cascade; xóa bị chặn nếu đang dùng |
 | Redmine | Base URL, API key mã hóa, test connection |
 | Phím tắt | Rebind từ `SHORTCUT_ACTIONS`, lưu localStorage |
 
@@ -162,11 +145,11 @@ Khẩn cấp:
 4. Gantt tổng lọc theo project/PIC.
 5. User kéo/resize phase; backend lưu assignments và rollup.
 
-### Flow 5 - PIC / Chứng Chỉ
+### Flow 5 - PIC
 
-1. User tạo/sửa/xóa/reorder danh mục.
-2. Đổi tên PIC/category cascade sang dữ liệu liên quan.
-3. Xóa bị chặn nếu danh mục đang dùng.
+1. User tạo/sửa/xóa/reorder danh mục PIC.
+2. Đổi tên PIC cascade sang dữ liệu liên quan.
+3. Xóa bị chặn nếu PIC đang dùng.
 4. Màu PIC dùng cho Gantt và các visual theo người phụ trách.
 
 ### Flow 6 - Phím tắt

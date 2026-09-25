@@ -67,7 +67,7 @@ const server = app.listen(PORT, HOST, () => {
   // (mindmap_attachments.status = 'pending' quá 24h), không còn dò URL trong JSON như GC cũ.
   purgeStalePendingAttachments();
   // Mốc nhận diện bản server đang chạy (để chắc chắn đã restart đúng code mới).
-  console.log('[server] features: luyen-de, gantt-phan-cong-giai-doan v2');
+  console.log('[server] features: gantt-phan-cong-giai-doan v2');
   // Tự mở trình duyệt khi khởi động qua launcher (đặt OPEN_BROWSER=1).
   if ((process.env.OPEN_BROWSER === '1' || isSea) && process.env.NO_BROWSER !== '1') {
     void openBrowser(`http://localhost:${PORT}`).catch((err) => console.error('[open-browser]', err));

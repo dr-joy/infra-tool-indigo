@@ -4,7 +4,6 @@ import { applyReleaseSchema } from './schema/release.js';
 import { applyProjectSchema } from './schema/project.js';
 import { applyPicSchema } from './schema/pic.js';
 import { applyWeeklyReportSchema } from './schema/weekly-report.js';
-import { applyLuyenDeSchema } from './schema/luyen-de.js';
 import { applyMindmapSchema } from './schema/mindmap.js';
 import { applyAppSettingsSchema } from './schema/app-settings.js';
 import { applyRedmineSchema } from './schema/redmine.js';
@@ -31,7 +30,6 @@ export function bootstrapDatabase(targetDb: DatabaseSync, context: DbMigrationCo
   applyProjectSchema(targetDb);
   applyPicSchema(targetDb);
   applyWeeklyReportSchema(targetDb);
-  applyLuyenDeSchema(targetDb);
   applyMindmapSchema(targetDb);
   applyAppSettingsSchema(targetDb);
   applyRedmineSchema(targetDb);

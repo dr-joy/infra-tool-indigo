@@ -2,9 +2,6 @@
 # CR-20260913-nen-tang-da-nguoi-dung.md §10 lát 1 (FR-35/36/39): đóng gói container, cấu hình
 # qua biến môi trường, ổ lưu trữ bền, health check. CHƯA đổi tính năng nghiệp vụ.
 #
-# ENABLE_LUYEN_DE=false (thêm ở Lát 4, xem server/app.ts): Luyện đề ở lại bản desktop, không lên
-# server — bản container này KHÔNG mount router de-thi.
-#
 # 2 stage:
 #  - builder: cần devDependencies (vite/tsc/tailwind) để `npm run build` ra dist/.
 #  - runtime: chỉ cài dependencies production. Server chạy TRỰC TIẾP qua tsx (không bundle
@@ -26,7 +23,6 @@ ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=4000 \
     DATA_DIR=/data/app \
-    ENABLE_LUYEN_DE=false \
     TZ=Asia/Ho_Chi_Minh
 
 # Chạy user không root UID 1001 — cùng UID với infra-tool-be/fe để quadlet dùng

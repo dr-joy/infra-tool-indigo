@@ -27,8 +27,8 @@ import type {
 // vòng 3) — toàn bộ state/effect/hàm nghiệp vụ của tính năng Task cá nhân (trước đây nằm trực tiếp
 // trong App()) cùng CotTask/CotDinhKy/TaskDinhKy/7 popup liên quan, giữ nguyên văn logic.
 //
-// QUAN TRỌNG — ManHinhTaskCaNhan LUÔN ĐƯỢC MOUNT (không như 5 màn khác đã tách trước — Project/Weekly/
-// Release/Luyện đề/MindMap — vốn unmount hẳn khi đổi tab): trước khi tách, state của tính năng này sống
+// QUAN TRỌNG — ManHinhTaskCaNhan LUÔN ĐƯỢC MOUNT (không như các màn khác đã tách trước — Project/
+// Weekly/Release/MindMap — vốn unmount hẳn khi đổi tab): trước khi tách, state của tính năng này sống
 // trong App() nên không unmount khi đổi tab, popup vẫn nổi đè lên tab khác nếu đang mở (hành vi hiện tại,
 // dù lạ, KHÔNG phải việc của đợt tách này để sửa — Council quyết định giữ nguyên qua prop `active`
 // thay vì bắt chước cách 5 màn kia unmount).

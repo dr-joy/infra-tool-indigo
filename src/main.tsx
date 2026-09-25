@@ -10,7 +10,6 @@ import { type TranslationKey } from './i18n';
 // đây là nợ hiệu năng có sẵn (bundle chính chỉ còn 2.6 kB dư từ CR-20260814), lát này thêm vài dòng
 // đã vượt ngân sách 500 kB. Áp đúng khuôn lazy đã dùng cho 3 tab kia thay vì nâng ngân sách lặng lẽ.
 const ManHinhLenLich = lazy(() => import('./screens/release').then((m) => ({ default: m.ManHinhLenLich })));
-const ManHinhLuyenDe = lazy(() => import('./luyen-de').then((m) => ({ default: m.ManHinhLuyenDe })));
 const ManHinhMindMap = lazy(() => import('./mind-map').then((m) => ({ default: m.ManHinhMindMap })));
 // Tab Admin (CR-20260913 Giai đoạn 2, Lát 8) — chỉ Admin mới thấy (lọc ở tabsChinhChoActor bên dưới),
 // nên cũng lazy-load giống 3 tab kia: đa số user không phải Admin, không cần tải bundle này bao giờ.
@@ -76,7 +75,6 @@ const tabsChinh: { key: TabChinh; i18nKey: TranslationKey }[] = [
   { key: 'project', i18nKey: 'tab.project' },
   { key: 'bao_cao_tuan', i18nKey: 'tab.weekly' },
   { key: 'len_lich', i18nKey: 'tab.schedule' },
-  { key: 'luyen_de', i18nKey: 'tab.luyen_de' },
   { key: 'so_do', i18nKey: 'tab.so_do' },
   { key: 'quan_ly_pic', i18nKey: 'tab.pics' },
   // Lát 9 — hiện cho MỌI actor active (không gate, xem ghi chú ở khai báo ManHinhQuanLyTeam trên).
@@ -88,8 +86,8 @@ const tabsChinh: { key: TabChinh; i18nKey: TranslationKey }[] = [
 ];
 
 // 2026-09-25: tab nào ứng với 1 feature trong team_feature_visibility (CR-20260913 FR-7) thì đưa vào
-// đây — team mới (provisionTeam) mặc định TẮT cả 5 feature này. Tab KHÔNG có mặt ở map (luyen_de,
-// quan_ly_pic, quan_ly_team, admin) không bị gate theo team, giữ nguyên logic hiện có. Trước đây các
+// đây — team mới (provisionTeam) mặc định TẮT cả 5 feature này. Tab KHÔNG có mặt ở map (quan_ly_pic,
+// quan_ly_team, admin) không bị gate theo team, giữ nguyên logic hiện có. Trước đây các
 // tab này vẫn hiện, bấm vào mới thấy lỗi "Chức năng này đang bị tắt cho team của bạn" (403
 // FEATURE_DISABLED từ server) — giờ ẩn hẳn nút, không để user bấm vào rồi mới biết.
 const TAB_FEATURE: Partial<Record<TabChinh, string>> = {
@@ -166,7 +164,6 @@ export function App() {
     'tab:project': () => chuyenTab('project'),
     'tab:bao_cao_tuan': () => chuyenTab('bao_cao_tuan'),
     'tab:len_lich': () => chuyenTab('len_lich'),
-    'tab:luyen_de': () => chuyenTab('luyen_de'),
     'tab:so_do': () => chuyenTab('so_do'),
     'tab:quan_ly_pic': () => chuyenTab('quan_ly_pic'),
     'action:them_task_nhanh': () => personalTaskRef.current?.openQuickAdd(),
@@ -239,12 +236,6 @@ export function App() {
 
         {tabDangMo === 'quan_ly_pic' && (
           <ManHinhQuanLyDanhMuc />
-        )}
-
-        {tabDangMo === 'luyen_de' && (
-          <Suspense fallback={<div className="p-6 text-sm">{t('loading.data')}</div>}>
-            <ManHinhLuyenDe />
-          </Suspense>
         )}
 
         {tabDangMo === 'so_do' && enabledFeatures.has('mind_map') && (

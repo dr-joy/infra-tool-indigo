@@ -203,7 +203,7 @@ Dự án **không dùng PR** ([ADR-P1](team-operating-standard.md)) — thay b�
 ## 10. Nợ test hiện tại & ưu tiên bổ sung
 
 Ghi lại để không quên (cập nhật khi giải quyết):
-1. Integration route còn trống: `projects`, `schedules`, `weekly`, `de-thi`, `mindmaps` — ưu tiên `schedules` (logic sinh task định kỳ phức tạp).
+1. Integration route còn trống: `projects`, `schedules`, `weekly`, `mindmaps` — ưu tiên `schedules` (logic sinh task định kỳ phức tạp).
 2. Chưa có render test cho các popup tạo/sửa task (`PopupTaoTask`, `PopupSuaTask`) và `PopupAutomationSession`.
 3. Chưa có E2E (Playwright) — mục 8 đang làm thủ công.
 4. ~~Chưa có CI~~ → đã thay bằng `npm run check` + pre-push hook ([ADR-P2](team-operating-standard.md)). Lỗ hổng còn lại: dep chưa khai trong `package.json` vẫn lọt (không có "máy sạch").

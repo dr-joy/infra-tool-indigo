@@ -59,6 +59,6 @@ Dùng `@testing-library/react`. Xem [test/client/components.test.tsx](../../test
 ## Phần còn thiếu / roadmap
 
 1. **Render smoke test cho 3 màn lớn** (Project/Weekly/Release) — sẽ thêm khi tách chúng ra file riêng (đang làm dở P0.2). Mỗi màn: mount với `fetch` mock, assert render không nổ + vài tương tác chính. Đây là lưới bắt hồi quy khi refactor tiếp.
-2. **Integration route còn trống:** projects, schedules, weekly, de-thi, mindmaps.
+2. **Integration route còn trống:** projects, schedules, weekly, mindmaps.
 3. **E2E (tùy chọn):** Playwright chạy app SEA thật + click qua các tab — giá trị cao nhất cho app desktop, nhưng nặng; cân nhắc sau khi có render smoke test.
 4. ~~**CI**~~ — đã chốt **không dùng CI** ([ADR-P2](team-operating-standard.md)); thay bằng `npm run check` + pre-push hook chạy tại máy.

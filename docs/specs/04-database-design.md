@@ -28,15 +28,11 @@ projects.pic ──> pics.name (soft)
 weekly_goals / weekly_task_evaluations / weekly_project_summaries ──> projects.id, project_tasks.id (soft)
 weekly_report_history (lịch sử báo cáo đã duyệt)
 
-de_thi_category (1) ──< de_thi_ky_thi.nhom (soft)
-de_thi_ky_thi (1) ──< de_thi_bo ──< de_thi_cau_hoi [FK CASCADE] ──< de_thi_dap_an [FK CASCADE]
-de_thi_phien [FK bo SET NULL] ──< de_thi_tra_loi [FK CASCADE]
-
 mindmaps (JSON tree)
 app_settings (key-value; cấu hình Redmine và nội dung release)
 ```
 
-FK thật được khai báo cho `project_task_assignments`, `de_thi_cau_hoi`, `de_thi_dap_an`, `de_thi_phien` và `de_thi_tra_loi`. Các ref project, parent, PIC, weekly và release còn lại là soft link do backend kiểm tra.
+FK thật được khai báo cho `project_task_assignments`. Các ref project, parent, PIC, weekly và release còn lại là soft link do backend kiểm tra.
 ## 3. Chi tiết bảng
 
 #
@@ -105,23 +101,12 @@ Các field automation trên definition đã được archive rồi xoá. Team/Ng
 
 #
 
-## 3.8 Luyện đề / chứng chỉ (de_thi_*)
-- `de_thi_category`: pick-list nhóm chứng chỉ. PK `id`, `name` NN UNIQUE, `sort_order`. Seed từ `DISTINCT nhom`.
-- `de_thi_ky_thi`: kỳ thi/chứng chỉ. PK `id`, `nhom` d'' (→category soft), `ten` NN, `ghi_chu`, `exam_so_cau?`, `exam_thoi_gian_phut?`, `sort_order`, timestamps.
-- `de_thi_bo`: bộ câu hỏi. PK `id`, `ky_thi_id?` (soft), `ten` NN, `nguon`, `file_name`, `ghi_chu`, `pass_percent?`, `duration_seconds?`, `sort_order`, timestamps. Index `(ky_thi_id)`.
-- `de_thi_cau_hoi`: câu hỏi. PK `id`, `bo_id` NN **FK CASCADE**, `loai` NN CHECK IN (`single`,`multi`), `noi_dung_en` NN, `noi_dung_vi`, `giai_thich_en/_vi`, `chu_de`, `do_kho`, `dich_thu_cong` NN d0, `lan_ra` NN d0, `last_rut_at`, `sort_order`, timestamps. Index `(bo_id)`.
-- `de_thi_dap_an`: đáp án. PK `id`, `cau_hoi_id` NN **FK CASCADE**, `noi_dung_en` NN, `noi_dung_vi`, `la_dap_an_dung` NN d0, `sort_order`. Index `(cau_hoi_id)`.
-- `de_thi_phien`: phiên luyện. PK `id`, `bo_id?` **FK SET NULL**, `che_do` d'review', `so_cau`/`so_dung`/`thoi_gian_giay` d0, `cau_hinh_json` d'{}', `created_at`.
-- `de_thi_tra_loi`: câu trả lời trong phiên. PK `id`, `phien_id` NN **FK CASCADE**, `cau_hoi_id` NN (soft), `dap_an_chon_json` d'[]', `dung_sai` d0. Index `(phien_id)`.
-
-#
-
-## 3.9 MindMap
+## 3.8 MindMap
 - `mindmaps`: PK `id`, `title` d'', `data` NN d'{}' (cây JSON lồng nhau), timestamps.
 
 #
 
-## 3.10 Cấu hình ứng dụng
+## 3.9 Cấu hình ứng dụng
 
 - `app_settings`: key-value, PK `key`, `value` NOT NULL, `updated_at`.
 - Cấu hình Redmine dùng `redmine_base_url` và `redmine_api_key`; API key được mã hoá thuận nghịch vì backend phải gửi nó cho Redmine.
@@ -129,7 +114,7 @@ Các field automation trên definition đã được archive rồi xoá. Team/Ng
 - `automation_events`, `drjoy_posted_articles` và các key chỉ phục vụ runtime AI đã được archive rồi xoá theo CR-20260912.
 ## 4. Enum
 
-**Enforced bằng CHECK:** `tasks.loai_task`, `tasks.trang_thai`, `project_tasks.level` (1..3), `project_tasks.tien_do` (0..100), `weekly_task_evaluations.status`, `de_thi_cau_hoi.loai`.
+**Enforced bằng CHECK:** `tasks.loai_task`, `tasks.trang_thai`, `project_tasks.level` (1..3), `project_tasks.tien_do` (0..100), `weekly_task_evaluations.status`.
 **Chỉ enforce ở code (không CHECK):** `lap_lai_kieu`, emergency `task_date` token và `schedule_mode`.
 
 ## 5. Cột JSON-trong-TEXT

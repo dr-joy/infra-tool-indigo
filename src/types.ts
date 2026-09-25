@@ -15,7 +15,7 @@ import type { EmergencyTimingToken, TaskLink, TaskLinkType, LoaiTask, TrangThai 
 
 export type TruongSort = 'ngayTao' | 'ngayHoanThanh';
 export type HuongSort = 'asc' | 'desc';
-export type TabChinh = 'task_ca_nhan' | 'project' | 'len_lich' | 'bao_cao_tuan' | 'quan_ly_pic' | 'luyen_de' | 'so_do' | 'admin' | 'quan_ly_team';
+export type TabChinh = 'task_ca_nhan' | 'project' | 'len_lich' | 'bao_cao_tuan' | 'quan_ly_pic' | 'so_do' | 'admin' | 'quan_ly_team';
 export type ReleaseType = 'dinh_ky' | 'khan_cap';
 
 export interface ReleaseTemplateItem {

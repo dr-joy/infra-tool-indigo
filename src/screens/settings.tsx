@@ -7,13 +7,11 @@ import { PopupXacNhanXoa } from '../components/dialogs';
 import { PIC_COLOR_PALETTE } from '../lib/task-utils';
 import { ShortcutSettingsScreen } from '../shortcuts';
 import type { PicItem } from '../types';
-import { ManHinhQuanLyCategory } from './luyen-de-category';
 
 // Tách khỏi src/main.tsx (kế hoạch Council run 022dd1e5, xem docs/exchanges/2026-09-12.md) — nội
 // dung 3 màn (ManHinhQuanLyDanhMuc, ManHinhQuanLyPic, ManHinhCauHinhRedmine) giữ nguyên văn. Cả ba
 // cùng quy mô nhỏ và đã tự chủ hoàn toàn (không nhận prop nào từ màn cha, tự gọi API riêng, tự quản
-// state riêng) nên gộp 1 file không tạo prop rối. Riêng ManHinhQuanLyCategory thuộc nghiệp vụ
-// Luyện đề (pick-list de_thi_category) nên đặt ở file riêng, import về đây để mount.
+// state riêng) nên gộp 1 file không tạo prop rối.
 
 // Tab "Quản lý PIC": thêm / đổi tên / xóa / sắp xếp danh sách người phụ trách.
 // Đổi tên sẽ tự cập nhật mọi nơi đang dùng (project, task, mục tiêu tuần).
@@ -382,23 +380,21 @@ function ManHinhCauHinhRedmine() {
   );
 }
 
-// Tab "Settings": 4 mục con — PIC (người phụ trách), Chứng chỉ (category đề luyện),
-// Redmine (cấu hình URL/API key) và Phím tắt. Chọn mục con để hiện nội dung tương ứng.
+// Tab "Settings": 3 mục con — PIC (người phụ trách), Redmine (cấu hình URL/API key) và Phím tắt.
+// Chọn mục con để hiện nội dung tương ứng.
 export function ManHinhQuanLyDanhMuc() {
-  const [muc, setMuc] = useState<'pic' | 'category' | 'redmine' | 'phim_tat'>('pic');
+  const [muc, setMuc] = useState<'pic' | 'redmine' | 'phim_tat'>('pic');
   const tabClass = (active: boolean) =>
     `rounded-md px-3 py-1.5 text-sm font-medium ${active ? 'bg-teal-600 text-white' : 'border bg-white text-slate-600 hover:bg-slate-50'}`;
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex gap-2">
         <button type="button" className={tabClass(muc === 'pic')} onClick={() => setMuc('pic')}>PIC</button>
-        <button type="button" className={tabClass(muc === 'category')} onClick={() => setMuc('category')}>Chứng chỉ</button>
         <button type="button" className={tabClass(muc === 'redmine')} onClick={() => setMuc('redmine')}>Redmine</button>
         <button type="button" className={tabClass(muc === 'phim_tat')} onClick={() => setMuc('phim_tat')}>Phím tắt</button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {muc === 'pic' && <ManHinhQuanLyPic />}
-        {muc === 'category' && <ManHinhQuanLyCategory />}
         {muc === 'redmine' && <ManHinhCauHinhRedmine />}
         {muc === 'phim_tat' && <ShortcutSettingsScreen />}
       </div>

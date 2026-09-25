@@ -7,7 +7,7 @@
 
 - **Express**, tắt `x-powered-by`. Header bảo mật mọi request: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`.
 - **CORS**: chỉ origin `^https?://(localhost|127\.0\.0\.1)(:\d+)?$`.
-- Body limit `32mb` (đủ import/export ngân hàng câu hỏi JSON).
+- Body limit `32mb` (đủ cho các payload JSON lớn — export/import dữ liệu, mindmap...).
 - Static: serve `dist/` nếu có; SPA fallback trả `index.html` cho GET không phải `/api`.
 - **Error handler toàn cục**: log server-side, trả `500 {message:'Lỗi server nội bộ'}` — KHÔNG lộ stack/SQL.
 - Port `PORT||4000`, bind `127.0.0.1`. SEA/exe hoặc `OPEN_BROWSER=1` → tự mở Chrome (profile `tuan.vu@drjoy.jp`) trừ khi `NO_BROWSER=1`.
@@ -97,21 +97,18 @@ Tuần = Thứ 2–CN. Eval `dat`/`vuot`/`khong_dat` (✅/🔼/❌). Kinds: `int
 ## 6. PIC (`routes/pics.ts`)
 GET (kèm `dangSuDung`) · POST (unique) · PATCH reorder · PATCH `:id` (đổi tên **cascade** projects.pic/assignee/weekly, đổi màu) · DELETE (**400** nếu còn task chưa xong).
 
-## 7. Luyện đề + Category (`routes/de-thi.ts`)
-Category (pick-list nhóm chứng chỉ, đổi tên cascade `nhom`, xoá chặn nếu còn dùng) · Kỳ thi (CRUD, export JSON song ngữ) · Bộ đề (import: mỗi câu ≥2 đáp án, **409** trùng fileName) · Sửa câu (VI/topic/difficulty, `dichThuCong`) · **Rút câu** công bằng (`ORDER BY lan_ra, last_rut_at, RANDOM`) · Phiên luyện (lưu kết quả) · Import JSON (chỉ ghi VI khi ≠ '').
-
-## 8. Redmine (`routes/redmine.ts`)
+## 7. Redmine (`routes/redmine.ts`)
 Config trong `app_settings`; API key **mã hoá AES-256-GCM** (`enc:v1:...`), master key `%APPDATA%\TaskManager\data\secret.key` (0600, container: `DATA_DIR/secret.key`). GET config (mask key) · PUT (baseUrl bắt buộc, key rỗng→giữ cũ) · DELETE key · POST test (`/users/current.json` header `X-Redmine-API-Key`; **401** key sai, **502** lỗi khác).
 
-## 9. MindMap (`routes/mindmaps.ts`)
+## 8. MindMap (`routes/mindmaps.ts`)
 Cây lưu JSON trong `mindmaps.data`; file đính kèm `dataDir/mindmap-files`. GET list/detail · POST/PUT (data phải là object) · POST upload (**413** >30MB) · GET file (chống path traversal) · DELETE.
 
-## 10. Hằng số/tiện ích chung
+## 9. Hằng số/tiện ích chung
 - **Task link**: type `chat/file/git/release/zoom`; URL `^(https?|slack|zoommtg|file|vscode)://`; **tối đa 4 link**.
 - **Thời gian**: `HH:MM`; ngày `YYYY-MM-DD` (timezone `Asia/Ho_Chi_Minh`).
 - **recurringMatchesDate**: ngayCuThe khớp ngày; hoặc hang_ngay/thu_2_den_thu_6/hang_tuan/hang_thang.
 
-## 11. Cần bổ sung
+## 10. Cần bổ sung
 
 > Bản hiện hành vẫn là local single-user. Thiết kế multi-user/public server nằm trong `CR-20260913-nen-tang-da-nguoi-dung`; chỉ cập nhật tài liệu này sau khi từng lát đã được triển khai và nghiệm thu.
 > ⏳ User điền nốt: hợp đồng API có cần versioning (`/api/v1`) khi mở cho bên thứ ba hay không.

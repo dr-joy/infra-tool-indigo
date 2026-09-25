@@ -17,9 +17,8 @@ export const SHORTCUT_ACTIONS: ShortcutActionMeta[] = [
   { id: 'tab:project', label: 'Chuyển tới: Project', group: 'Chuyển màn', defaultCombo: 'alt+2' },
   { id: 'tab:bao_cao_tuan', label: 'Chuyển tới: Báo cáo tuần', group: 'Chuyển màn', defaultCombo: 'alt+3' },
   { id: 'tab:len_lich', label: 'Chuyển tới: Lên lịch', group: 'Chuyển màn', defaultCombo: 'alt+4' },
-  { id: 'tab:luyen_de', label: 'Chuyển tới: Luyện đề', group: 'Chuyển màn', defaultCombo: 'alt+5' },
-  { id: 'tab:so_do', label: 'Chuyển tới: Sơ đồ', group: 'Chuyển màn', defaultCombo: 'alt+6' },
-  { id: 'tab:quan_ly_pic', label: 'Chuyển tới: Cài đặt (PIC/Chứng chỉ/Redmine/Phím tắt)', group: 'Chuyển màn', defaultCombo: 'alt+7' },
+  { id: 'tab:so_do', label: 'Chuyển tới: Sơ đồ', group: 'Chuyển màn', defaultCombo: 'alt+5' },
+  { id: 'tab:quan_ly_pic', label: 'Chuyển tới: Cài đặt (PIC/Redmine/Phím tắt)', group: 'Chuyển màn', defaultCombo: 'alt+6' },
   { id: 'action:them_task_nhanh', label: 'Mở: Thêm task nhanh', group: 'Hành động', defaultCombo: 'ctrl+q' },
   { id: 'action:lich_su', label: 'Mở: Lịch sử task', group: 'Hành động', defaultCombo: null }
 ];

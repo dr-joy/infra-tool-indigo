@@ -22,7 +22,7 @@
 | Hạng mục | Budget | Cách đo |
 |---|---|---|
 | Bundle **chính** (entry) | **≤ 500 kB raw / ~140 kB gzip** | `npm run build` (đang ~468 kB / 134 kB gzip) |
-| Chunk **lazy** mỗi tab nặng | Tách riêng, không gộp vào entry | build in ra chunk `mind-map`, `luyen-de`, `skill-forge`… |
+| Chunk **lazy** mỗi tab nặng | Tách riêng, không gộp vào entry | build in ra chunk `mind-map`, `release`, `admin`… |
 | Thời gian mở app (tới UI dùng được) | ⏱️ đặt mục tiêu (vd < 2s trên máy đích) | bấm giờ thủ công |
 | API local (thao tác thường) | Gần như tức thời (< 50ms p95) | log/DevTools Network |
 | Body request | Mặc định nhỏ; 32MB **chỉ** route import | `app.ts` |
