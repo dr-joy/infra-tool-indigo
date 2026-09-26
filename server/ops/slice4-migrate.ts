@@ -462,6 +462,12 @@ export interface BackfillCounts {
   weeklyReportHistory: number;
   tasks: number;
   mindmaps: number;
+  // 2026-09-26 (bug thật gặp trên production, xem docs/exchanges/2026-09-26.md) — khác 0 khi team
+  // đích ĐÃ CÓ SẴN project hệ thống "Khác" riêng (tự seed bởi server/db-seed.ts mỗi lần server khởi
+  // động, cho MỌI team đã tồn tại) TRƯỚC KHI backfill chạy — project "Khác" kiểu cũ (desktop 1-user,
+  // team_id NULL) khi đó không thể tự gán team_id (vi phạm idx_projects_system_per_team: mỗi team
+  // chỉ 1 project hệ thống), phải GỘP dữ liệu vào project hệ thống đã có rồi xoá dòng cũ.
+  legacySystemProjectMergedRows: number;
 }
 
 export function backfillDev13Scope(targetDb: DatabaseSync, dev13TeamId: number, leaderUserId: number): BackfillCounts {
@@ -473,6 +479,25 @@ export function backfillDev13Scope(targetDb: DatabaseSync, dev13TeamId: number, 
     const systemProjectCount = (targetDb.prepare('SELECT COUNT(*) AS c FROM projects WHERE is_system = 1 AND team_id IS NULL').get() as { c: number }).c;
     if (systemProjectCount > 1) {
       throw new Error(`backfillDev13Scope: có ${systemProjectCount} project hệ thống "Khác" chưa gán team (chỉ nên có 1) — cần người vận hành tự gộp/xử lý trước khi chạy tiếp`);
+    }
+
+    let legacySystemProjectMergedRows = 0;
+    const legacySystemProject = targetDb.prepare('SELECT id FROM projects WHERE is_system = 1 AND team_id IS NULL').get() as { id: number } | undefined;
+    if (legacySystemProject) {
+      const existingTeamSystemProject = targetDb.prepare('SELECT id FROM projects WHERE is_system = 1 AND team_id = ?').get(dev13TeamId) as { id: number } | undefined;
+      if (existingTeamSystemProject) {
+        // Team đích đã có sẵn project hệ thống riêng (được tự seed khi team này được tạo) — không thể
+        // gán thẳng team_id cho project "Khác" cũ (sẽ vi phạm unique index). Gộp: chuyển mọi dòng đang
+        // trỏ vào project cũ sang project hệ thống đã có, rồi xoá dòng cũ (giờ rỗng). Idempotent: nếu
+        // chạy lại, legacySystemProject không còn tồn tại (đã xoá) nên không vào nhánh này nữa.
+        const movedProjectTasks = targetDb.prepare('UPDATE project_tasks SET project_id = ? WHERE project_id = ?').run(existingTeamSystemProject.id, legacySystemProject.id);
+        const movedWeeklyGoals = targetDb.prepare('UPDATE weekly_goals SET project_id = ? WHERE project_id = ?').run(existingTeamSystemProject.id, legacySystemProject.id);
+        const movedWeeklySummaries = targetDb.prepare('UPDATE weekly_project_summaries SET project_id = ? WHERE project_id = ?').run(existingTeamSystemProject.id, legacySystemProject.id);
+        const movedWeeklyRisks = targetDb.prepare('UPDATE weekly_project_risks SET project_id = ? WHERE project_id = ?').run(existingTeamSystemProject.id, legacySystemProject.id);
+        targetDb.prepare('DELETE FROM projects WHERE id = ?').run(legacySystemProject.id);
+        legacySystemProjectMergedRows = Number(movedProjectTasks.changes) + Number(movedWeeklyGoals.changes)
+          + Number(movedWeeklySummaries.changes) + Number(movedWeeklyRisks.changes);
+      }
     }
 
     const projects = targetDb.prepare('UPDATE projects SET team_id = ? WHERE team_id IS NULL').run(dev13TeamId);
@@ -499,7 +524,7 @@ export function backfillDev13Scope(targetDb: DatabaseSync, dev13TeamId: number, 
       projects: Number(projects.changes), projectTasks: Number(projectTasks.changes), pics: Number(pics.changes),
       weeklyGoals: Number(weeklyGoals.changes), weeklyTaskEvaluations: Number(weeklyTaskEvaluations.changes),
       weeklyProjectSummaries: Number(weeklyProjectSummaries.changes), weeklyReportHistory: Number(weeklyReportHistory.changes),
-      tasks: Number(tasks.changes), mindmaps: Number(mindmaps.changes)
+      tasks: Number(tasks.changes), mindmaps: Number(mindmaps.changes), legacySystemProjectMergedRows
     };
   } catch (error) {
     if (targetDb.isTransaction) targetDb.exec('ROLLBACK');

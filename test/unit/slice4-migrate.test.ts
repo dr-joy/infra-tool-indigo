@@ -402,6 +402,59 @@ test('backfillDev13Scope: gán team_id/owner_user_id cho dữ liệu NULL, idemp
   db.close();
 });
 
+test('backfillDev13Scope: team đích ĐÃ CÓ SẴN project hệ thống "Khác" riêng -> gộp dữ liệu, xoá project cũ, không vi phạm unique index (bug thật gặp trên production, docs/exchanges/2026-09-26.md)', () => {
+  const dir = nextDir('backfill-merge-system-project');
+  const { dbPath, leaderUserId } = buildFakeDesktopDb(dir);
+  const db = new DatabaseSync(dbPath);
+  const { teamId } = ensureDev13Identity(db, leaderUserId);
+
+  // Mô phỏng đúng thứ tự đã xảy ra thật trên production: team được tạo và DÙNG TRƯỚC (server tự seed
+  // 1 project hệ thống riêng cho team này, giống server/db-seed.ts làm mỗi lần khởi động), RỒI SAU ĐÓ
+  // mới chạy backfill cho dữ liệu desktop cũ (project "Khác" cũ vẫn còn team_id NULL).
+  const now = new Date().toISOString();
+  const teamSystemProjectResult = db.prepare(
+    "INSERT INTO projects (ten_project, pic, team_id, ngay_bat_dau, sort_order, is_system, created_at, updated_at) VALUES ('Khác', '', ?, ?, 1, 1, ?, ?)"
+  ).run(teamId, now.slice(0, 10), now, now);
+  const teamSystemProjectId = Number(teamSystemProjectResult.lastInsertRowid);
+
+  const legacySystemProjectResult = db.prepare(
+    "INSERT INTO projects (ten_project, pic, ngay_bat_dau, sort_order, is_system, created_at, updated_at) VALUES ('Khác', '', ?, 2, 1, ?, ?)"
+  ).run(now.slice(0, 10), now, now);
+  const legacySystemProjectId = Number(legacySystemProjectResult.lastInsertRowid);
+  db.prepare(`
+    INSERT INTO project_tasks (project_id, level, tieu_de, ngay_bat_dau_du_kien, ngay_ket_thuc_du_kien, tien_do, assignee, created_at, updated_at)
+    VALUES (?, 1, 'Task lẻ cũ trong Khác', '2026-01-01', '2026-01-02', 0, 'Nam', ?, ?)
+  `).run(legacySystemProjectId, now, now);
+  db.prepare(`
+    INSERT INTO weekly_goals (week_start, project_id, goal_text, created_at, updated_at) VALUES ('2026-01-05', ?, 'Mục tiêu cũ', ?, ?)
+  `).run(legacySystemProjectId, now, now);
+  db.prepare(`
+    INSERT INTO weekly_project_summaries (week_start, project_id, content) VALUES ('2026-01-05', ?, 'Tổng kết cũ')
+  `).run(legacySystemProjectId);
+
+  const result = backfillDev13Scope(db, teamId, leaderUserId);
+  assert.equal(result.legacySystemProjectMergedRows, 3, '1 project_tasks + 1 weekly_goals + 1 weekly_project_summaries');
+
+  const remainingSystemProjects = db.prepare('SELECT id FROM projects WHERE is_system = 1 AND team_id = ?').all(teamId) as { id: number }[];
+  assert.equal(remainingSystemProjects.length, 1, 'chỉ còn ĐÚNG 1 project hệ thống cho team này (không vi phạm idx_projects_system_per_team)');
+  assert.equal(remainingSystemProjects[0].id, teamSystemProjectId, 'giữ lại project hệ thống CỦA TEAM, không phải project cũ');
+
+  const legacyStillExists = db.prepare('SELECT 1 FROM projects WHERE id = ?').get(legacySystemProjectId);
+  assert.equal(legacyStillExists, undefined, 'project "Khác" cũ phải bị xoá sau khi gộp xong');
+
+  const movedTask = db.prepare("SELECT project_id FROM project_tasks WHERE tieu_de = 'Task lẻ cũ trong Khác'").get() as { project_id: number };
+  assert.equal(movedTask.project_id, teamSystemProjectId, 'task cũ phải trỏ sang project hệ thống CỦA TEAM');
+  const movedGoal = db.prepare("SELECT project_id FROM weekly_goals WHERE goal_text = 'Mục tiêu cũ'").get() as { project_id: number };
+  assert.equal(movedGoal.project_id, teamSystemProjectId);
+  const movedSummary = db.prepare("SELECT project_id FROM weekly_project_summaries WHERE content = 'Tổng kết cũ'").get() as { project_id: number };
+  assert.equal(movedSummary.project_id, teamSystemProjectId);
+
+  // Idempotent: gọi lại lần 2 không còn project cũ để gộp -> không đổi gì thêm, không lỗi.
+  const second = backfillDev13Scope(db, teamId, leaderUserId);
+  assert.equal(second.legacySystemProjectMergedRows, 0);
+  db.close();
+});
+
 // 2026-09-26 (docs/exchanges/2026-09-26.md) — bổ sung backfillReleasePersonalOwnership(), phần CR
 // §6.3 (Lát 6) đã ghi rõ ý định "gán owner_user_id = leaderUserId cho toàn bộ dữ liệu cũ" của 4 bảng
 // release cá nhân nhưng CHƯA TỪNG được viết (backfillDev13Scope() không đụng 4 bảng này).
