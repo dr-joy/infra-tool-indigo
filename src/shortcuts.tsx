@@ -160,32 +160,32 @@ export function ShortcutSettingsScreen() {
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
       {/* Header trong card trắng — đồng bộ các màn cài đặt khác. Hướng dẫn gom vào InfoTip. */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-white p-4">
-        <h2 className="flex items-center gap-1.5 text-lg font-bold text-slate-800">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-vien bg-surface p-4">
+        <h2 className="flex items-center gap-1.5 text-lg font-bold text-muc">
           Phím tắt
           <InfoTip>
-            Bấm <b className="text-teal-700">Ghi</b> rồi nhấn tổ hợp phím để gán.
-            <span className="mx-1 rounded bg-slate-100 px-1.5 py-0.5 font-mono">Esc</span> huỷ ·
-            <span className="mx-1 rounded bg-slate-100 px-1.5 py-0.5 font-mono">Backspace</span> xoá phím.
+            Bấm <b className="text-primary">Ghi</b> rồi nhấn tổ hợp phím để gán.
+            <span className="mx-1 rounded bg-surface-2 px-1.5 py-0.5 font-mono">Esc</span> huỷ ·
+            <span className="mx-1 rounded bg-surface-2 px-1.5 py-0.5 font-mono">Backspace</span> xoá phím.
             Phím tắt không chạy khi con trỏ đang ở trong ô nhập liệu (input/textarea).
           </InfoTip>
         </h2>
-        <button type="button" className="shrink-0 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50" onClick={resetAllBindings}>
+        <button type="button" className="shrink-0 rounded-md border border-vien px-3 py-1.5 text-sm font-medium text-phu hover:bg-surface-2" onClick={resetAllBindings}>
           Khôi phục mặc định tất cả
         </button>
       </div>
 
       {groups.map((group) => (
-        <div key={group} className="overflow-hidden rounded-lg border bg-white">
-          <div className="border-b bg-gradient-to-r from-teal-50 to-white px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-teal-700">{group}</div>
-          <div className="divide-y divide-slate-100">
+        <div key={group} className="overflow-hidden rounded-lg border border-vien bg-surface">
+          <div className="border-b border-vien bg-gradient-to-r from-primary-soft to-surface px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-primary">{group}</div>
+          <div className="divide-y divide-vien">
             {SHORTCUT_ACTIONS.filter((a) => a.group === group).map((meta) => {
               const combo = effectiveCombo(meta, b);
               const isRecording = recordingId === meta.id;
               const duplicated = combo != null && (comboCount.get(combo) || 0) > 1;
               return (
-                <div key={meta.id} className="flex h-12 items-center gap-3 px-4 transition hover:bg-slate-50">
-                  <span className="min-w-0 flex-1 truncate text-sm text-slate-700">{meta.label}</span>
+                <div key={meta.id} className="flex h-12 items-center gap-3 px-4 transition hover:bg-surface-2">
+                  <span className="min-w-0 flex-1 truncate text-sm text-muc">{meta.label}</span>
                   {/* Slot chiều cao cố định (h-8) -> đổi giữa input record và keycap không làm nhảy row */}
                   <div className="flex h-8 w-56 shrink-0 items-center justify-end gap-1">
                     {isRecording ? (
@@ -195,7 +195,7 @@ export function ShortcutSettingsScreen() {
                         value="Nhấn tổ hợp phím…"
                         onKeyDown={(event) => onRecordKeyDown(event, meta.id)}
                         onBlur={stopRecord}
-                        className="box-border h-8 w-44 animate-pulse rounded-md border-2 border-teal-500 bg-teal-50 px-2 text-center text-sm font-medium text-teal-700 outline-none"
+                        className="box-border h-8 w-44 animate-pulse rounded-md border-2 border-primary bg-primary-soft px-2 text-center text-sm font-medium text-primary outline-none"
                       />
                     ) : (
                       <ComboKeys combo={combo} duplicated={duplicated} />
@@ -203,11 +203,11 @@ export function ShortcutSettingsScreen() {
                   </div>
                   <div className="flex shrink-0 gap-1.5">
                     <button type="button"
-                      className={`box-border h-8 w-12 rounded-md text-xs font-semibold text-white transition ${isRecording ? 'bg-rose-500 hover:bg-rose-600' : 'bg-teal-600 hover:bg-teal-700'}`}
+                      className={`box-border h-8 w-12 rounded-md text-xs font-semibold text-on-primary transition ${isRecording ? 'bg-danger hover:opacity-90' : 'bg-primary hover:opacity-90'}`}
                       onClick={() => (isRecording ? stopRecord() : startRecord(meta.id))}>
                       {isRecording ? 'Huỷ' : 'Ghi'}
                     </button>
-                    <button type="button" className="box-border h-8 w-8 rounded-md border border-slate-300 text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                    <button type="button" className="box-border h-8 w-8 rounded-md border border-vien text-phu hover:bg-surface-2 hover:text-muc"
                       onClick={() => resetBinding(meta.id)} title="Về mặc định">↺</button>
                   </div>
                 </div>
@@ -222,14 +222,14 @@ export function ShortcutSettingsScreen() {
 
 // Hiển thị tổ hợp phím dạng "keycap" (từng phím 1 ô), đỏ nếu trùng.
 function ComboKeys({ combo, duplicated }: { combo: string | null; duplicated: boolean }) {
-  if (!combo) return <span className="flex h-8 items-center text-sm italic text-slate-400">chưa gán</span>;
+  if (!combo) return <span className="flex h-8 items-center text-sm italic text-phu">chưa gán</span>;
   const keys = formatCombo(combo).split(' + ');
   return (
     <span className="flex h-8 items-center gap-1" title={duplicated ? 'Trùng với hành động khác' : undefined}>
       {keys.map((k, i) => (
         <kbd key={i}
-          className={`box-border inline-flex h-7 min-w-[1.75rem] items-center justify-center rounded-md border px-2 font-mono text-xs font-semibold shadow-sm ${
-            duplicated ? 'border-rose-300 bg-rose-50 text-rose-600' : 'border-slate-300 bg-slate-50 text-slate-700'}`}>
+          className={`box-border inline-flex h-7 min-w-[1.75rem] items-center justify-center rounded-md border px-2 font-mono text-xs font-semibold shadow-token-sm ${
+            duplicated ? 'border-danger bg-danger/15 text-danger' : 'border-vien bg-surface-2 text-muc'}`}>
           {k}
         </kbd>
       ))}

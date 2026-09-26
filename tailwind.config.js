@@ -63,7 +63,6 @@ export default {
         'token-lg': 'var(--radius-lg)'
       },
       boxShadow: {
-        mem: '0 18px 45px rgba(31, 42, 46, 0.08)',
         'token-sm': 'var(--shadow-sm)',
         'token-md': 'var(--shadow-md)'
       }

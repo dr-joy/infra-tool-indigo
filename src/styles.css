@@ -2225,14 +2225,14 @@
   }
 
   .nut-them {
-    @apply flex h-12 w-12 items-center justify-center rounded-md border text-white transition;
-    background: #0d9488;
-    border-color: #0d9488;
+    @apply flex h-12 w-12 items-center justify-center rounded-md border text-on-primary transition;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
   }
 
   .nut-them:hover {
-    background: #0f766e;
-    border-color: #0f766e;
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
   }
 
   .nut-them,
@@ -2326,49 +2326,49 @@
   }
 
   .nut-chinh {
-    @apply px-4 py-2 text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400;
-    background: #0d9488;
-    border-color: #0d9488;
+    @apply px-4 py-2 text-on-primary disabled:cursor-not-allowed disabled:border-vien disabled:bg-surface-2 disabled:text-muted-2;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
   }
 
   .nut-chinh:not(:disabled):hover {
-    background: #0f766e;
-    border-color: #0f766e;
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
   }
 
   .nut-them {
-    background: #0d9488;
-    border-color: #0d9488;
-    color: white;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-on-primary);
   }
 
   .nut-them:not(:disabled):hover {
-    background: #0f766e;
-    border-color: #0f766e;
-    color: white;
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+    color: var(--color-on-primary);
   }
 
   .nav-step-button {
-    @apply inline-flex h-9 w-9 shrink-0 items-center justify-center border-0 text-white transition disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-300;
-    background: #0d9488;
+    @apply inline-flex h-9 w-9 shrink-0 items-center justify-center border-0 text-on-primary transition disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-muted-2;
+    background: var(--color-primary);
   }
 
   .nav-step-button:not(:disabled):hover {
-    background: #0f766e;
-    color: white;
+    background: var(--color-primary-hover);
+    color: var(--color-on-primary);
   }
 
   .nut-phu {
-    @apply border-slate-300 bg-white px-4 py-2 text-slate-700 hover:border-slate-500 hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400;
+    @apply border-vien bg-surface px-4 py-2 text-phu hover:border-muted-2 hover:bg-surface-2 disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-muted-2;
   }
 
   .nut-lich-su {
-    @apply hover:text-white;
+    @apply hover:text-on-primary;
   }
 
   .nut-lich-su:hover {
-    background: #0f766e;
-    border-color: #0f766e;
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
   }
 
   .quick-add-popup {
@@ -2513,14 +2513,14 @@
   }
 
   .man-hinh-len-lich .release-hover-emerald:not(:disabled):hover {
-    background: #0f766e;
-    border-color: #0f766e;
-    color: white;
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+    color: var(--color-on-primary);
   }
 
   .man-hinh-len-lich .release-date-picker-button:hover {
-    background: #0f766e;
-    color: white;
+    background: var(--color-primary-hover);
+    color: var(--color-on-primary);
   }
 
   .nut-nguy-hiem {
@@ -2528,7 +2528,7 @@
   }
 
   .nut-nguy-hiem-text {
-    @apply border-red-600 bg-red-600 px-4 py-2 text-white hover:border-red-700 hover:bg-red-700 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400;
+    @apply border-danger bg-danger px-4 py-2 text-on-primary hover:opacity-90 disabled:cursor-not-allowed disabled:border-vien disabled:bg-surface-2 disabled:text-muted-2;
   }
 
   .nut-cancel-record {
@@ -2536,9 +2536,9 @@
   }
 
   .nut-trash-icon {
-    border-color: #ef4444;
-    background: #ef4444;
-    color: white;
+    border-color: var(--color-danger);
+    background: var(--color-danger);
+    color: var(--color-on-primary);
   }
 
   .nut-trash-icon:hover {
@@ -2599,28 +2599,28 @@
 
   .nut-huy,
   .nut-icon {
-    @apply h-8 w-8 border-slate-300 bg-white text-slate-600 hover:border-slate-500 hover:bg-slate-100;
+    @apply h-8 w-8 border-vien bg-surface text-phu hover:border-muted-2 hover:bg-surface-2;
   }
 
   .nut-huy {
-    @apply hover:border-red-600 hover:bg-red-600 hover:text-white;
+    @apply hover:border-danger hover:bg-danger hover:text-on-primary;
   }
 
   .nut-icon {
-    @apply border-red-600 bg-red-600 text-white hover:border-red-700 hover:bg-red-700 hover:text-white;
+    @apply border-danger bg-danger text-on-primary hover:border-danger hover:bg-danger hover:opacity-90 hover:text-on-primary;
   }
 
   .checkbox-xong {
-    @apply flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border text-white transition;
-    background: #0d9488;
-    border-color: #0d9488;
+    @apply flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border text-on-primary transition;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
   }
 
   .checkbox-xong:hover,
   .nut-hoan-thanh-timeline:hover {
-    background: #0f766e;
-    border-color: #0f766e;
-    color: white;
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+    color: var(--color-on-primary);
   }
 
   .checkbox-xong input {
@@ -2628,11 +2628,11 @@
   }
 
   .checkbox-disabled {
-    @apply cursor-not-allowed border-slate-300 bg-slate-200 text-slate-500;
+    @apply cursor-not-allowed border-vien bg-surface-2 text-phu;
   }
 
   .empty {
-    @apply rounded-md border border-dashed border-slate-300 bg-slate-50 p-5 text-center text-sm text-phu;
+    @apply rounded-md border border-dashed border-vien bg-surface-2 p-5 text-center text-sm text-phu;
   }
 
   .overlay {
@@ -2649,7 +2649,7 @@
   }
 
   .popup {
-    @apply max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg border border-vien bg-white p-5;
+    @apply max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg border border-vien bg-surface p-5;
     animation: popupSoftEnter 190ms ease-out backwards;
   }
 
@@ -2675,7 +2675,7 @@
   }
 
   .project-info-table th {
-    @apply border border-vien bg-slate-100 px-4 py-2 text-left font-bold text-muc;
+    @apply border border-vien bg-surface-2 px-4 py-2 text-left font-bold text-muc;
   }
 
   .project-info-table td {
@@ -2693,9 +2693,9 @@
 
   .popup-release-manager {
     @apply my-0 flex h-[calc(100vh-32px)] max-h-[calc(100vh-32px)] flex-col overflow-hidden;
-    border-color: #9ca3af;
+    border-color: var(--color-border);
     border-width: 1px;
-    background: #d1d5db;
+    background: var(--color-surface-2);
     animation: popupSoftEnter 190ms ease-out backwards;
   }
 

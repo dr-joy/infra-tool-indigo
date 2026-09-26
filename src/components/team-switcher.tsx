@@ -26,22 +26,22 @@ export function TeamSwitcher() {
     <div ref={ref} className="relative">
       <button
         type="button"
-        className="flex items-center gap-2 rounded-md border border-vien bg-white px-3 py-1.5 text-sm font-medium text-muc hover:bg-slate-50"
+        className="flex items-center gap-2 rounded-md border border-vien bg-surface px-3 py-1.5 text-sm font-medium text-muc hover:bg-surface-2"
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <Users size={16} className="text-teal-600" />
+        <Users size={16} className="text-primary" />
         <span className="max-w-[12rem] truncate">{activeTeam ? activeTeam.name : 'Chưa chọn team'}</span>
         <ChevronDown size={14} />
       </button>
 
       {open && (
         <div
-          className="absolute right-0 top-full z-40 mt-1 w-72 rounded-md border border-vien bg-white py-1 shadow-mem"
+          className="absolute right-0 top-full z-40 mt-1 w-72 rounded-md border border-vien bg-surface py-1 shadow-token-md"
           role="listbox"
         >
-          <div className="border-b px-3 py-2 text-xs text-phu">
+          <div className="border-b border-vien px-3 py-2 text-xs text-phu">
             <div className="font-semibold text-muc">{actor.displayName}</div>
             <div className="truncate">{actor.email}</div>
           </div>
@@ -55,7 +55,7 @@ export function TeamSwitcher() {
                 type="button"
                 role="option"
                 aria-selected={team.id === activeTeamId}
-                className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-slate-50 ${team.id === activeTeamId ? 'bg-teal-50 font-semibold text-teal-700' : 'text-muc'}`}
+                className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-surface-2 ${team.id === activeTeamId ? 'bg-primary-soft font-semibold text-primary' : 'text-muc'}`}
                 onClick={() => { setActiveTeamId(team.id); setOpen(false); }}
               >
                 <span className="truncate">{team.name}</span>
@@ -63,10 +63,10 @@ export function TeamSwitcher() {
               </button>
             ))}
           </div>
-          <div className="border-t pt-1">
+          <div className="border-t border-vien pt-1">
             <button
               type="button"
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-danger hover:bg-surface-2"
               onClick={() => { setOpen(false); void logout(); }}
             >
               <LogOut size={14} /> Đăng xuất
