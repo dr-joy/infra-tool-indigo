@@ -1,0 +1,29 @@
+{
+  "agent": "codex",
+  "bodyMarkdown": "#### Reviewer\n\n**1. Cách tôi hiểu vấn đề**\n\nĐây là một vá tạm thời, chỉ Admin được dùng, để Leader tự tải bản sao DB rồi di trú toàn bộ dữ liệu legacy còn `NULL` về team Dev13 hoặc về chính tài khoản đang thao tác. Mục tiêu quan trọng nhất là không mất dữ liệu, không gán sai chủ sở hữu, có thể chạy lại an toàn, và không làm hỏng DB production đang hoạt động.\n\n**2. Giả định đang dùng**\n\n- Chỉ có một team legacy cần nhận dữ liệu là Dev13.\n- Actor Admin chạy route là đúng Leader cần sở hữu task, mindmap và bốn nhóm dữ liệu Release cá nhân.\n- Các bảng Release team-wide mới hơn không chứa dữ liệu legacy thiếu phạm vi; các bảng weekly mới bắt buộc `team_id` cũng không có dữ liệu cũ cần gán.\n- Backup được Leader kiểm tra thực tế sau khi tải xong trước khi gọi route di trú.\n\n**3. Chỗ chưa rõ hoặc rủi ro cần rà kỹ ở vòng sau**\n\n- Ba bước di trú hiện commit riêng. Nếu bước sau lỗi, DB ở trạng thái đã di trú một phần; idempotent giúp chạy lại, nhưng không thay thế được tính nguyên tử khi dữ liệu production bị lỗi bất ngờ giữa chừng.\n- Không thể bọc thêm một transaction ngoài mà giữ nguyên ba hàm hiện tại, vì chúng tự `BEGIN`/`COMMIT`. Cần đánh giá cách tách bản thân thao tác SQL khỏi transaction để route kiểm soát một transaction duy nhất.\n- `VACUUM INTO` đọc DB nguồn và ghi file mới, nên không sửa DB nguồn; với WAL, rủi ro chính là lỗi bận DB hoặc bản ghi mới xuất hiện giữa lúc đếm dòng và lúc tạo snapshot, khiến backup bị từ chối an toàn. Kết nối backup hiện không thấy thiết lập thời gian chờ khoá như kết nối ứng dụng.\n- Thư mục tạm dùng tên cố định `tmp-legacy-backup`. Hai yêu cầu backup đồng thời có thể dọn nhầm file/thư mục của nhau; rủi ro nhỏ về vận hành nhưng là lỗi thật với endpoint Admin.\n- Xóa file sau `res.send(fileBuffer)` không làm file tải xuống rỗng vì nội dung đã được nạp vào bộ nhớ trước khi gửi. Tuy vậy, server không thể biết trình duyệt của Leader đã nhận đủ hay đã lưu thành công; audit hiện ghi “tải backup” trước khi truyền xong. Cần một bước kiểm tra phía người dùng, tối thiểu mở file SQLite và chạy kiểm tra toàn vẹn trước khi di trú.\n- Test backup hiện chỉ kiểm tra magic header SQLite, chưa kiểm tra toàn vẹn file nhận được, tính đầy đủ của dữ liệu, lỗi trong lúc tạo backup, lỗi giữa các bước di trú, chạy lại sau lỗi, hay xung đột yêu cầu đồng thời.\n- Danh sách `CORE_TABLES` phù hợp với phạm vi legacy team/personal ban đầu, nhưng không bao gồm bốn bảng Release vừa được bổ sung. Vì vậy cơ chế xác minh backup hiện chưa đối chiếu số dòng của chính dữ liệu Release có rủi ro cao này.\n\n```yaml\nturn_result:\n  agent: \"codex\"\n  round: 1\n  blocking_objections: 0\n  new_decisions: 0\n  questions_for_user: 0\n  permission_requests: 0\n  converged: false\n  note: \"Đã xác định các rủi ro cần kiểm tra tiếp về tính nguyên tử, backup đồng thời và độ bao phủ kiểm thử.\"\n  rules_version_seen: \"RULES-2026-09-04-a\"\n  session_id: \"94bd327d-a4a1-4083-8d74-c88971e8623c\"\n```\n",
+  "createdAt": "2026-09-26T04:53:50.791Z",
+  "questionCards": [],
+  "recordId": "94bd327d-a4a1-4083-8d74-c88971e8623c-agent_turn-0",
+  "recordType": "agent_turn",
+  "roles": [
+    "Reviewer",
+    "QA",
+    "Infra"
+  ],
+  "round": 1,
+  "rulesVersion": "RULES-2026-09-04-a",
+  "schemaVersion": 1,
+  "sessionId": "94bd327d-a4a1-4083-8d74-c88971e8623c",
+  "turnResult": {
+    "agent": "codex",
+    "blocking_objections": 0,
+    "converged": false,
+    "new_decisions": 0,
+    "note": "Đã xác định các rủi ro cần kiểm tra tiếp về tính nguyên tử, backup đồng thời và độ bao phủ kiểm thử.",
+    "permission_requests": 0,
+    "questions_for_user": 0,
+    "round": 1,
+    "rules_version_seen": "RULES-2026-09-04-a",
+    "session_id": "94bd327d-a4a1-4083-8d74-c88971e8623c"
+  }
+}

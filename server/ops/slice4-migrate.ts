@@ -38,6 +38,15 @@ const CORE_TABLES = [
   'tasks', 'mindmaps'
 ] as const;
 
+// 2026-09-26 (docs/exchanges/2026-09-26.md, Council review run 94bd327d) — danh sách RIÊNG cho
+// createVerifiedBackup() khi cần đối chiếu thêm 4 bảng Release cá nhân (backfillReleasePersonalOwnership()
+// sắp sửa đổi các bảng này) — KHÔNG đổi CORE_TABLES trực tiếp vì hằng số đó còn dùng chung cho
+// verifySlice4Migration()/fixture test của pipeline Lát 4 cũ, đổi sẽ phá vỡ giả định của các test đó.
+export const BACKUP_VERIFY_TABLES = [
+  ...CORE_TABLES, 'release_templates', 'release_task_definitions',
+  'emergency_release_templates', 'emergency_release_task_definitions'
+] as const;
+
 function sha256File(filePath: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const hash = createHash('sha256');
@@ -286,7 +295,11 @@ export interface BackupManifest {
 // PRAGMA integrity_check + đối chiếu số dòng từng bảng (VACUUM INTO tạo file nén lại, không thể so
 // sánh byte-for-byte với nguồn — sha256 trả về là của CHÍNH bản backup, dùng để phát hiện file bị
 // sửa/hỏng về sau, không phải để so với nguồn).
-export async function createVerifiedBackup(sourceDbPath: string, backupDir: string): Promise<BackupManifest> {
+// `tablesToVerify` (2026-09-26, Council review 94bd327d) — mặc định CORE_TABLES như trước (không đổi
+// hành vi cũ), truyền BACKUP_VERIFY_TABLES khi cần đối chiếu thêm 4 bảng Release cá nhân.
+export async function createVerifiedBackup(
+  sourceDbPath: string, backupDir: string, tablesToVerify: readonly string[] = CORE_TABLES
+): Promise<BackupManifest> {
   if (!existsSync(sourceDbPath)) {
     throw new Error(`createVerifiedBackup: không tìm thấy DB nguồn tại ${sourceDbPath}`);
   }
@@ -296,10 +309,14 @@ export async function createVerifiedBackup(sourceDbPath: string, backupDir: stri
   if (existsSync(backupPath)) throw new Error(`createVerifiedBackup: file backup đã tồn tại ${backupPath}`);
 
   const sourceDb = new DatabaseSync(sourceDbPath, { readOnly: true });
+  // 2026-09-26 (Council review 94bd327d) — kết nối đọc lúc backup trước đây KHÔNG set busy_timeout,
+  // khác kết nối chính của app (server/db.ts). Thêm để nhất quán, tránh "database is locked" tức thì
+  // nếu tranh chấp khoá thoáng qua đúng lúc checkpoint WAL.
+  sourceDb.exec('PRAGMA busy_timeout = 5000');
   let sourceCounts: Record<string, number>;
   let userVersion: number;
   try {
-    sourceCounts = countRowsByTable(sourceDb, CORE_TABLES);
+    sourceCounts = countRowsByTable(sourceDb, tablesToVerify);
     userVersion = (sourceDb.prepare('PRAGMA user_version').get() as { user_version: number }).user_version;
     // VACUUM INTO ghi ra file MỚI, không đụng nguồn — chạy được cả khi nguồn read-only.
     sourceDb.exec(`VACUUM INTO '${backupPath.replace(/'/g, "''").replace(/\\/g, '/')}'`);
@@ -312,7 +329,7 @@ export async function createVerifiedBackup(sourceDbPath: string, backupDir: stri
   let backupCounts: Record<string, number>;
   try {
     integrity = (backupDb.prepare('PRAGMA integrity_check').get() as { integrity_check: string }).integrity_check;
-    backupCounts = countRowsByTable(backupDb, CORE_TABLES);
+    backupCounts = countRowsByTable(backupDb, tablesToVerify);
   } finally {
     backupDb.close();
   }
@@ -321,7 +338,7 @@ export async function createVerifiedBackup(sourceDbPath: string, backupDir: stri
     unlinkSync(backupPath);
     throw new Error(`createVerifiedBackup: bản backup KHÔNG toàn vẹn (integrity_check = ${integrity}) — đã xoá, dừng lại`);
   }
-  const mismatched = CORE_TABLES.filter((t) => sourceCounts[t] !== backupCounts[t]);
+  const mismatched = tablesToVerify.filter((t) => sourceCounts[t] !== backupCounts[t]);
   if (mismatched.length > 0) {
     unlinkSync(backupPath);
     throw new Error(`createVerifiedBackup: số dòng LỆCH giữa nguồn và backup ở bảng: ${mismatched.join(', ')} — đã xoá backup, dừng lại`);

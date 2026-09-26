@@ -15,6 +15,7 @@
 //    project_task (giữ nguyên `legacy_pic_label`, không tự đoán/gán cho người khác — CR §6.3).
 import { Router } from 'express';
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
 import { db } from '../db.js';
 import { dataDir } from '../paths.js';
@@ -22,7 +23,10 @@ import { requireSession, requireActiveAccount, actorFromRequest } from '../lib/a
 import { authorize } from '../lib/authorize.js';
 import { writeAudit } from '../lib/audit.js';
 import { sendRouteError } from '../lib/utils.js';
-import { createVerifiedBackup, ensureDev13Identity, backfillDev13Scope, backfillReleasePersonalOwnership } from '../ops/slice4-migrate.js';
+import {
+  createVerifiedBackup, ensureDev13Identity, backfillDev13Scope, backfillReleasePersonalOwnership,
+  BACKUP_VERIFY_TABLES
+} from '../ops/slice4-migrate.js';
 
 const router = Router();
 
@@ -30,15 +34,17 @@ router.get('/admin/legacy-data/backup', requireSession, requireActiveAccount, as
   const actor = actorFromRequest(req);
   authorize({ actor, policyKind: 'team_feature', resource: 'team', action: 'legacy_data_migration_temp', scope: {} });
 
-  const tmpDir = join(dataDir, 'tmp-legacy-backup');
+  // 2026-09-26 (Council review 94bd327d) — thư mục con RIÊNG theo từng request (hậu tố ngẫu nhiên),
+  // KHÔNG dùng chung 1 tên cố định: 2 request đồng thời trước đây có thể `rmSync(tmpDir, {recursive:
+  // true})` xoá nhầm file backup của nhau vì chung đúng 1 thư mục.
+  const tmpDir = join(dataDir, 'tmp-legacy-backup', randomBytes(8).toString('hex'));
   try {
-    const manifest = await createVerifiedBackup(join(dataDir, 'tasks.sqlite'), tmpDir);
+    const manifest = await createVerifiedBackup(join(dataDir, 'tasks.sqlite'), tmpDir, BACKUP_VERIFY_TABLES);
     writeAudit(actor.userId, null, 'legacy_data.backup_download', 'db:tasks.sqlite', { sha256: manifest.sha256 });
     const fileBuffer = readFileSync(manifest.backupPath);
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="tasks-backup-${Date.now()}.sqlite"`);
     res.send(fileBuffer);
-    rmSync(manifest.backupPath, { force: true });
   } catch (error) {
     sendRouteError(res, error, 'Không tạo được bản backup');
   } finally {
