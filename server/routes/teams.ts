@@ -132,36 +132,6 @@ router.post('/admin/teams/:id/leader', requireSession, requireActiveAccount, (re
   }
 });
 
-// ── POST /admin/self-join-team — VÁ TẠM THỜI, XOÁ SAU KHI DÙNG XONG (2026-09-26, xem
-// docs/exchanges/2026-09-26.md và server/lib/authorization-policy.ts:self_join_bootstrap). Chỉ cho
-// actor tự thêm CHÍNH MÌNH (userId luôn lấy từ session, không nhận từ body) làm Leader của 1 team chỉ
-// định — KHÔNG đòi phải đã là thành viên trước (khác hẳn /admin/teams/:id/leader ở trên), để gỡ đúng
-// tình huống tài khoản Admin bootstrap bị kẹt 'active' nhưng không thuộc team nào.
-router.post('/admin/self-join-team', requireSession, requireActiveAccount, (req, res) => {
-  const actor = actorFromRequest(req);
-  authorize({ actor, policyKind: 'team_feature', resource: 'team', action: 'self_join_bootstrap', scope: {} });
-  const teamId = Number((req.body as { teamId?: number }).teamId);
-  if (!Number.isInteger(teamId)) return res.status(400).json({ message: 'teamId không hợp lệ' });
-
-  try {
-    withTransaction(() => {
-      const team = db.prepare('SELECT id FROM teams WHERE id = ?').get(teamId);
-      if (!team) throw new HttpError(404, 'Không tìm thấy team');
-      db.prepare("UPDATE team_members SET role = 'member' WHERE team_id = ? AND role = 'leader'").run(teamId);
-      const existing = db.prepare('SELECT 1 FROM team_members WHERE team_id = ? AND user_id = ?').get(teamId, actor.userId);
-      if (existing) {
-        db.prepare("UPDATE team_members SET role = 'leader' WHERE team_id = ? AND user_id = ?").run(teamId, actor.userId);
-      } else {
-        db.prepare("INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, 'leader')").run(teamId, actor.userId);
-      }
-      writeAudit(actor.userId, teamId, 'team.self_join_bootstrap_admin', `team:${teamId}`, { userId: actor.userId });
-    });
-    res.json({ ok: true });
-  } catch (error) {
-    sendRouteError(res, error, 'Không tự thêm được vào team');
-  }
-});
-
 // ── GET /me/teams — actor tự xem team mình thuộc, kèm role ─────────────────────────
 // Kèm `features` (danh sách feature đang 'on' của team đó) — FE dùng để ẩn hẳn tab thay vì hiện tab
 // rồi mới báo lỗi 403 FEATURE_DISABLED bên trong (đọc được: chỉ giới hạn ở team actor ĐÃ là thành
