@@ -2038,8 +2038,9 @@ function PopupGanttTong({
   const [filterProject, setFilterProject] = useState<string>('all');
   const [filterPic, setFilterPic] = useState<string>('');
   const [collapsedGanttProjectIds, setCollapsedGanttProjectIds] = useState<Set<string>>(new Set());
-  // Ẩn task đã xong 100% ở MỌI project (project "Khác" luôn ẩn 100% bất kể toggle).
-  const [hide100, setHide100] = useState(false);
+  // Ẩn task đã xong 100% ở MỌI project — mặc định BẬT (2026-09-26, Council), project "Khác" không
+  // còn hardcode ẩn riêng nữa, dùng chung đúng 1 công tắc như mọi project khác.
+  const [hide100, setHide100] = useState(true);
   const hasFilter = filterProject !== '' || filterPic !== '';
   const canCollapseGanttProjects = filterProject === 'all';
   // PIC đang lọc cụ thể (không phải '' rỗng hay 'all') -> chỉ vẽ lane/bar của PIC này.
@@ -2058,8 +2059,7 @@ function PopupGanttTong({
         const all = tasksByProject[p.id] || [];
         const parentIds = new Set(all.map((tk) => tk.parentId).filter((v): v is string => Boolean(v)));
         const { numberById, orderById } = buildProjectTaskNumbers(all);
-        // Project "Khác" luôn ẩn task 100%; project thường chỉ ẩn khi bật toggle hide100.
-        let tasks = all.filter((tk) => !parentIds.has(tk.id) && tk.ngayBatDauDuKien && tk.ngayKetThucDuKien && !((p.isSystem || hide100) && tk.tienDo === 100));
+        let tasks = all.filter((tk) => !parentIds.has(tk.id) && tk.ngayBatDauDuKien && tk.ngayKetThucDuKien && !(hide100 && tk.tienDo === 100));
         if (filterPic !== '' && filterPic !== 'all') tasks = tasks.filter((tk) => splitAssignees(tk.assignee).includes(filterPic));
         // Thứ tự trên Gantt = thứ tự từ trên xuống ở màn list task (duyệt cây theo sortOrder).
         tasks = [...tasks].sort((a, b) => (orderById.get(a.id) ?? 0) - (orderById.get(b.id) ?? 0));
