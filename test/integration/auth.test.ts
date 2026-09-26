@@ -251,6 +251,23 @@ test('callback thiếu ?access_token=/?refresh_token= -> 400 AUTH_CALLBACK_INVAL
 // single-use ở tầng này) — rủi ro token bị replay nếu lộ URL là đánh đổi đã biết của phương án B, xem
 // docs/exchanges/2026-09-25.md, không phải điều app cố tình chặn.
 
+// 2026-09-26 (docs/exchanges/2026-09-26.md, rà soát lại commit 2e27454e) — URL của chính request này
+// chứa access_token/refresh_token thật trên query: response KHÔNG được để trình duyệt/proxy cache lại,
+// dù thành công hay thất bại (cả 2 nhánh đều có thể mang token thật trên URL đã gọi).
+test('callback (thành công lẫn thất bại) luôn set Cache-Control: no-store, không để token trên URL bị cache', async () => {
+  const nonceOk = await startLogin();
+  const { accessToken, refreshToken } = await issueAuthCode('cache-control-test@drjoy.jp', 'Y');
+  const resOk = await fetch(callbackUrl(accessToken, refreshToken), {
+    redirect: 'manual', headers: { Cookie: `login_nonce=${nonceOk}` }
+  });
+  assert.equal(resOk.status, 302);
+  assert.equal(resOk.headers.get('cache-control'), 'no-store');
+
+  const resFail = await fetch(callbackUrl(accessToken, refreshToken), { redirect: 'manual' });
+  assert.equal(resFail.status, 400);
+  assert.equal(resFail.headers.get('cache-control'), 'no-store');
+});
+
 test('GET /auth/me không có cookie phiên -> 401 SESSION_REQUIRED', async () => {
   const res = await fetch(`${base}/api/auth/me`);
   assert.equal(res.status, 401);

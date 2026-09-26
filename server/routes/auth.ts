@@ -92,6 +92,12 @@ router.get('/auth/login', (_req, res) => {
 // mật: token thật lộ ra URL — vào log truy cập của proxy/server — thay vì nhờ đổi cấu hình phía họ
 // sang "code"). Xem docs/exchanges/2026-09-25.md.
 router.get('/auth/callback', asyncHandler(async (req, res) => {
+  // 2026-09-26 (docs/exchanges/2026-09-26.md, rà soát lại commit 2e27454e) — flow "legacy" nhận
+  // access_token/refresh_token thật ngay trên query string của chính request này (đánh đổi bảo mật đã
+  // chốt 25/09, không đổi lại ở đây). Chặn thêm ĐÚNG một việc còn thiếu: không cho trình duyệt/proxy
+  // trung gian lưu cache response này — thiếu no-store thì URL kèm token có thể còn sống lại qua
+  // "quay lại trang trước" (back/forward cache) hoặc cache trung gian, dù thanh địa chỉ đã đổi sau redirect.
+  res.setHeader('Cache-Control', 'no-store');
   const cookies = parseCookie(req.headers.cookie || '');
   const nonce = cookies[LOGIN_NONCE_COOKIE_NAME];
   // Xoá cookie nonce ngay (dùng một lần) bất kể kết quả bên dưới thành hay bại.
