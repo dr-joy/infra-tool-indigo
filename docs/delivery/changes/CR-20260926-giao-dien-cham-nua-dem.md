@@ -211,8 +211,31 @@ Không đụng.
   `menu-tab-active` → `side-item-active`, hành vi thật không đổi). `npm run check` xanh 10/11 cổng
   (Design token vẫn là nợ cũ không liên quan, xem trên). **Chưa smoke thủ công bằng trình duyệt**
   (không có công cụ chụp màn hình trong môi trường agent) — dev server vẫn chạy tại
-  `http://127.0.0.1:4000` để Leader tự kiểm tra khi thuận tiện. Đang chờ 1 vòng Council review lỗi
-  trước khi sang Pha 3.
+  `http://127.0.0.1:4000` để Leader tự kiểm tra khi thuận tiện. Council review đang chạy nền song
+  song với Pha 3 đợt 1 (không chặn tiến độ, Leader đã cho phép không cần đợi phê duyệt giữa các pha).
+
+- **Pha 3 — đợt 1/N XONG (commit `1c891dc5`, nhánh `feature/style-cham-nua-dem`).** Di trú màu cho
+  các FILE DÙNG CHUNG (không thuộc riêng 1 màn): `ui.tsx` (InfoTip — đổi màu + THÊM tính vị trí thông
+  minh theo FR-6, lật trên/dưới + kẹp trái/phải theo mép màn hình khi hover/focus, giữ nguyên cơ chế
+  hiện/ẩn CSS cũ), `context.tsx` (toast bubble), `team-switcher.tsx`, `auth-errors.tsx`
+  (PermissionLostModal + Conflict409Notice), `shortcuts.tsx` (màn Phím tắt). Cùng đợt: di trú TOÀN BỘ
+  hệ thống nút/popup dùng chung trong `styles.css` (`nut-chinh`/`nut-phu`/`nut-them`/`nut-huy`/
+  `nut-icon`/`nut-nguy-hiem-text`/`nav-step-button`/`nut-lich-su`/`nut-trash-icon`/`checkbox-xong`/
+  `.popup`/`.overlay`/`.popup-release-manager`/`.project-info-table`) — đây là điểm đòn bẩy cao nhất
+  vì MỌI màn đều dùng chung các class này, sửa 1 lần lan toả toàn app. Đã xoá `boxShadow.mem` (hết
+  chỗ dùng sau khi `team-switcher.tsx` đổi sang `shadow-token-md`).
+  **Phát hiện thêm về phạm vi thật của Pha 3 (quan trọng, sửa lại nhận định trước đó):** phần lớn
+  "hardcode Tailwind" KHÔNG nằm ở className trong `.tsx` như ước lượng ban đầu, mà nằm ở CHÍNH
+  `styles.css` dưới dạng hàng trăm class dùng chung (`@apply ... bg-white/border-slate-*/bg-teal-*`)
+  — nghĩa là việc "sửa từng file `src/screens/*`" ở mục 6.1 KHÔNG đơn giản chỉ là sửa className trong
+  file `.tsx` đó, mà phần lớn công sức thực tế nằm ở việc tìm và sửa đúng các class `.tsx-đó-dùng`
+  bên trong `styles.css` (file CSS chung 3600+ dòng, không tách riêng theo màn). Thứ tự màn dễ→khó
+  Leader đã chốt vẫn giữ nguyên, nhưng "độ khó" mỗi màn giờ nên hiểu là "có bao nhiêu class riêng của
+  màn đó còn hardcode trong styles.css", không phải chỉ đếm `className=` trong `.tsx`.
+  `npm run check`: TypeScript/build/token gate xanh; test: 1 lần dính lại đúng test tích hợp backend
+  flaky đã biết (không liên quan), đã tự xác nhận riêng `npx vitest run` (15 file/112 test frontend)
+  pass 100%. Ngoài phạm vi đợt này (để dành cho lượt riêng): `quick-add-*`/`quick-project-*` (thuộc
+  popup "thêm task nhanh" của Task cá nhân/Project, không phải file dùng chung thật).
 
 ## 11. Docs cần cập nhật sau khi làm xong
 
