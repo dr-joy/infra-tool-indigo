@@ -260,6 +260,28 @@ Không đụng.
   `<input>`/`<textarea>`/`<select>` thì KHÔNG cần vì rule nền ở trên đã lo (trừ khi JSX tự ghi đè bằng
   1 class màu viền khác). `npm run check` xanh 10/11 cổng.
 
+- **Council review Pha 3 đợt 1+2 XONG (run `bc2f9540`, Codex 2 lượt `invalid_turn_output` — Claude tự
+  tổng hợp).** Xác nhận PASS toàn bộ các điểm kỹ thuật đề bài lo (quy tắc `border` mặc định Tailwind
+  đúng; `.popup`/`.overlay` animation không bị ảnh hưởng nhờ `popupSoftEnter` cố ý kết thúc ở
+  `transform: none`, có comment giải thích từ trước; `.nut-icon` mặc định đỏ/danger là hành vi CŨ có
+  từ trước, đổi hex→token không đổi ý nghĩa). **Tìm ra và đã SỬA (commit `f7ae72d8`) 1 lỗi thật MỚI
+  phát sinh từ chính Pha 3:** `InfoTip` (`ui.tsx`) vừa `aria-hidden="true"` vừa `tabIndex={0}` trên
+  cùng icon — vi phạm ARIA cơ bản, tạo 1 điểm dừng Tab "câm" cho người dùng bàn phím/trình đọc màn
+  hình. Đã chuyển `tabIndex`/`role="button"`/`aria-label` lên span bao ngoài, icon SVG giữ
+  `aria-hidden` vì đã có nhãn ở ngoài.
+
+- **Pha 3 — đợt 3/N XONG (commit `3fe2875f`) — màn Quản lý team.** Di trú `team-management.tsx`
+  (Tổng quan/Thành viên/Nhật ký + 2 popup Thêm/Bớt thành viên).
+
+- **Pha 3 — đợt 4/N XONG (commit `fabb62ae`) — màn Lịch release chung.** Di trú
+  `release-calendar.tsx` (board + 3 popup Đăng ký/Yêu cầu mở khoá/Ép giờ chung).
+
+- **Còn lại theo thứ tự dễ→khó đã chốt:** Admin(146) → Project(200, cần quyết định câu hỏi tiêu đề
+  trùng ở mục "Tiến độ" phần Pha 2 review) → Weekly(211) → Task cá nhân(223) → Release đăng ký/`
+  release.tsx`(231, khó nhất — 2 Gantt + PopupYeuCauMoKhoa). Cộng thêm khối `.mm-*` (MindMap) trong
+  `styles.css` khi tới màn MindMap (không thuộc 9 màn theo thứ tự dễ→khó gốc vì MindMap không có
+  trong bảng Pha 3, nhưng vẫn cần làm nếu Leader muốn phủ hết — cần hỏi lại phạm vi này).
+
 ## 11. Docs cần cập nhật sau khi làm xong
 
 - [ ] `docs/standards/design-standard.md` (bộ token mới) · [ ] không đụng docs/01-05 khác (không đổi
