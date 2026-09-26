@@ -383,7 +383,7 @@
   }
 
   .project-task-summary span {
-    @apply rounded bg-slate-100 px-2 py-1 text-xs font-bold text-phu;
+    @apply rounded bg-surface-2 px-2 py-1 text-xs font-bold text-phu;
   }
 
   .project-task-summary .project-summary-progress-item {
@@ -393,13 +393,14 @@
   .project-task-summary .project-summary-progress-circle {
     --progress: 0%;
     @apply grid h-10 w-10 place-items-center rounded-full p-0 text-[10px] font-black text-muc;
-    background: conic-gradient(#0d9488 var(--progress), #e2e8f0 0);
+    background: conic-gradient(var(--color-primary) var(--progress), var(--color-border) 0);
     position: relative;
   }
 
   .project-task-summary .project-summary-progress-circle::before {
     content: '';
-    @apply absolute rounded-full bg-white;
+    @apply absolute rounded-full;
+    background: var(--color-surface);
     inset: 5px;
   }
 
@@ -408,7 +409,7 @@
   }
 
   .project-task-summary .project-summary-warning {
-    @apply bg-amber-100 text-amber-800;
+    @apply bg-warning-soft text-warning;
   }
 
   .project-task-tree {
@@ -464,12 +465,12 @@
   }
 
   .project-task-dragging > .project-task-card {
-    @apply opacity-60 ring-2 ring-sky-500;
+    @apply opacity-60 ring-2 ring-primary;
   }
 
   .project-task-card {
     --project-task-frame-height: 2.5rem;
-    @apply relative z-10 grid items-stretch gap-y-1 rounded-md border bg-slate-50 p-1 shadow-sm;
+    @apply relative z-10 grid items-stretch gap-y-1 rounded-md border border-vien bg-surface-2 p-1 shadow-token-sm;
     margin-left: var(--project-task-indent);
     transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   }
@@ -479,9 +480,9 @@
   }
 
   .project-task-card.project-task-card-clickable:hover {
-    border-color: #5eead4;
-    background: #f0fdfa;
-    box-shadow: 0 2px 8px rgba(13, 148, 136, 0.14) !important;
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 14%, transparent) !important;
   }
 
   @media (min-width: 1024px) {
@@ -498,15 +499,15 @@
   }
 
   .project-task-level-1 > .project-task-card {
-    @apply border-slate-300 bg-slate-50 shadow-md shadow-slate-200;
+    @apply border-vien bg-surface-2 shadow-token-md;
   }
 
   .project-task-level-2 > .project-task-card {
-    @apply border-slate-300 bg-slate-50 shadow-md shadow-slate-200;
+    @apply border-vien bg-surface-2 shadow-token-md;
   }
 
   .project-task-level-3 > .project-task-card {
-    @apply border-slate-300 bg-slate-50 shadow-md shadow-slate-200;
+    @apply border-vien bg-surface-2 shadow-token-md;
   }
 
   .project-task-main {
@@ -539,7 +540,7 @@
   }
 
   .project-task-note-area {
-    @apply relative min-w-0 justify-self-stretch self-stretch overflow-hidden rounded border border-slate-200 bg-slate-50 text-xs font-semibold leading-5 text-slate-500;
+    @apply relative min-w-0 justify-self-stretch self-stretch overflow-hidden rounded border border-vien bg-surface-2 text-xs font-semibold leading-5 text-phu;
     min-height: var(--project-task-frame-height);
   }
 
@@ -548,23 +549,23 @@
   }
 
   .project-detail p.project-task-note {
-    @apply m-0 max-w-none whitespace-pre-wrap break-words text-xs font-semibold leading-4 text-slate-600;
+    @apply m-0 max-w-none whitespace-pre-wrap break-words text-xs font-semibold leading-4 text-phu;
   }
 
   .project-task-number {
-    @apply inline-flex h-6 w-[1.8rem] shrink-0 items-center justify-center rounded-md bg-teal-600 p-0 text-[11px] font-bold text-white;
+    @apply inline-flex h-6 w-[1.8rem] shrink-0 items-center justify-center rounded-md bg-primary p-0 text-[11px] font-bold text-on-primary;
   }
 
   .project-task-child-count {
-    @apply whitespace-nowrap rounded bg-sky-50 px-2 py-1 text-[11px] font-bold text-sky-700;
+    @apply whitespace-nowrap rounded bg-secondary-soft px-2 py-1 text-[11px] font-bold text-secondary;
   }
 
   .project-task-collapse-button {
-    @apply mt-0.5 flex h-4 w-6 shrink-0 items-center justify-center border-0 bg-transparent p-0 text-slate-700 transition;
+    @apply mt-0.5 flex h-4 w-6 shrink-0 items-center justify-center border-0 bg-transparent p-0 text-phu transition;
   }
 
   .project-task-collapse-button:hover {
-    @apply text-slate-950;
+    @apply text-muc;
   }
 
   .project-task-fields {
@@ -620,7 +621,7 @@
 
   .project-task-fields .project-task-missing-estimate,
   .project-task-fields .project-task-missing-estimate strong {
-    @apply text-amber-600;
+    @apply text-warning;
   }
 
   .project-task-progress-field {
@@ -633,20 +634,20 @@
 
   .project-task-progress-bar {
     --progress: 0%;
-    @apply relative flex h-3 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-300 bg-slate-100 text-[10px] font-black text-muc;
+    @apply relative flex h-3 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-vien bg-surface-2 text-[10px] font-black text-muc;
     transform: translateX(-25px);
   }
 
   .project-task-progress-fill {
     content: '';
     @apply absolute bottom-0 left-0 top-0;
-    background-color: #0d9488;
+    background-color: var(--color-primary);
     width: var(--progress);
   }
 
   /* Chữ % luôn một màu xám đậm, không đổi theo mức tiến độ */
   .project-task-progress-bar > span:not(.project-task-progress-fill) {
-    @apply relative z-10 text-slate-700;
+    @apply relative z-10 text-muc;
   }
 
   .project-task-child-button {
@@ -655,12 +656,12 @@
 
   /* Task carry-over chưa xử lý (không được duyệt mục tiêu, chưa reschedule) — báo đỏ */
   .project-task-at-risk > .project-task-card {
-    @apply border-red-400 bg-red-50;
-    box-shadow: 0 1px 4px rgba(239, 68, 68, 0.25);
+    @apply border-danger bg-danger-soft;
+    box-shadow: 0 1px 4px color-mix(in srgb, var(--color-danger) 25%, transparent);
   }
 
   .project-task-atrisk-chip {
-    @apply ml-2 inline-flex shrink-0 items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-600 align-middle;
+    @apply ml-2 inline-flex shrink-0 items-center gap-1 rounded bg-danger-soft px-1.5 py-0.5 text-[10px] font-bold text-danger align-middle;
   }
 
   .project-task-actions {
@@ -688,11 +689,8 @@
     width: calc(100vw - 24px);
     height: calc(100vh - 24px);
     overflow: hidden;
-    background-color: #edf1f0;
-    background-image:
-      repeating-linear-gradient(30deg, rgba(165, 178, 174, 0.38) 0 1px, transparent 1px 26px, rgba(165, 178, 174, 0.38) 26px 27px, transparent 27px 52px),
-      linear-gradient(135deg, rgba(208, 216, 214, 0.65), rgba(241, 245, 244, 0.84));
-    background-size: 104px 90px, 100% 100%;
+    /* Chàm Nửa Đêm: bỏ hoạ tiết trang trí sáng cũ (không hợp nền tối), dùng nền phẳng như shell. */
+    background-color: var(--color-bg);
   }
 
   .project-gantt-header {
@@ -713,37 +711,37 @@
   }
 
   .project-gantt-empty {
-    @apply m-5 rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm font-semibold text-phu;
+    @apply m-5 rounded-md border border-dashed border-vien bg-surface-2 px-4 py-5 text-sm font-semibold text-phu;
   }
 
   .project-gantt-shell {
-    @apply grid min-h-0 overflow-hidden rounded-md border border-slate-500;
+    @apply grid min-h-0 overflow-hidden rounded-md border border-vien;
     height: calc(100% - 4rem - 36px);
     grid-template-columns: 260px minmax(0, 1fr);
     margin: 12px;
   }
 
   .project-gantt-task-column {
-    @apply min-h-0 overflow-hidden border-r border-slate-500;
-    background: rgba(241, 245, 244, 0.9);
+    @apply min-h-0 overflow-hidden border-r border-vien;
+    background: color-mix(in srgb, var(--color-surface) 90%, transparent);
   }
 
   .project-roadmap-task-column {
-    background: rgba(241, 245, 244, 0.9);
+    background: color-mix(in srgb, var(--color-surface) 90%, transparent);
   }
 
   .project-gantt-task-column-spacer {
-    @apply sticky top-0 z-10 border-b border-slate-500 bg-white;
+    @apply sticky top-0 z-10 border-b border-vien bg-surface;
     height: 60px;
   }
 
   .project-roadmap-task-column-spacer {
-    @apply sticky top-0 z-10 bg-white;
+    @apply sticky top-0 z-10 bg-surface;
     height: 66px;
   }
 
   .project-gantt-task-label {
-    @apply flex h-14 min-w-0 flex-col justify-center overflow-hidden border-b border-slate-400 px-3 text-sm;
+    @apply flex h-14 min-w-0 flex-col justify-center overflow-hidden border-b border-vien px-3 text-sm;
   }
 
   .project-gantt-task-label-titleonly {
@@ -755,7 +753,7 @@
   }
 
   .project-gantt-task-grip {
-    @apply absolute left-2 top-1/2 -translate-y-1/2 text-slate-400;
+    @apply absolute left-2 top-1/2 -translate-y-1/2 text-phu;
   }
 
   .project-gantt-task-label-dragging {
@@ -763,11 +761,11 @@
   }
 
   .project-gantt-task-label-drop {
-    @apply bg-teal-50 ring-2 ring-inset ring-teal-500;
+    @apply bg-primary-soft ring-2 ring-inset ring-primary;
   }
 
   .project-roadmap-project-label {
-    @apply flex min-w-0 flex-col justify-center overflow-hidden border-b border-slate-500 bg-slate-200 px-3 text-sm;
+    @apply flex min-w-0 flex-col justify-center overflow-hidden border-b border-vien bg-surface-2 px-3 text-sm;
     height: 42px;
   }
 
@@ -776,7 +774,7 @@
   }
 
   .project-roadmap-toggle {
-    @apply grid h-7 w-7 shrink-0 place-items-center rounded-md border border-slate-300 bg-white p-0 text-muc transition hover:border-slate-500 hover:bg-slate-100;
+    @apply grid h-7 w-7 shrink-0 place-items-center rounded-md border border-vien bg-surface p-0 text-muc transition hover:border-muted-2 hover:bg-surface-2;
   }
 
   .project-roadmap-project-label-text {
@@ -784,7 +782,7 @@
   }
 
   .project-roadmap-task-label {
-    @apply bg-white pl-6;
+    @apply bg-surface pl-6;
   }
 
   .project-gantt-task-title {
@@ -796,7 +794,7 @@
   }
 
   .project-gantt-task-id {
-    @apply mb-0.5 block text-[10px] font-black leading-none text-slate-400;
+    @apply mb-0.5 block text-[10px] font-black leading-none text-phu;
   }
 
   .project-gantt-task-title-wrap {
@@ -811,7 +809,7 @@
 
   .project-gantt-scroll {
     @apply min-h-0 overflow-auto;
-    background: rgba(255, 255, 255, 0.7);
+    background: color-mix(in srgb, var(--color-bg) 70%, transparent);
     overscroll-behavior: contain;
   }
 
@@ -827,7 +825,7 @@
   }
 
   .project-gantt-calendar {
-    @apply sticky top-0 z-40 bg-white;
+    @apply sticky top-0 z-40 bg-surface;
   }
 
   .project-gantt-months {
@@ -835,15 +833,15 @@
   }
 
   .project-gantt-month {
-    @apply flex h-[22px] shrink-0 items-center justify-center overflow-hidden whitespace-nowrap border-b border-r border-slate-500 bg-slate-100 px-1 text-xs font-black text-muc;
+    @apply flex h-[22px] shrink-0 items-center justify-center overflow-hidden whitespace-nowrap border-b border-r border-vien bg-surface-2 px-1 text-xs font-black text-muc;
   }
 
   .project-gantt-days {
-    @apply flex h-[38px] border-b border-slate-500 bg-white;
+    @apply flex h-[38px] border-b border-vien bg-surface;
   }
 
   .project-roadmap-calendar {
-    @apply sticky top-0 z-20 bg-white;
+    @apply sticky top-0 z-20 bg-surface;
     height: 66px;
   }
 
@@ -853,11 +851,11 @@
   }
 
   .project-roadmap-month {
-    @apply flex h-7 shrink-0 items-center justify-center border-b border-r border-slate-500 bg-slate-100 text-xs font-black text-muc;
+    @apply flex h-7 shrink-0 items-center justify-center border-b border-r border-vien bg-surface-2 text-xs font-black text-muc;
   }
 
   .project-roadmap-week {
-    @apply flex h-[38px] shrink-0 flex-col items-center justify-center border-b border-r border-slate-500 text-[10px] leading-4 text-slate-600;
+    @apply flex h-[38px] shrink-0 flex-col items-center justify-center border-b border-r border-vien text-[10px] leading-4 text-phu;
   }
 
   .project-roadmap-week strong {
@@ -869,7 +867,7 @@
   }
 
   .project-gantt-day {
-    @apply flex shrink-0 flex-col items-center justify-center border-r border-slate-500 text-[11px] leading-4 text-slate-600;
+    @apply flex shrink-0 flex-col items-center justify-center border-r border-vien text-[11px] leading-4 text-phu;
   }
 
   .project-gantt-day strong {
@@ -878,7 +876,7 @@
 
   .project-gantt-day-saturday,
   .project-gantt-day-sunday {
-    background-color: rgba(100, 116, 139, 0.16);
+    background-color: color-mix(in srgb, var(--color-border) 40%, transparent);
   }
 
   .project-gantt-day-saturday span,
@@ -897,51 +895,51 @@
 
   .project-gantt-weekend {
     @apply pointer-events-none absolute z-0;
-    background-color: rgba(100, 116, 139, 0.16);
+    background-color: color-mix(in srgb, var(--color-border) 40%, transparent);
   }
 
   .project-gantt-row {
-    @apply relative h-14 border-b border-slate-500;
-    background-image: linear-gradient(to right, rgba(71, 85, 105, 0.58) 1px, transparent 1px);
+    @apply relative h-14 border-b border-vien;
+    background-image: linear-gradient(to right, color-mix(in srgb, var(--color-border) 60%, transparent) 1px, transparent 1px);
     background-size: 42px 100%;
   }
 
   .project-gantt-row-drop {
-    @apply ring-2 ring-inset ring-teal-500;
-    background-color: rgba(20, 184, 166, 0.08);
+    @apply ring-2 ring-inset ring-primary;
+    background-color: color-mix(in srgb, var(--color-primary) 8%, transparent);
   }
 
   /* Hàng tiêu đề nhóm project trong Gantt tổng (cả cột nhãn lẫn vùng timeline) */
   .project-gantt-group-row,
   .project-gantt-group-label {
-    @apply flex items-center border-b border-slate-500 bg-slate-200 px-3 text-sm font-bold text-slate-800;
+    @apply flex items-center border-b border-vien bg-surface-2 px-3 text-sm font-bold text-muc;
     height: 32px;
   }
 
   .project-gantt-group-toggle {
-    @apply mr-2 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-slate-400 bg-white text-slate-700 transition hover:border-teal-500 hover:bg-teal-50 hover:text-teal-700;
+    @apply mr-2 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-vien bg-surface text-phu transition hover:border-primary hover:bg-primary-soft hover:text-primary;
   }
 
   .project-roadmap-project-row {
-    @apply relative border-b border-slate-500 bg-slate-200;
+    @apply relative border-b border-vien bg-surface-2;
     height: 42px;
   }
 
   .project-roadmap-task-row {
-    background-image: linear-gradient(to right, rgba(71, 85, 105, 0.58) 1px, transparent 1px);
+    background-image: linear-gradient(to right, color-mix(in srgb, var(--color-border) 60%, transparent) 1px, transparent 1px);
     background-size: 118px 100%;
   }
 
   .project-gantt-today-line {
-    @apply pointer-events-none absolute z-30 w-0.5 bg-red-600;
+    @apply pointer-events-none absolute z-30 w-0.5 bg-danger;
   }
 
   .project-gantt-today-line span {
-    @apply absolute left-1 top-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-black text-white;
+    @apply absolute left-1 top-1 rounded bg-danger px-1.5 py-0.5 text-[10px] font-black text-on-primary;
   }
 
   .project-gantt-bar {
-    @apply absolute flex h-4 cursor-grab select-none items-center overflow-hidden rounded-md border-0 bg-teal-600 text-xs font-black text-white shadow-sm;
+    @apply absolute flex h-4 cursor-grab select-none items-center overflow-hidden rounded-md border-0 bg-primary text-xs font-black text-on-primary shadow-token-sm;
     touch-action: none;
   }
 
@@ -989,15 +987,15 @@
   }
 
   .project-gantt-bar-level-2 {
-    @apply bg-teal-600;
+    @apply bg-primary;
   }
 
   .project-gantt-bar-level-3 {
-    @apply bg-teal-500;
+    @apply bg-primary-hover;
   }
 
   .project-gantt-bar-done {
-    background-color: #64748b;
+    background-color: var(--color-muted-2);
   }
 
   .project-gantt-resize {
@@ -1011,7 +1009,8 @@
   }
 
   .man-hinh-len-lich {
-    @apply min-h-0 flex-1 overflow-y-auto rounded-lg border border-slate-400 bg-white/75 p-5 backdrop-blur;
+    @apply min-h-0 flex-1 overflow-y-auto rounded-lg border border-vien p-5 backdrop-blur;
+    background: color-mix(in srgb, var(--color-surface) 75%, transparent);
     animation: releaseFadeIn 220ms ease-out both;
   }
 
@@ -1036,15 +1035,15 @@
   }
 
   .release-type-options {
-    @apply flex flex-wrap gap-1 rounded-md border border-slate-300 bg-slate-50 p-1;
+    @apply flex flex-wrap gap-1 rounded-md border border-vien bg-surface-2 p-1;
   }
 
   .release-type-button {
-    @apply inline-flex min-w-[150px] items-center justify-center rounded px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-teal-50 hover:text-teal-700;
+    @apply inline-flex min-w-[150px] items-center justify-center rounded px-3 py-2 text-sm font-bold text-phu transition hover:bg-primary-soft hover:text-primary;
   }
 
   .release-type-button-active {
-    @apply bg-teal-600 text-white hover:bg-teal-700 hover:text-white;
+    @apply bg-primary text-on-primary hover:bg-primary-hover hover:text-on-primary;
   }
 
   .release-layout {
@@ -1053,12 +1052,12 @@
 
   .release-form-panel,
   .release-note {
-    @apply rounded-md border border-vien bg-white p-4 transition duration-200 ease-out;
+    @apply rounded-md border border-vien bg-surface p-4 transition duration-200 ease-out;
   }
 
   .release-form-panel:hover,
   .release-note:hover {
-    @apply border-sky-200 bg-sky-50/20;
+    @apply border-secondary bg-secondary-soft;
   }
 
   .release-form-panel h3 {
@@ -1087,7 +1086,7 @@
   }
 
   .release-date-picker-button {
-    @apply absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-slate-600 transition hover:bg-sky-50 hover:text-sky-700;
+    @apply absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-phu transition hover:bg-secondary-soft hover:text-secondary;
   }
 
   .release-emergency-grid {
@@ -1107,7 +1106,7 @@
   }
 
   .release-master-date {
-    @apply flex min-h-10 items-center rounded-md border border-vien bg-slate-50 px-3 text-sm font-semibold text-muc;
+    @apply flex min-h-10 items-center rounded-md border border-vien bg-surface-2 px-3 text-sm font-semibold text-muc;
   }
 
   .release-management-actions {
@@ -1132,7 +1131,7 @@
   }
 
   .release-emergency-batch-row {
-    @apply flex flex-wrap items-center gap-3 rounded-md border border-vien bg-slate-50 px-3 py-2 text-sm;
+    @apply flex flex-wrap items-center gap-3 rounded-md border border-vien bg-surface-2 px-3 py-2 text-sm;
   }
 
   .release-emergency-batch-key {
@@ -1145,7 +1144,7 @@
   }
 
   .release-emergency-batch-badge {
-    @apply ml-auto rounded-full border border-vien bg-white px-2.5 py-1 text-xs font-semibold text-phu;
+    @apply ml-auto rounded-full border border-vien bg-surface px-2.5 py-1 text-xs font-semibold text-phu;
   }
 
   .release-emergency-batch-badge.is-posted {
