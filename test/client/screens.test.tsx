@@ -418,7 +418,7 @@ describe('Ẩn task đã xong 100% mặc định ở project "Khác" (Council ru
     expect(screen.queryByText(/Hiện \d+ task đã xong/)).not.toBeInTheDocument();
   });
 
-  it('AC2+AC3: project "Khác" ẩn mặc định task 100%, nút hiện đúng N, bấm hiện lại toàn bộ ngay lập tức', async () => {
+  it('AC2+AC3: project "Khác" ẩn mặc định task 100%, nút hiện đúng N, bấm hiện/ẩn lại được (toggle 2 chiều — Leader phản hồi dùng thật 2026-09-26)', async () => {
     mockKhacProjectFetch();
     renderWithProviders(<ManHinhProject />);
     await waitFor(() => expect(screen.getByText('Task thường đã xong')).toBeInTheDocument());
@@ -432,7 +432,13 @@ describe('Ẩn task đã xong 100% mặc định ở project "Khác" (Council ru
     fireEvent.click(screen.getByRole('button', { name: 'Hiện 2 task đã xong' }));
     await waitFor(() => expect(screen.getByText('Khác xong 1')).toBeInTheDocument());
     expect(screen.getByText('Khác xong 2')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Hiện \d+ task đã xong/ })).not.toBeInTheDocument();
+
+    // Nút vẫn còn (đổi nhãn thành "Ẩn") — bấm lại để THU GỌN, không cần rời/mở lại project.
+    const nutAn = screen.getByRole('button', { name: 'Ẩn 2 task đã xong' });
+    fireEvent.click(nutAn);
+    await waitFor(() => expect(screen.queryByText('Khác xong 1')).not.toBeInTheDocument());
+    expect(screen.queryByText('Khác xong 2')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hiện 2 task đã xong' })).toBeInTheDocument();
   });
 
   it('AC4: rời project "Khác" rồi quay lại -> tự reset về ẩn (không nhớ giữa các lần mở)', async () => {

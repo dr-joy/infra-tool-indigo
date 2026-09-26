@@ -156,6 +156,29 @@ test('FR-18: PATCH /projects/:id với rowVersion cũ -> 409 VERSION_CONFLICT, d
   assert.equal(row.ten_project, '[itest] rowver sua lan 1', 'bản ghi phải giữ đúng kết quả của lần sửa THÀNH CÔNG gần nhất');
 });
 
+// 2026-09-26 (Leader dùng thật) — trước đây route PATCH /projects/:id có nhánh riêng CHO PHÉP đổi tên
+// project hệ thống "Khác" (chỉ chặn PIC/ngày bắt đầu); Leader không muốn tên "Khác" bị đổi nữa -> chặn
+// TOÀN BỘ PATCH cho project hệ thống, đồng bộ với close/pending/restore/xóa đã chặn sẵn ở trên.
+test('PATCH /projects/:id: project hệ thống "Khác" -> 400, không đổi tên (Leader 2026-09-26)', async () => {
+  const teamId = await onboarding.makeTeam(adminSession, '[itest] Team Khac Immutable');
+  await onboarding.setFeatureVisibility(adminSession, teamId, 'project', 'on');
+  const leader = await onboarding.joinAndApprove('khac-immutable-leader@drjoy.jp', 'Leader Khac', teamId, 'leader', adminSession);
+  const H = flow.H(leader.session);
+
+  const list = await req(H, 'GET', `/api/projects?teamId=${teamId}`);
+  assert.equal(list.status, 200);
+  const khac = list.json.find((p: { isSystem: boolean }) => p.isSystem);
+  assert.ok(khac, 'team mới phải tự có sẵn project hệ thống "Khác"');
+
+  const res = await req(H, 'PATCH', `/api/projects/${khac.id}`, {
+    ten: '[itest] co gang doi ten Khac', responsibleUserId: leader.userId, ngayBatDau: '2026-09-01', rowVersion: khac.rowVersion
+  });
+  assert.equal(res.status, 400);
+
+  const row = db.prepare('SELECT ten_project FROM projects WHERE id = ?').get(khac.id) as { ten_project: string };
+  assert.equal(row.ten_project, 'Khác', 'tên project hệ thống không được đổi');
+});
+
 test('FR-18: PATCH task project với rowVersion cũ -> 409, PUT assignments với rowVersion cũ -> 409', async () => {
   const teamId = await onboarding.makeTeam(adminSession, '[itest] Team RowVersion Task');
   await onboarding.setFeatureVisibility(adminSession, teamId, 'project', 'on');

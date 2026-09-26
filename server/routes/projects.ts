@@ -300,19 +300,15 @@ router.patch('/projects/:projectId', requireSession, requireActiveAccount, (req,
   const project = loadProjectOrThrow(projectId);
   authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'project', action: 'update', scope: { teamId: project.team_id ?? undefined } });
 
+  // 2026-09-26 (Leader yêu cầu) — project hệ thống "Khác" KHÔNG được sửa gì cả, kể cả đổi tên (trước
+  // đây route này cho đổi tên riêng "Khác", giữ nguyên PIC/ngày bắt đầu — Leader không muốn tên bị đổi
+  // nữa, đồng bộ với close/pending/restore/xóa cũng đều chặn project hệ thống ngay phía trên).
+  if (project.is_system) return res.status(400).json({ message: 'Không thể sửa project hệ thống "Khác"' });
+
   const body = req.body as ProjectBody;
   const ten = body.ten?.trim();
   if (!ten) return res.status(400).json({ message: 'Tên Project là bắt buộc' });
   const now = new Date().toISOString();
-
-  // Project hệ thống "Khác": chỉ cho đổi tên, giữ nguyên người phụ trách/ngày bắt đầu
-  if (project.is_system) {
-    const updated = db.prepare('UPDATE projects SET ten_project = ?, updated_at = ?, row_version = row_version + 1 WHERE id = ? AND row_version = ?')
-      .run(ten, now, projectId, body.rowVersion ?? -1);
-    if (updated.changes === 0) throw new HttpError(409, 'Có người vừa thay đổi project này, vui lòng tải lại', 'VERSION_CONFLICT');
-    const row = db.prepare('SELECT * FROM projects WHERE id = ?').get(projectId) as Record<string, unknown>;
-    return res.json(mapProject(row));
-  }
 
   const responsibleUserId = body.responsibleUserId == null || body.responsibleUserId === '' ? null : Number(body.responsibleUserId);
   const ngayBatDau = body.ngayBatDau?.trim();

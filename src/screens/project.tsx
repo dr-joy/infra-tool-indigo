@@ -217,10 +217,12 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
   const [projectTaskError, setProjectTaskError] = useState('');
   const [hienThiDanhSachProject, setHienThiDanhSachProject] = useState(true);
   const [projectDangKeo, setProjectDangKeo] = useState<string | null>(null);
-  // 2026-09-26 (Council, run 9c9f21c4) — CHỈ project hệ thống "Khác": mặc định ẩn task đã xong 100%
-  // ở danh sách chính (project này không có khái niệm dọn/archive, cứ dài mãi theo thời gian). Nút
-  // "Hiện N task đã xong" bấm 1 chiều trong 1 lần mở; không nhớ giữa các lần mở (reset cùng effect
-  // nạp lại projectTasks bên dưới).
+  // 2026-09-26 (Council run 9c9f21c4, sửa lại theo phản hồi Leader dùng thật) — CHỈ project hệ thống
+  // "Khác": mặc định ẩn task đã xong 100% ở danh sách chính (project này không có khái niệm dọn/
+  // archive, cứ dài mãi theo thời gian). Nút "Hiện/Ẩn N task đã xong" là TOGGLE 2 chiều trong 1 lần mở
+  // (Council ban đầu chốt 1 chiều, nhưng Leader dùng thật thấy bất tiện vì không có cách thu gọn lại —
+  // đổi ngay theo phản hồi thật). Không nhớ giữa các lần mở project khác nhau (reset cùng effect nạp
+  // lại projectTasks bên dưới).
   const [showCompletedInKhac, setShowCompletedInKhac] = useState(false);
   const selectedProject = projects.find((project) => project.id === projectDangChon);
   const projectTaskSummary = useMemo(() => {
@@ -851,15 +853,18 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
             </div>
             {selectedProject && (
               <div className="project-detail-actions">
-                {/* Project hệ thống "Khác" chỉ là việc lẻ: không Thông tin chi tiết, không Gantt, không xóa */}
+                {/* Project hệ thống "Khác" chỉ là việc lẻ: không Thông tin chi tiết, không Gantt, không
+                    sửa (kể cả đổi tên — Leader 2026-09-26), không xóa */}
                 {!selectedProject.isSystem && (
                   <button type="button" className="nut-phu project-icon-button" onClick={() => setMoThongTinProject(true)} title={t('project.info')} aria-label={t('project.info')}>
                     <Info className="project-header-action-icon" size={20} strokeWidth={2.5} />
                   </button>
                 )}
-                <button type="button" className="nut-phu project-icon-button" onClick={() => setProjectDangSua(selectedProject)} title={t('project.edit')} aria-label={t('project.edit')}>
-                  <Pencil className="project-header-action-icon" size={20} strokeWidth={2.5} />
-                </button>
+                {!selectedProject.isSystem && (
+                  <button type="button" className="nut-phu project-icon-button" onClick={() => setProjectDangSua(selectedProject)} title={t('project.edit')} aria-label={t('project.edit')}>
+                    <Pencil className="project-header-action-icon" size={20} strokeWidth={2.5} />
+                  </button>
+                )}
                 {!selectedProject.isSystem && (
                   <button type="button" className="nut-nguy-hiem-text project-icon-button" onClick={() => setProjectDangXoa(selectedProject)} title={t('project.delete')} aria-label={t('project.delete')}>
                     <Trash2 className="project-header-action-icon" size={20} strokeWidth={2.5} />
@@ -884,9 +889,11 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
                   <div>
                     <h3>{t('project.tasks_panel')}</h3>
                   </div>
-                  {selectedProject.isSystem && !showCompletedInKhac && completedTaskIdsInKhac.size > 0 && (
-                    <button type="button" className="nut-phu" onClick={() => setShowCompletedInKhac(true)}>
-                      {`Hiện ${completedTaskIdsInKhac.size} task đã xong`}
+                  {selectedProject.isSystem && completedTaskIdsInKhac.size > 0 && (
+                    <button type="button" className="nut-phu" onClick={() => setShowCompletedInKhac((value) => !value)}>
+                      {showCompletedInKhac
+                        ? `Ẩn ${completedTaskIdsInKhac.size} task đã xong`
+                        : `Hiện ${completedTaskIdsInKhac.size} task đã xong`}
                     </button>
                   )}
                 </div>
