@@ -201,6 +201,19 @@ Không đụng.
   **Trạng thái đúng: `npm run check` xanh 10/11 cổng, cổng Design token đỏ vì nợ cũ không liên quan,
   test backend/frontend đều pass khi chạy lại.**
 
+- **Pha 2 XONG (commit `3b87fe07`, nhánh `feature/style-cham-nua-dem`).** Đổi `src/main.tsx` từ nav
+  ngang (`.menu-tabs`) sang sidebar dọc, nhóm "Làm việc"/"Hệ thống" đúng prototype, tiêu đề màn hiện
+  động ở topbar. Giữ nguyên 100% logic cũ (lọc tab theo quyền/feature-visibility, `?tab=` URL, cảnh
+  báo rời MindMap, phím tắt). TeamSwitcher dời xuống chân sidebar, cố ý tách khỏi vùng cuộn
+  `.sidebar-nav` để popup của nó không bị cắt (đã ghi lý do kỹ thuật trong code). Icon riêng cho từng
+  tab bằng `lucide-react`. Xoá CSS chết `.app-brand`/`.menu-tabs`/`.menu-tab*` (đã grep xác nhận
+  không còn nơi nào khác dùng trước khi xoá). Sửa 1 test client lệch theo cấu trúc mới (đổi
+  `menu-tab-active` → `side-item-active`, hành vi thật không đổi). `npm run check` xanh 10/11 cổng
+  (Design token vẫn là nợ cũ không liên quan, xem trên). **Chưa smoke thủ công bằng trình duyệt**
+  (không có công cụ chụp màn hình trong môi trường agent) — dev server vẫn chạy tại
+  `http://127.0.0.1:4000` để Leader tự kiểm tra khi thuận tiện. Đang chờ 1 vòng Council review lỗi
+  trước khi sang Pha 3.
+
 ## 11. Docs cần cập nhật sau khi làm xong
 
 - [ ] `docs/standards/design-standard.md` (bộ token mới) · [ ] không đụng docs/01-05 khác (không đổi
