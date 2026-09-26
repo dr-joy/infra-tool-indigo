@@ -372,3 +372,84 @@ describe('Race condition khi đổi team nhanh — vòng 2 (Council review Lát 
     await waitFor(() => expect(screen.getAllByText('Du an team QA (moi)').length).toBeGreaterThan(0));
   });
 });
+
+// Council review run 9c9f21c4 (2026-09-26) — thiết kế: chỉ project hệ thống "Khác" ẩn task tienDo=100
+// ở danh sách chính, mặc định ẩn, nút "Hiện N task đã xong" bấm 1 chiều, reset khi đổi project.
+describe('Ẩn task đã xong 100% mặc định ở project "Khác" (Council run 9c9f21c4, 2026-09-26)', () => {
+  function mockKhacProjectFetch() {
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), 'http://localhost');
+      if (url.pathname === '/api/auth/me') {
+        return jsonResponse({ user: { id: 1, email: 'a@drjoy.jp', displayName: 'X', avatar: null, status: 'active', systemRole: 'user', memberships: [{ teamId: 1, role: 'leader' }] } });
+      }
+      if (url.pathname === '/api/me/teams') {
+        return jsonResponse({ teams: [{ id: 1, name: 'Dev13', description: null, role: 'leader' }] });
+      }
+      if (url.pathname === '/api/notifications') return jsonResponse({ notifications: [] });
+      if (url.pathname === '/api/projects') {
+        return jsonResponse([
+          { id: 'p1', ten: 'Project thường', pic: '', ngayBatDau: '2026-01-01', moTa: '', sortOrder: 1, closedAt: null, pendingAt: null, isSystem: false },
+          { id: 'k1', ten: 'Khác', pic: '', ngayBatDau: '2026-01-01', moTa: '', sortOrder: 2, closedAt: null, pendingAt: null, isSystem: true }
+        ]);
+      }
+      const baseTask = (overrides: Record<string, unknown>) => ({
+        parentId: null, level: 1, ghiChu: '', ngayBatDauDuKien: '2026-01-01', ngayKetThucDuKien: '2026-01-02',
+        estimateHours: 8, assignee: '', executionOrder: 1, links: [], ...overrides
+      });
+      if (url.pathname === '/api/projects/p1/tasks') {
+        return jsonResponse([baseTask({ id: 't-p1-done', projectId: 'p1', tieuDe: 'Task thường đã xong', tienDo: 100, sortOrder: 1 })]);
+      }
+      if (url.pathname === '/api/projects/k1/tasks') {
+        return jsonResponse([
+          baseTask({ id: 't-k1-done-1', projectId: 'k1', tieuDe: 'Khác xong 1', tienDo: 100, sortOrder: 1 }),
+          baseTask({ id: 't-k1-todo', projectId: 'k1', tieuDe: 'Khác chưa xong', tienDo: 40, sortOrder: 2 }),
+          baseTask({ id: 't-k1-done-2', projectId: 'k1', tieuDe: 'Khác xong 2', tienDo: 100, sortOrder: 3 })
+        ]);
+      }
+      if (/^\/api\/weeks\/[^/]+\/goals$/.test(url.pathname)) return jsonResponse({ hasGoals: false, prevEvaluated: false, goals: [] });
+      return jsonResponse([]);
+    }) as unknown as typeof fetch;
+  }
+
+  it('AC1: project thường vẫn hiện task 100%, không có nút "Hiện N task đã xong"', async () => {
+    mockKhacProjectFetch();
+    renderWithProviders(<ManHinhProject />);
+    await waitFor(() => expect(screen.getByText('Task thường đã xong')).toBeInTheDocument());
+    expect(screen.queryByText(/Hiện \d+ task đã xong/)).not.toBeInTheDocument();
+  });
+
+  it('AC2+AC3: project "Khác" ẩn mặc định task 100%, nút hiện đúng N, bấm hiện lại toàn bộ ngay lập tức', async () => {
+    mockKhacProjectFetch();
+    renderWithProviders(<ManHinhProject />);
+    await waitFor(() => expect(screen.getByText('Task thường đã xong')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Khác' }));
+    await waitFor(() => expect(screen.getByText('Khác chưa xong')).toBeInTheDocument());
+    expect(screen.queryByText('Khác xong 1')).not.toBeInTheDocument();
+    expect(screen.queryByText('Khác xong 2')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hiện 2 task đã xong' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hiện 2 task đã xong' }));
+    await waitFor(() => expect(screen.getByText('Khác xong 1')).toBeInTheDocument());
+    expect(screen.getByText('Khác xong 2')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Hiện \d+ task đã xong/ })).not.toBeInTheDocument();
+  });
+
+  it('AC4: rời project "Khác" rồi quay lại -> tự reset về ẩn (không nhớ giữa các lần mở)', async () => {
+    mockKhacProjectFetch();
+    renderWithProviders(<ManHinhProject />);
+    await waitFor(() => expect(screen.getByText('Task thường đã xong')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Khác' }));
+    await waitFor(() => expect(screen.getByText('Khác chưa xong')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Hiện 2 task đã xong' }));
+    await waitFor(() => expect(screen.getByText('Khác xong 1')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Project thường' }));
+    await waitFor(() => expect(screen.getByText('Task thường đã xong')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Khác' }));
+    await waitFor(() => expect(screen.getByText('Khác chưa xong')).toBeInTheDocument());
+    expect(screen.queryByText('Khác xong 1')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hiện 2 task đã xong' })).toBeInTheDocument();
+  });
+});

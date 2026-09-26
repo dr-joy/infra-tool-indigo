@@ -217,6 +217,11 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
   const [projectTaskError, setProjectTaskError] = useState('');
   const [hienThiDanhSachProject, setHienThiDanhSachProject] = useState(true);
   const [projectDangKeo, setProjectDangKeo] = useState<string | null>(null);
+  // 2026-09-26 (Council, run 9c9f21c4) — CHỈ project hệ thống "Khác": mặc định ẩn task đã xong 100%
+  // ở danh sách chính (project này không có khái niệm dọn/archive, cứ dài mãi theo thời gian). Nút
+  // "Hiện N task đã xong" bấm 1 chiều trong 1 lần mở; không nhớ giữa các lần mở (reset cùng effect
+  // nạp lại projectTasks bên dưới).
+  const [showCompletedInKhac, setShowCompletedInKhac] = useState(false);
   const selectedProject = projects.find((project) => project.id === projectDangChon);
   const projectTaskSummary = useMemo(() => {
     const parentIds = new Set(projectTasks.map((task) => task.parentId).filter((value): value is string => Boolean(value)));
@@ -247,6 +252,12 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
       roundedManMonths: Math.round(manMonths)
     };
   }, [projectTasks]);
+
+  // Chỉ tính cho project "Khác" — project thường không đổi hành vi gì (Council run 9c9f21c4).
+  const completedTaskIdsInKhac = useMemo(() => {
+    if (!selectedProject?.isSystem) return new Set<string>();
+    return new Set(projectTasks.filter((task) => task.tienDo === 100).map((task) => task.id));
+  }, [selectedProject?.isSystem, projectTasks]);
 
   // aliveRef: cờ huỷ (cancellation guard) — chỉ dùng khi gọi TỪ effect nạp theo activeTeamId bên
   // dưới. Đổi team nhanh (A -> B trước khi response của A về) khiến response cũ của A có thể set
@@ -321,6 +332,7 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
     // project/team cũ vẫn hiện dưới tiêu đề project mới tới khi fetch xong.
     setProjectTasks([]);
     setProjectTaskError('');
+    setShowCompletedInKhac(false);
     void taiProjectTasks(projectDangChon, aliveRef);
     return () => { aliveRef.current = false; };
   }, [projectDangChon, activeTeamId]);
@@ -872,6 +884,11 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
                   <div>
                     <h3>{t('project.tasks_panel')}</h3>
                   </div>
+                  {selectedProject.isSystem && !showCompletedInKhac && completedTaskIdsInKhac.size > 0 && (
+                    <button type="button" className="nut-phu" onClick={() => setShowCompletedInKhac(true)}>
+                      {`Hiện ${completedTaskIdsInKhac.size} task đã xong`}
+                    </button>
+                  )}
                 </div>
                 {dangTaiProjectTask && projectTasks.length === 0 && <p className="project-list-state">{t('loading.task')}</p>}
                 {!dangTaiProjectTask && projectTaskError && <p className="project-list-state project-list-error">{projectTaskError}</p>}
@@ -885,6 +902,7 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
                     goalTaskIds={goalTaskIds}
                     atRiskTaskIds={atRiskTaskIds}
                     allowChildren={!selectedProject.isSystem}
+                    hiddenTaskIds={selectedProject.isSystem && !showCompletedInKhac ? completedTaskIdsInKhac : undefined}
                     onAddChild={moPopupTaoProjectTask}
                     onEdit={setProjectTaskDangSua}
                     onDelete={setProjectTaskDangXoa}
@@ -1259,11 +1277,14 @@ function PopupLichSuProjectClose({
   );
 }
 
+const EMPTY_HIDDEN_TASK_IDS: ReadonlySet<string> = new Set();
+
 function ProjectTaskTree({
   tasks,
   goalTaskIds,
   atRiskTaskIds,
   allowChildren = true,
+  hiddenTaskIds,
   onAddChild,
   onEdit,
   onDelete,
@@ -1274,12 +1295,17 @@ function ProjectTaskTree({
   goalTaskIds: Set<string>;
   atRiskTaskIds: Set<string>;
   allowChildren?: boolean;
+  // Task có id trong đây KHÔNG được render (project "Khác" ẩn task 100%, Council run 9c9f21c4) — vẫn
+  // giữ NGUYÊN trong `tasks`/`tasksByParent` để dropTask() dựng payload reorder đủ id anh em (server
+  // yêu cầu khớp chính xác toàn bộ tập id cùng parentId), chỉ bỏ qua ở tầng render + đánh số thứ tự.
+  hiddenTaskIds?: ReadonlySet<string>;
   onAddChild: (task: ProjectTaskItem) => void;
   onEdit: (task: ProjectTaskItem) => void;
   onDelete: (task: ProjectTaskItem) => void;
   onProgressChange: (task: ProjectTaskItem, tienDo: number) => void;
   onReorder: (parentId: string | null, taskIds: string[]) => Promise<void>;
 }) {
+  const hidden = hiddenTaskIds ?? EMPTY_HIDDEN_TASK_IDS;
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [collapsedTaskIds, setCollapsedTaskIds] = useState<Set<string>>(() => {
     const parentIds = new Set(tasks.map((task) => task.parentId).filter((value): value is string => Boolean(value)));
@@ -1325,12 +1351,15 @@ function ProjectTaskTree({
 
   function renderTasks(parentId: string | null, parentNumber = '') {
     const items = tasksByParent[parentId || 'root'] || [];
+    let visibleIndex = 0;
     return (
       <div className={parentId ? 'project-task-children' : 'project-task-tree'}>
-        {items.map((task, index) => {
+        {items.map((task) => {
+          if (hidden.has(task.id)) return null;
           const childrenCount = (tasksByParent[task.id] || []).length;
           const isCollapsed = collapsedTaskIds.has(task.id);
-          const taskNumber = parentNumber ? `${parentNumber}.${index + 1}` : `${index + 1}`;
+          const taskNumber = parentNumber ? `${parentNumber}.${visibleIndex + 1}` : `${visibleIndex + 1}`;
+          visibleIndex += 1;
           return (
             <ProjectTaskRow
               key={task.id}
@@ -2038,8 +2067,9 @@ function PopupGanttTong({
   const [filterProject, setFilterProject] = useState<string>('all');
   const [filterPic, setFilterPic] = useState<string>('');
   const [collapsedGanttProjectIds, setCollapsedGanttProjectIds] = useState<Set<string>>(new Set());
-  // Ẩn task đã xong 100% ở MỌI project (project "Khác" luôn ẩn 100% bất kể toggle).
-  const [hide100, setHide100] = useState(false);
+  // Ẩn task đã xong 100% ở MỌI project — mặc định BẬT (2026-09-26, Council), project "Khác" không
+  // còn hardcode ẩn riêng nữa, dùng chung đúng 1 công tắc như mọi project khác.
+  const [hide100, setHide100] = useState(true);
   const hasFilter = filterProject !== '' || filterPic !== '';
   const canCollapseGanttProjects = filterProject === 'all';
   // PIC đang lọc cụ thể (không phải '' rỗng hay 'all') -> chỉ vẽ lane/bar của PIC này.
@@ -2058,8 +2088,7 @@ function PopupGanttTong({
         const all = tasksByProject[p.id] || [];
         const parentIds = new Set(all.map((tk) => tk.parentId).filter((v): v is string => Boolean(v)));
         const { numberById, orderById } = buildProjectTaskNumbers(all);
-        // Project "Khác" luôn ẩn task 100%; project thường chỉ ẩn khi bật toggle hide100.
-        let tasks = all.filter((tk) => !parentIds.has(tk.id) && tk.ngayBatDauDuKien && tk.ngayKetThucDuKien && !((p.isSystem || hide100) && tk.tienDo === 100));
+        let tasks = all.filter((tk) => !parentIds.has(tk.id) && tk.ngayBatDauDuKien && tk.ngayKetThucDuKien && !(hide100 && tk.tienDo === 100));
         if (filterPic !== '' && filterPic !== 'all') tasks = tasks.filter((tk) => splitAssignees(tk.assignee).includes(filterPic));
         // Thứ tự trên Gantt = thứ tự từ trên xuống ở màn list task (duyệt cây theo sortOrder).
         tasks = [...tasks].sort((a, b) => (orderById.get(a.id) ?? 0) - (orderById.get(b.id) ?? 0));

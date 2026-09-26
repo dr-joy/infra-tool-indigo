@@ -1,0 +1,30 @@
+{
+  "agent": "codex",
+  "bodyMarkdown": "#### Reviewer\n\nKhông phản đối. Tôi đã soi `ProjectTaskTree.dropTask`, `sapXepProjectTasks` và route reorder: giữ mảng task đầy đủ khi tạo payload là đủ để không mất ID task ẩn. Lớp render cần bỏ task 100% khỏi DOM và đánh lại số thứ tự theo các task đang hiện để tránh nhảy số. Gantt tổng độc lập, không bị tác động.\n\n```yaml\nturn_result:\n  agent: \"codex\"\n  round: 2\n  blocking_objections: 0\n  new_decisions: 0\n  questions_for_user: 0\n  permission_requests: 0\n  converged: true\n  note: \"Không còn phản đối chặn: thiết kế giữ nguyên dữ liệu cho sắp xếp và chỉ ẩn ở lớp hiển thị xử lý đúng rủi ro kéo-thả.\"\n  rules_version_seen: \"RULES-2026-09-04-a\"\n  session_id: \"9c9f21c4-b39f-4fc7-a678-035ce21f0d03\"\n  consensus_summary: \"Đồng thuận với Codex: tính năng ẩn task 100% ở màn hình chính project Khác là thay đổi thuần phía giao diện, không đổi API/DB/quyền. Thiết kế chốt: thêm 1 state ẩn/hiện chỉ trong màn hình đó, mặc định ẩn, tự reset về ẩn mỗi lần đổi project hoặc mở lại; để tránh phá tính năng kéo-thả sắp xếp (server đòi danh sách task đầy đủ), vẫn giữ nguyên toàn bộ dữ liệu khi tính việc sắp xếp và chỉ ẩn các task đã xong ở lớp hiển thị cuối cùng, không lọc bớt dữ liệu gốc; nút \\\"Hiện N task đã xong\\\" hoạt động một chiều trong mỗi lần mở, không cần nút ẩn lại riêng; cần bổ sung test tự động ngay từ đầu tại test/client/screens.test.tsx theo đúng khuôn mẫu hiện có. Còn 1 việc cần Dev tự kiểm bằng dữ liệu thật trước khi code (không phải quyết định thiết kế): xác nhận dữ liệu cũ vừa gộp vào project Khác có thực sự không có task con hay không.\"\n```\n",
+  "createdAt": "2026-09-26T06:52:49.724Z",
+  "questionCards": [],
+  "recordId": "9c9f21c4-b39f-4fc7-a678-035ce21f0d03-agent_turn-3",
+  "recordType": "agent_turn",
+  "roles": [
+    "Reviewer",
+    "QA",
+    "Infra"
+  ],
+  "round": 2,
+  "rulesVersion": "RULES-2026-09-04-a",
+  "schemaVersion": 1,
+  "sessionId": "9c9f21c4-b39f-4fc7-a678-035ce21f0d03",
+  "turnResult": {
+    "agent": "codex",
+    "blocking_objections": 0,
+    "consensus_summary": "Đồng thuận với Codex: tính năng ẩn task 100% ở màn hình chính project Khác là thay đổi thuần phía giao diện, không đổi API/DB/quyền. Thiết kế chốt: thêm 1 state ẩn/hiện chỉ trong màn hình đó, mặc định ẩn, tự reset về ẩn mỗi lần đổi project hoặc mở lại; để tránh phá tính năng kéo-thả sắp xếp (server đòi danh sách task đầy đủ), vẫn giữ nguyên toàn bộ dữ liệu khi tính việc sắp xếp và chỉ ẩn các task đã xong ở lớp hiển thị cuối cùng, không lọc bớt dữ liệu gốc; nút \"Hiện N task đã xong\" hoạt động một chiều trong mỗi lần mở, không cần nút ẩn lại riêng; cần bổ sung test tự động ngay từ đầu tại test/client/screens.test.tsx theo đúng khuôn mẫu hiện có. Còn 1 việc cần Dev tự kiểm bằng dữ liệu thật trước khi code (không phải quyết định thiết kế): xác nhận dữ liệu cũ vừa gộp vào project Khác có thực sự không có task con hay không.",
+    "converged": true,
+    "new_decisions": 0,
+    "note": "Không còn phản đối chặn: thiết kế giữ nguyên dữ liệu cho sắp xếp và chỉ ẩn ở lớp hiển thị xử lý đúng rủi ro kéo-thả.",
+    "permission_requests": 0,
+    "questions_for_user": 0,
+    "round": 2,
+    "rules_version_seen": "RULES-2026-09-04-a",
+    "session_id": "9c9f21c4-b39f-4fc7-a678-035ce21f0d03"
+  }
+}
