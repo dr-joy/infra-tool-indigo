@@ -139,43 +139,54 @@
     @apply grid min-h-0 flex-1 content-start gap-3 overflow-y-auto pr-1;
   }
 
-  .app-brand {
-    @apply mb-1 px-1 text-sm font-black uppercase tracking-wide text-slate-600;
+  /* Pha 2 CR-20260926 — sidebar dọc + topbar thay menu-tab ngang cũ. Sidebar tách riêng phần
+     điều hướng CÓ CUỘN (.sidebar-nav, overflow-y-auto) khỏi phần chân KHÔNG cuộn (.sidebar-foot,
+     chứa TeamSwitcher) — cố ý, vì TeamSwitcher xổ popup bằng position:absolute; nếu nằm trong vùng
+     có overflow-y-auto thì popup bị cắt cụt (đúng lỗi CSS thật đã từng xảy ra 25/09 với menu-tabs
+     backdrop-blur, xem lịch sử file này trước khi sửa). */
+  .sidebar {
+    @apply flex w-56 shrink-0 flex-col border-r border-vien px-3 py-4;
   }
 
-  /* 2026-09-25: bỏ `backdrop-blur` — thuộc tính này (giống `filter`) bắt trình duyệt vẽ riêng cả
-     .menu-tabs vào 1 buffer đúng bằng kích thước khung của nó, khiến popup TeamSwitcher (position:
-     absolute, tràn xuống dưới khung nav) bị cắt cụt chỉ còn thấy viền trên cùng — không phải bug ở
-     TeamSwitcher, mà do chính CSS của nav cha. */
-  .menu-tabs {
-    @apply mb-2 flex min-h-10 items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white/75 p-1;
+  .sidebar-brand {
+    @apply mb-3 px-1 text-sm font-black uppercase tracking-wide text-muc;
   }
 
-  .menu-tab-list {
-    @apply flex min-w-0 flex-wrap items-center gap-1;
+  .sidebar-nav {
+    @apply min-h-0 flex-1 overflow-y-auto;
   }
 
-  .menu-tab-actions {
+  .side-group-label {
+    @apply mb-1 mt-4 px-2 text-xs font-bold uppercase tracking-wide text-phu first:mt-0;
+  }
+
+  .side-item {
+    @apply mb-0.5 flex h-9 w-full items-center gap-2 rounded-md border border-transparent px-2 text-left text-sm font-semibold text-phu transition;
+  }
+
+  .side-item:hover {
+    @apply border-vien bg-surface-2 text-muc;
+  }
+
+  .side-item-active,
+  .side-item-active:hover {
+    @apply border-transparent bg-primary-soft text-primary;
+  }
+
+  .sidebar-foot {
+    @apply mt-3 border-t border-vien pt-3;
+  }
+
+  .topbar {
+    @apply mb-2 flex min-h-10 items-center justify-between gap-3 border-b border-vien px-1 pb-3;
+  }
+
+  .topbar-title {
+    @apply text-lg font-bold text-muc;
+  }
+
+  .topbar-right {
     @apply ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2;
-  }
-
-  .menu-tab {
-    @apply flex h-8 items-center justify-center rounded px-4 text-sm font-bold text-slate-700 transition;
-  }
-
-  .menu-tab:hover {
-    background: #f0fdfa;
-    color: #0d9488;
-  }
-
-  .menu-tab-active {
-    background: #0d9488;
-    color: #fff;
-  }
-
-  .menu-tab-active:hover {
-    background: #0f766e;
-    color: #fff;
   }
 
   .man-hinh-project {
