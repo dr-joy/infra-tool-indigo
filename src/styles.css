@@ -1521,11 +1521,11 @@
   }
 
   .release-token-guide-group {
-    @apply grid gap-2 border-b border-dashed border-slate-200 pb-3 last:border-b-0 last:pb-0;
+    @apply grid gap-2 border-b border-dashed border-vien pb-3 last:border-b-0 last:pb-0;
   }
 
   .release-token-guide-title {
-    @apply text-xs font-bold text-slate-700;
+    @apply text-xs font-bold text-muc;
   }
 
   .release-token-guide-row {
@@ -1533,12 +1533,12 @@
   }
 
   .release-token-guide code {
-    @apply rounded bg-white px-2 py-1 font-bold;
-    color: #374151;
+    @apply rounded bg-surface-2 px-2 py-1 font-bold;
+    color: var(--color-text);
   }
 
   .release-token-copy {
-    @apply flex items-center gap-2 rounded-md border border-sky-100 bg-white px-2 py-1 text-sky-800 transition hover:border-sky-300 hover:bg-sky-50;
+    @apply flex items-center gap-2 rounded-md border border-secondary bg-surface px-2 py-1 text-secondary transition hover:bg-secondary-soft;
   }
 
   .release-token-copy code {
@@ -1546,21 +1546,21 @@
   }
 
   .release-copy-status {
-    @apply mt-3 text-sm font-bold text-emerald-700;
+    @apply mt-3 text-sm font-bold text-success;
   }
 
   .release-save-success {
-    @apply fixed left-1/2 top-1/2 z-[70] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3 rounded-lg border border-emerald-100 bg-white px-8 py-7 text-center text-sm font-bold text-emerald-700;
+    @apply fixed left-1/2 top-1/2 z-[70] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3 rounded-lg border border-success bg-surface px-8 py-7 text-center text-sm font-bold text-success;
   }
 
   .release-save-success-icon {
-    @apply grid h-20 w-20 place-items-center rounded-full border-4 border-emerald-500 bg-emerald-50 text-emerald-600;
+    @apply grid h-20 w-20 place-items-center rounded-full border-4 border-success bg-success-soft text-success;
   }
 
   .release-date-summary {
     @apply mt-2 grid gap-1 rounded-md border p-3 text-xs leading-5 text-phu;
-    background: #e5e7eb;
-    border-color: #6b7280;
+    background: var(--color-surface-2);
+    border-color: var(--color-muted-2);
     animation: releaseSoftRise 180ms ease-out both;
   }
 
@@ -1577,11 +1577,8 @@
   }
 
   .release-timeline-decoration {
-    @apply relative overflow-hidden rounded-md border border-sky-100 bg-white p-4 lg:col-span-1;
+    @apply relative overflow-hidden rounded-md border border-vien bg-surface p-4 lg:col-span-1;
     min-height: 118px;
-    background:
-      linear-gradient(90deg, rgba(255, 247, 237, 0.92), rgba(254, 226, 226, 0.72), rgba(255, 237, 213, 0.84)),
-      white;
     animation: releaseSoftRise 220ms ease-out both;
   }
 
@@ -1611,11 +1608,11 @@
   }
 
   .release-timeline-copy span {
-    @apply font-bold uppercase tracking-wide text-slate-500;
+    @apply font-bold uppercase tracking-wide text-phu;
   }
 
   .release-timeline-copy strong {
-    @apply text-base text-slate-800;
+    @apply text-base text-muc;
   }
 
   .release-timeline-track {
@@ -1624,7 +1621,7 @@
 
   .release-timeline-track::before {
     content: '';
-    @apply absolute left-[6%] right-[6%] top-5 h-0.5 rounded-full bg-slate-300;
+    @apply absolute left-[6%] right-[6%] top-5 h-0.5 rounded-full bg-vien;
   }
 
   .release-timeline-progress {
@@ -1636,7 +1633,7 @@
   }
 
   .release-rocket-runner {
-    @apply absolute top-0 z-10 flex h-12 w-12 items-center justify-center rounded-full border border-violet-300 bg-white text-violet-700;
+    @apply absolute top-0 z-10 flex h-12 w-12 items-center justify-center rounded-full border border-secondary bg-surface text-secondary;
     left: 6%;
     animation: releaseRocketRoll 22s ease-in-out infinite;
   }
@@ -1646,7 +1643,7 @@
   }
 
   .release-timeline-label {
-    @apply absolute top-10 text-xs font-black uppercase tracking-wide text-slate-600;
+    @apply absolute top-10 text-xs font-black uppercase tracking-wide text-phu;
   }
 
   .release-timeline-label-start {
@@ -1662,19 +1659,16 @@
   }
 
   .emergency-shape-playground {
-    @apply relative h-40 overflow-hidden rounded-md border border-slate-400 bg-slate-100;
-    background:
-      linear-gradient(180deg, rgba(248, 250, 252, 0.95), rgba(226, 232, 240, 0.95)),
-      white;
+    @apply relative h-40 overflow-hidden rounded-md border border-vien bg-surface-2;
   }
 
   .emergency-shape-playground::before {
     content: '';
-    @apply absolute bottom-8 left-5 right-5 h-0.5 bg-slate-700;
+    @apply absolute bottom-8 left-5 right-5 h-0.5 bg-muted-2;
   }
 
   .emergency-shape {
-    @apply absolute bottom-8 block border border-slate-900;
+    @apply absolute bottom-8 block border border-muted-2;
   }
 
   .emergency-shape-circle {
@@ -1698,7 +1692,7 @@
   }
 
   .emergency-impact {
-    @apply absolute bottom-[58px] hidden h-8 w-8 rounded-full border border-dashed border-slate-400;
+    @apply absolute bottom-[58px] hidden h-8 w-8 rounded-full border border-dashed border-vien;
     animation: emergencyImpactPop 8.4s ease-in-out infinite;
   }
 
@@ -1716,46 +1710,17 @@
   }
 
   .task-row {
-    @apply flex min-h-[5.6rem] cursor-grab items-center gap-2.5 overflow-hidden rounded-md border border-slate-300 bg-slate-50 p-2.5 transition active:cursor-grabbing;
-    background: #f8fafc;
-    border-color: #cbd5e1;
+    @apply flex min-h-[5.6rem] cursor-grab items-center gap-2.5 overflow-hidden rounded-md border border-vien bg-surface-2 p-2.5 transition active:cursor-grabbing;
     transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
   }
 
-  .task-row:hover {
-    background: #f0fdfa;
-    border-color: #5eead4;
-    box-shadow: 0 2px 8px rgba(13, 148, 136, 0.14);
-  }
-
-  .task-row.task-source-manual {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-  }
-
-  .task-row.task-source-manual:hover {
-    background: #f0fdfa;
-    border-color: #5eead4;
-  }
-
-  .task-row.task-source-regular-release {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-  }
-
-  .task-row.task-source-regular-release:hover {
-    background: #f0fdfa;
-    border-color: #5eead4;
-  }
-
-  .task-row.task-source-emergency-release {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-  }
-
+  .task-row:hover,
+  .task-row.task-source-manual:hover,
+  .task-row.task-source-regular-release:hover,
   .task-row.task-source-emergency-release:hover {
-    background: #f0fdfa;
-    border-color: #5eead4;
+    background: var(--color-primary-soft);
+    border-color: var(--color-primary);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 14%, transparent);
   }
 
   .task-actions {
@@ -1766,7 +1731,7 @@
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
-    @apply min-w-0 overflow-hidden leading-[1.15rem] text-slate-950;
+    @apply min-w-0 overflow-hidden leading-[1.15rem] text-muc;
     font-family: "Times New Roman", Times, serif;
   }
 
@@ -1792,7 +1757,7 @@
   }
 
   .task-link-badge {
-    @apply inline-flex h-5 min-w-5 shrink-0 items-center justify-center gap-0.5 rounded border bg-white px-1 text-[9px] font-black leading-none transition;
+    @apply inline-flex h-5 min-w-5 shrink-0 items-center justify-center gap-0.5 rounded border bg-surface px-1 text-[9px] font-black leading-none transition;
   }
 
   .task-link-badge:hover,
@@ -1805,11 +1770,11 @@
   }
 
   .task-link-badge.task-link-file {
-    @apply border-emerald-200 bg-white text-emerald-600 hover:bg-emerald-50;
+    @apply border-success bg-surface text-success hover:bg-success-soft;
   }
 
   .task-link-badge.task-link-git {
-    @apply border-black bg-black text-white hover:bg-slate-800;
+    @apply border-muc bg-muc text-nen hover:opacity-90;
   }
 
   .task-link-badge.task-link-git svg {
@@ -1817,7 +1782,7 @@
   }
 
   .task-link-badge.task-link-release {
-    @apply border-red-200 bg-white text-red-600 hover:bg-red-50;
+    @apply border-danger bg-surface text-danger hover:bg-danger-soft;
   }
 
   .task-link-badge.task-link-zoom {
