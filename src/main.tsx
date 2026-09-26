@@ -221,7 +221,7 @@ export function App() {
             bên dưới: phòng trường hợp tabDangMo còn sót lại đúng 1 tick trước khi effect đổi team tự
             chuyển tab (xem tabsHienThiKeys ở trên), không để lọt 1 tick render nội dung tab đã tắt. */}
         {tabDangMo === 'project' && enabledFeatures.has('project') && (
-          <ManHinhProject openGanttOnMount />
+          <ManHinhProject />
         )}
 
         {tabDangMo === 'len_lich' && enabledFeatures.has('release') && (

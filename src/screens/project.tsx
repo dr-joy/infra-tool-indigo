@@ -177,7 +177,7 @@ function thuTrongTuanGantt(value: string) {
   return { label: taoNgayTuInput(value).toLocaleDateString('vi-VN', { weekday: 'short' }), className: '' };
 }
 
-export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?: boolean }) {
+export function ManHinhProject() {
   const { t } = useLang();
   // CR-20260913 FR-13 — mọi màn nghiệp vụ hiển thị theo đúng team đang chọn (server/routes/projects.ts
   // §6.2: GET /projects, GET /projects/closed, POST /projects, PATCH /projects/reorder bắt buộc teamId).
@@ -207,7 +207,6 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
   const [dangTaiGanttTong, setDangTaiGanttTong] = useState(false);
   const [ganttTongError, setGanttTongError] = useState('');
   const [ganttTongTaskDangSua, setGanttTongTaskDangSua] = useState<ProjectTaskItem | null>(null);
-  const autoOpenedGanttRef = useRef(false);
   const [closedProjects, setClosedProjects] = useState<ProjectItem[]>([]);
   const [dangTaiClosedProjects, setDangTaiClosedProjects] = useState(false);
   const [closedProjectsError, setClosedProjectsError] = useState('');
@@ -557,13 +556,6 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
     window.addEventListener(quickProjectTaskCreatedEvent, refreshAfterQuickAdd);
     return () => window.removeEventListener(quickProjectTaskCreatedEvent, refreshAfterQuickAdd);
   }, [projectDangChon, moGanttTong, moRoadmapProject, projects]);
-
-  useEffect(() => {
-    if (!openGanttOnMount || autoOpenedGanttRef.current || dangTaiProject) return;
-    autoOpenedGanttRef.current = true;
-    setMoGanttTong(true);
-    void taiGanttTongTasks();
-  }, [openGanttOnMount, dangTaiProject, projects]);
 
   // Đổi ngày 1 task ở Gantt tổng (dùng projectId của task, không phụ thuộc project đang chọn)
   async function capNhatNgayTaskTong(task: ProjectTaskItem, start: string, end: string) {
