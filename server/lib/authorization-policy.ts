@@ -47,7 +47,14 @@ export const AUTHORIZATION_POLICY: Record<string, Record<string, PolicyEntry>> =
     // Resource RIÊNG (không tái dùng 'team_member'.'list', vốn chỉ cho leader/member trong team đó —
     // FR-11 coi danh sách roster phục vụ đúng việc "chỉ định Leader" là cấu hình Admin quản lý, KHÁC dữ
     // liệu nghiệp vụ team như task/project mà Admin không được xem).
-    list_members: { feature: null, roles: ['admin'] }
+    list_members: { feature: null, roles: ['admin'] },
+    // 2026-09-26 (docs/exchanges/2026-09-26.md) — VÁ TẠM THỜI, XOÁ SAU KHI DÙNG XONG. Admin tự tải
+    // backup DB + tự chạy bước di trú dữ liệu cũ (project/task/mindmap/báo cáo tuần + template/task
+    // Release) về team Dev13 + về chính mình, qua `server/routes/admin-legacy-migration-temp.ts` — vì
+    // Admin không có SSH để tự chạy đúng CLI gốc `server/ops/slice4-migrate.ts` (file đó tự ghi rõ
+    // "KHÔNG được tự ý gọi nhắm vào DB thật trong bất kỳ agent nào" — route này để CHÍNH Admin bấm,
+    // không phải agent tự gọi).
+    legacy_data_migration_temp: { feature: null, roles: ['admin'] }
   },
   feature_visibility: {
     read: { feature: null, roles: ['admin'] },

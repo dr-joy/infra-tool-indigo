@@ -10,7 +10,7 @@ import crypto from 'node:crypto';
 import {
   applySlice4Schema, ensureDev13Identity, backfillDev13Scope, migrateLegacyPicLabels,
   createVerifiedBackup, buildServerDatabaseFromDesktopSnapshot, verifySlice4Migration,
-  smokeBootMigratedServer,
+  smokeBootMigratedServer, backfillReleasePersonalOwnership,
 } from '../../server/ops/slice4-migrate.js';
 import { runVersionedMigrations, type DbMigrationContext } from '../../server/db-migrations.js';
 
@@ -399,6 +399,45 @@ test('backfillDev13Scope: gán team_id/owner_user_id cho dữ liệu NULL, idemp
   const mindmap = db.prepare("SELECT owner_user_id, visibility FROM mindmaps WHERE title = 'Sơ đồ cũ'").get() as { owner_user_id: number; visibility: string };
   assert.equal(mindmap.owner_user_id, leaderUserId);
   assert.equal(mindmap.visibility, 'private', 'Mind Map cũ không được tự chia sẻ');
+  db.close();
+});
+
+// 2026-09-26 (docs/exchanges/2026-09-26.md) — bổ sung backfillReleasePersonalOwnership(), phần CR
+// §6.3 (Lát 6) đã ghi rõ ý định "gán owner_user_id = leaderUserId cho toàn bộ dữ liệu cũ" của 4 bảng
+// release cá nhân nhưng CHƯA TỪNG được viết (backfillDev13Scope() không đụng 4 bảng này).
+test('backfillReleasePersonalOwnership: gán owner_user_id cho 4 bảng release cũ, idempotent lần 2', () => {
+  const dir = nextDir('backfill-release');
+  const { dbPath, leaderUserId } = buildFakeDesktopDb(dir);
+  const db = new DatabaseSync(dbPath);
+
+  const nullBefore = (table: string) =>
+    (db.prepare(`SELECT COUNT(*) c FROM ${table} WHERE owner_user_id IS NULL`).get() as { c: number }).c;
+  const expected = {
+    releaseTemplates: nullBefore('release_templates'),
+    releaseTaskDefinitions: nullBefore('release_task_definitions'),
+    emergencyReleaseTemplates: nullBefore('emergency_release_templates'),
+    emergencyReleaseTaskDefinitions: nullBefore('emergency_release_task_definitions'),
+  };
+  assert.ok(expected.releaseTemplates >= 1, 'db-seed.ts phải seed sẵn ít nhất 1 release_templates owner_user_id NULL');
+
+  const first = backfillReleasePersonalOwnership(db, leaderUserId);
+  assert.equal(first.releaseTemplates, expected.releaseTemplates);
+  assert.equal(first.releaseTaskDefinitions, expected.releaseTaskDefinitions);
+  assert.equal(first.emergencyReleaseTemplates, expected.emergencyReleaseTemplates);
+  assert.equal(first.emergencyReleaseTaskDefinitions, expected.emergencyReleaseTaskDefinitions);
+
+  const second = backfillReleasePersonalOwnership(db, leaderUserId);
+  assert.equal(second.releaseTemplates, 0, 'lần 2 không còn dòng NULL nào để backfill');
+  assert.equal(second.releaseTaskDefinitions, 0);
+  assert.equal(second.emergencyReleaseTemplates, 0);
+  assert.equal(second.emergencyReleaseTaskDefinitions, 0);
+
+  const stillNull = (table: string) =>
+    (db.prepare(`SELECT COUNT(*) c FROM ${table} WHERE owner_user_id IS NULL`).get() as { c: number }).c;
+  assert.equal(stillNull('release_templates'), 0);
+  assert.equal(stillNull('release_task_definitions'), 0);
+  assert.equal(stillNull('emergency_release_templates'), 0);
+  assert.equal(stillNull('emergency_release_task_definitions'), 0);
   db.close();
 });
 

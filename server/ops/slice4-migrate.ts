@@ -490,6 +490,40 @@ export function backfillDev13Scope(targetDb: DatabaseSync, dev13TeamId: number, 
   }
 }
 
+// ── Bước bổ sung: backfillReleasePersonalOwnership ───────────────────────────────────────────
+// CR-20260913 Lát 6 (§6.3 "Sửa 4 bảng release đã có", xem docs/delivery/changes/
+// CR-20260913-nen-tang-da-nguoi-dung.md dòng ~1536-1542) đã ghi rõ ý định: "Di trú: gán
+// owner_user_id = leaderUserId (Leader Dev13 hiện tại) cho toàn bộ dữ liệu cũ — không tự nhân bản cho
+// user khác". Bước này CHƯA TỪNG được viết khi Lát 6 thật sự code (backfillDev13Scope() ở trên không
+// đụng 4 bảng release — xem comment đầu server/schema/release.ts) — bổ sung đúng phần còn thiếu,
+// KHÔNG phải quyết định thiết kế mới. Cùng khuôn idempotent: CHỈ chạm dòng owner_user_id đang NULL.
+export interface ReleasePersonalOwnershipCounts {
+  releaseTemplates: number;
+  releaseTaskDefinitions: number;
+  emergencyReleaseTemplates: number;
+  emergencyReleaseTaskDefinitions: number;
+}
+
+export function backfillReleasePersonalOwnership(targetDb: DatabaseSync, leaderUserId: number): ReleasePersonalOwnershipCounts {
+  targetDb.exec('BEGIN TRANSACTION');
+  try {
+    const releaseTemplates = targetDb.prepare('UPDATE release_templates SET owner_user_id = ? WHERE owner_user_id IS NULL').run(leaderUserId);
+    const releaseTaskDefinitions = targetDb.prepare('UPDATE release_task_definitions SET owner_user_id = ? WHERE owner_user_id IS NULL').run(leaderUserId);
+    const emergencyReleaseTemplates = targetDb.prepare('UPDATE emergency_release_templates SET owner_user_id = ? WHERE owner_user_id IS NULL').run(leaderUserId);
+    const emergencyReleaseTaskDefinitions = targetDb.prepare('UPDATE emergency_release_task_definitions SET owner_user_id = ? WHERE owner_user_id IS NULL').run(leaderUserId);
+    targetDb.exec('COMMIT');
+    return {
+      releaseTemplates: Number(releaseTemplates.changes),
+      releaseTaskDefinitions: Number(releaseTaskDefinitions.changes),
+      emergencyReleaseTemplates: Number(emergencyReleaseTemplates.changes),
+      emergencyReleaseTaskDefinitions: Number(emergencyReleaseTaskDefinitions.changes)
+    };
+  } catch (error) {
+    if (targetDb.isTransaction) targetDb.exec('ROLLBACK');
+    throw error;
+  }
+}
+
 // ── Bước 5: migrateLegacyPicLabels ───────────────────────────────────────────────────────────
 // Copy NGUYÊN VĂN (không tách chuỗi nhiều tên, không so khớp hoa/thường, không tra pics/
 // users.display_name, không đoán tài khoản — CR §6.3). CHÚ Ý: 3 UPDATE đầu (projects/project_tasks/
