@@ -13,9 +13,9 @@ function loiThanThien(e: unknown): string {
   return e instanceof Error ? e.message : 'Có lỗi xảy ra';
 }
 
-const btnPrimary = 'rounded-md bg-teal-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50';
-const btnSecondary = 'rounded-md border bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50';
-const btnDanger = 'rounded-md border border-rose-200 bg-white px-3 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50';
+const btnPrimary = 'rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-on-primary hover:bg-primary-hover disabled:opacity-50';
+const btnSecondary = 'rounded-md border border-vien bg-surface px-3 py-1.5 text-sm font-medium text-phu hover:bg-surface-2 disabled:opacity-50';
+const btnDanger = 'rounded-md border border-danger bg-surface px-3 py-1.5 text-sm font-medium text-danger hover:bg-danger/15 disabled:opacity-50';
 
 // ── Kiểu dữ liệu — khớp NGUYÊN VĂN tên cột trả về từ server (không có tầng map camelCase ở các route
 // này, khác vài route khác trong app — xem server/routes/teams.ts, admin-config.ts, auth.ts, onboarding.ts).
@@ -115,14 +115,14 @@ function AdminTeams() {
     }
   }
 
-  if (loading) return <div className="p-4 text-sm text-slate-400">Đang tải…</div>;
+  if (loading) return <div className="p-4 text-sm text-phu">Đang tải…</div>;
 
   return (
     <div className="flex flex-col gap-3">
-      {error && <div className="rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
+      {error && <div className="rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
 
-      <div className="max-w-xl rounded-lg border bg-white p-4">
-        <h3 className="mb-2 text-sm font-semibold text-slate-700">Tạo team mới</h3>
+      <div className="max-w-xl rounded-lg border border-vien bg-surface p-4">
+        <h3 className="mb-2 text-sm font-semibold text-muc">Tạo team mới</h3>
         <div className="flex flex-col gap-2">
           <input className="rounded border px-3 py-1.5 text-sm" placeholder="Tên team…" value={newName} disabled={busy} onChange={(e) => setNewName(e.target.value)} />
           <input className="rounded border px-3 py-1.5 text-sm" placeholder="Mô tả (tuỳ chọn)…" value={newDesc} disabled={busy} onChange={(e) => setNewDesc(e.target.value)} />
@@ -132,8 +132,8 @@ function AdminTeams() {
         </div>
       </div>
 
-      <div className="rounded-lg border bg-white">
-        {teams.length === 0 && <div className="p-4 text-center text-sm text-slate-400">Chưa có team nào.</div>}
+      <div className="rounded-lg border border-vien bg-surface">
+        {teams.length === 0 && <div className="p-4 text-center text-sm text-phu">Chưa có team nào.</div>}
         {teams.map((team) => (
           <div key={team.id} className="flex items-center gap-2 border-b p-3 last:border-b-0">
             {editingId === team.id ? (
@@ -149,12 +149,12 @@ function AdminTeams() {
               <>
                 <div className="flex-1">
                   <div className="text-sm font-medium">{team.name}</div>
-                  {team.description && <div className="text-xs text-slate-500">{team.description}</div>}
+                  {team.description && <div className="text-xs text-phu">{team.description}</div>}
                 </div>
                 <button type="button" className={btnSecondary} onClick={() => setLeaderPickerTeam(team)}>Đổi Leader</button>
                 <button
                   type="button"
-                  className="rounded p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  className="rounded p-1.5 text-phu hover:bg-surface-2 hover:text-muc"
                   title="Sửa tên/mô tả"
                   onClick={() => { setEditingId(team.id); setEditName(team.name); setEditDesc(team.description || ''); }}
                 >
@@ -212,18 +212,18 @@ function PopupChonLeader({ team, onClose, onDone }: { team: TeamRow; onClose: ()
           <h2 className="text-lg font-bold">Đổi Leader — {team.name}</h2>
           <button type="button" className="nut-icon" onClick={onClose}><X size={18} /></button>
         </div>
-        {members === null && !error && <div className="py-4 text-sm text-slate-400">Đang tải danh sách thành viên…</div>}
-        {error && <div className="mb-2 rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
+        {members === null && !error && <div className="py-4 text-sm text-phu">Đang tải danh sách thành viên…</div>}
+        {error && <div className="mb-2 rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
         {members !== null && members.length === 0 && (
-          <div className="py-4 text-sm text-slate-400">Team này chưa có thành viên nào — phải có người tham gia (qua duyệt yêu cầu) trước khi chỉ định Leader.</div>
+          <div className="py-4 text-sm text-phu">Team này chưa có thành viên nào — phải có người tham gia (qua duyệt yêu cầu) trước khi chỉ định Leader.</div>
         )}
         {members !== null && members.length > 0 && (
           <div className="flex flex-col gap-1">
             {members.map((m) => (
-              <label key={m.id} className="flex items-center gap-2 rounded border px-3 py-2 text-sm hover:bg-slate-50">
+              <label key={m.id} className="flex items-center gap-2 rounded border border-vien px-3 py-2 text-sm hover:bg-surface-2">
                 <input type="radio" name="leader-pick" checked={picked === m.id} onChange={() => setPicked(m.id)} />
-                <span className="flex-1">{m.display_name} <span className="text-xs text-slate-400">({m.email})</span></span>
-                {m.role === 'leader' && <span className="rounded bg-teal-50 px-2 py-0.5 text-xs text-teal-700">Leader hiện tại</span>}
+                <span className="flex-1">{m.display_name} <span className="text-xs text-phu">({m.email})</span></span>
+                {m.role === 'leader' && <span className="rounded bg-primary-soft px-2 py-0.5 text-xs text-primary">Leader hiện tại</span>}
               </label>
             ))}
           </div>
@@ -295,19 +295,19 @@ function AdminFeatureVisibility() {
     }
   }
 
-  if (loading) return <div className="p-4 text-sm text-slate-400">Đang tải…</div>;
+  if (loading) return <div className="p-4 text-sm text-phu">Đang tải…</div>;
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="rounded border bg-amber-50 p-3 text-xs text-amber-800">
+      <div className="rounded border border-warning bg-warning/15 p-3 text-xs text-warning">
         Tắt một chức năng không xoá dữ liệu đã có, chỉ ẩn giao diện. Tắt "Project" tự tắt theo "Báo cáo
         tuần" của đúng team đó (không tự bật lại khi bật Project lại).
       </div>
-      {error && <div className="rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
-      <div className="overflow-x-auto rounded-lg border bg-white">
+      {error && <div className="rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+      <div className="overflow-x-auto rounded-lg border border-vien bg-surface">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-slate-50">
+            <tr className="border-b border-vien bg-surface-2">
               <th className="p-2 text-left font-medium">Team</th>
               {FEATURES.map((f) => <th key={f.key} className="p-2 text-center font-medium">{f.label}</th>)}
             </tr>
@@ -329,7 +329,7 @@ function AdminFeatureVisibility() {
                         aria-label={`${f.label} — ${team.name}`}
                         disabled={!row || busyKey === key}
                         onClick={() => toggle(team.id, f.key)}
-                        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${on ? 'bg-teal-600' : 'bg-slate-300'}`}
+                        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${on ? 'bg-primary' : 'bg-muted-2'}`}
                       >
                         <span
                           className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${on ? 'translate-x-6' : 'translate-x-1'}`}
@@ -436,15 +436,15 @@ function AdminReleaseConfig() {
     }
   }
 
-  if (loading) return <div className="p-4 text-sm text-slate-400">Đang tải…</div>;
+  if (loading) return <div className="p-4 text-sm text-phu">Đang tải…</div>;
 
   return (
     <div className="flex flex-col gap-4">
-      {error && <div className="rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
+      {error && <div className="rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
 
-      <div className="max-w-xl rounded-lg border bg-white p-4">
-        <h3 className="mb-2 text-sm font-semibold text-slate-700">Team điều phối Release</h3>
-        <p className="mb-2 text-xs text-slate-500">
+      <div className="max-w-xl rounded-lg border border-vien bg-surface p-4">
+        <h3 className="mb-2 text-sm font-semibold text-muc">Team điều phối Release</h3>
+        <p className="mb-2 text-xs text-phu">
           Leader của team này có quyền khoá lịch/duyệt mở khoá/ép giờ chung trên MỌI team, độc lập với
           việc Release có đang Bật cho chính team này hay không.
         </p>
@@ -459,9 +459,9 @@ function AdminReleaseConfig() {
         </select>
       </div>
 
-      <div className="rounded-lg border bg-white p-4">
-        <h3 className="mb-1 text-sm font-semibold text-slate-700">Tab cá nhân Release (FR-28a)</h3>
-        <p className="mb-2 text-xs text-slate-500">
+      <div className="rounded-lg border border-vien bg-surface p-4">
+        <h3 className="mb-1 text-sm font-semibold text-muc">Tab cá nhân Release (FR-28a)</h3>
+        <p className="mb-2 text-xs text-phu">
           Chỉ có tác dụng khi "Task cá nhân" đang Bật cho đúng team đó (xem tab Hiển thị chức năng).
         </p>
         <div className="divide-y">
@@ -478,7 +478,7 @@ function AdminReleaseConfig() {
                   aria-label={`Tab cá nhân Release — ${team.name}`}
                   disabled={busy}
                   onClick={() => toggleAutogen(team.id)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${on ? 'bg-teal-600' : 'bg-slate-300'}`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${on ? 'bg-primary' : 'bg-muted-2'}`}
                 >
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${on ? 'translate-x-6' : 'translate-x-1'}`}
@@ -490,14 +490,14 @@ function AdminReleaseConfig() {
         </div>
       </div>
 
-      <div className="rounded-lg border bg-white p-4">
-        <h3 className="mb-1 text-sm font-semibold text-slate-700">Vùng Cá nhân trong Release — theo từng người</h3>
-        <p className="mb-2 text-xs text-slate-500">
+      <div className="rounded-lg border border-vien bg-surface p-4">
+        <h3 className="mb-1 text-sm font-semibold text-muc">Vùng Cá nhân trong Release — theo từng người</h3>
+        <p className="mb-2 text-xs text-phu">
           Chỉ liệt kê user thuộc ít nhất 1 team đã Bật đủ Release + Tab cá nhân ở trên. Mặc định Tắt —
           user không thấy nút "Cá nhân" ở màn Release cho tới khi Admin bật riêng ở đây.
         </p>
         {personalAreaUsers.length === 0 ? (
-          <p className="text-xs text-slate-400">Chưa có user nào đủ điều kiện.</p>
+          <p className="text-xs text-phu">Chưa có user nào đủ điều kiện.</p>
         ) : (
           <div className="divide-y">
             {personalAreaUsers.map((u) => {
@@ -506,7 +506,7 @@ function AdminReleaseConfig() {
                 <div key={u.id} className="flex items-center justify-between py-2">
                   <div className="flex flex-col">
                     <span className="text-sm">{u.display_name}</span>
-                    <span className="text-xs text-slate-400">{u.email}</span>
+                    <span className="text-xs text-phu">{u.email}</span>
                   </div>
                   <button
                     type="button"
@@ -515,7 +515,7 @@ function AdminReleaseConfig() {
                     aria-label={`Vùng Cá nhân Release — ${u.display_name}`}
                     disabled={busy}
                     onClick={() => togglePersonalArea(u.id)}
-                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${on ? 'bg-teal-600' : 'bg-slate-300'}`}
+                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${on ? 'bg-primary' : 'bg-muted-2'}`}
                   >
                     <span
                       className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${on ? 'translate-x-6' : 'translate-x-1'}`}
@@ -603,20 +603,20 @@ function AdminJoinRequests() {
     }
   }
 
-  if (loading) return <div className="p-4 text-sm text-slate-400">Đang tải…</div>;
+  if (loading) return <div className="p-4 text-sm text-phu">Đang tải…</div>;
 
   return (
     <div className="flex flex-col gap-3">
-      {error && <div className="rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
-      {items.length === 0 && <div className="rounded-lg border bg-white p-4 text-center text-sm text-slate-400">Không có yêu cầu nào đang chờ.</div>}
+      {error && <div className="rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+      {items.length === 0 && <div className="rounded-lg border border-vien bg-surface p-4 text-center text-sm text-phu">Không có yêu cầu nào đang chờ.</div>}
       {items.map((jr) => (
-        <div key={jr.id} className="rounded-lg border bg-white p-4">
+        <div key={jr.id} className="rounded-lg border border-vien bg-surface p-4">
           <div className="mb-2 flex items-center justify-between">
             <div>
               <div className="text-sm font-medium">{jr.display_name}</div>
-              <div className="text-xs text-slate-500">{jr.email}</div>
+              <div className="text-xs text-phu">{jr.email}</div>
             </div>
-            <div className="text-xs text-slate-400">Yêu cầu: {tenTeam(jr.requested_team_id)} · {jr.requested_role === 'leader' ? 'Leader' : 'Member'}</div>
+            <div className="text-xs text-phu">Yêu cầu: {tenTeam(jr.requested_team_id)} · {jr.requested_role === 'leader' ? 'Leader' : 'Member'}</div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <select
@@ -721,15 +721,15 @@ function AdminUsers() {
 
   const soAdminHoatDong = items.filter((u) => u.system_role === 'admin' && u.status === 'active').length;
 
-  if (loading) return <div className="p-4 text-sm text-slate-400">Đang tải…</div>;
+  if (loading) return <div className="p-4 text-sm text-phu">Đang tải…</div>;
 
   return (
     <div className="flex flex-col gap-3">
-      {error && <div className="rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
-      <div className="overflow-x-auto rounded-lg border bg-white">
+      {error && <div className="rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+      <div className="overflow-x-auto rounded-lg border border-vien bg-surface">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-slate-50">
+            <tr className="border-b border-vien bg-surface-2">
               <th className="p-2 text-left font-medium">Người dùng</th>
               <th className="p-2 text-left font-medium">Trạng thái</th>
               <th className="p-2 text-left font-medium">Lần đăng nhập cuối</th>
@@ -742,15 +742,15 @@ function AdminUsers() {
               return (
                 <tr key={u.id} className="border-b last:border-b-0">
                   <td className="p-2">
-                    <div className="font-medium">{u.display_name}{u.system_role === 'admin' && <span className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">Admin</span>}</div>
-                    <div className="text-xs text-slate-500">{u.email}</div>
+                    <div className="font-medium">{u.display_name}{u.system_role === 'admin' && <span className="ml-1 rounded bg-surface-2 px-1.5 py-0.5 text-xs text-phu">Admin</span>}</div>
+                    <div className="text-xs text-phu">{u.email}</div>
                   </td>
                   <td className="p-2">
-                    <span className={`rounded px-2 py-0.5 text-xs ${u.status === 'disabled' ? 'bg-rose-50 text-rose-600' : u.status === 'pending' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                    <span className={`rounded px-2 py-0.5 text-xs ${u.status === 'disabled' ? 'bg-danger/15 text-danger' : u.status === 'pending' ? 'bg-warning/15 text-warning' : 'bg-success/15 text-success'}`}>
                       {u.status === 'disabled' ? 'Đã khoá' : u.status === 'pending' ? 'Chờ duyệt' : 'Đang hoạt động'}
                     </span>
                   </td>
-                  <td className="p-2 text-xs text-slate-500">{u.last_login_at ? new Date(u.last_login_at).toLocaleString('vi-VN') : '—'}</td>
+                  <td className="p-2 text-xs text-phu">{u.last_login_at ? new Date(u.last_login_at).toLocaleString('vi-VN') : '—'}</td>
                   <td className="p-2 text-right">
                     <div className="flex justify-end gap-2">
                       {u.status === 'disabled' ? (
@@ -833,18 +833,18 @@ function AdminAudit() {
   function tenNguoi(id: number) { return users.find((u) => u.id === id)?.display_name || `user #${id}`; }
   function tenTeam(id: number | null) { return id == null ? '—' : teams.find((t) => t.id === id)?.name || `team #${id}`; }
 
-  if (loading) return <div className="p-4 text-sm text-slate-400">Đang tải…</div>;
+  if (loading) return <div className="p-4 text-sm text-phu">Đang tải…</div>;
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="rounded border bg-amber-50 p-3 text-xs text-amber-800">
+      <div className="rounded border border-warning bg-warning/15 p-3 text-xs text-warning">
         Admin chỉ thấy AI làm gì, team nào, lúc nào — không thấy nội dung nghiệp vụ chi tiết (FR-11a).
       </div>
-      {error && <div className="rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
-      <div className="overflow-x-auto rounded-lg border bg-white">
+      {error && <div className="rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+      <div className="overflow-x-auto rounded-lg border border-vien bg-surface">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-slate-50">
+            <tr className="border-b border-vien bg-surface-2">
               <th className="p-2 text-left font-medium">Thời điểm</th>
               <th className="p-2 text-left font-medium">Ai</th>
               <th className="p-2 text-left font-medium">Hành động</th>
@@ -854,7 +854,7 @@ function AdminAudit() {
           <tbody>
             {entries.map((e) => (
               <tr key={e.id} className="border-b last:border-b-0">
-                <td className="p-2 text-xs text-slate-500">{new Date(e.createdAt).toLocaleString('vi-VN')}</td>
+                <td className="p-2 text-xs text-phu">{new Date(e.createdAt).toLocaleString('vi-VN')}</td>
                 <td className="p-2">{tenNguoi(e.actorUserId)}</td>
                 <td className="p-2 font-mono text-xs">{e.action}</td>
                 <td className="p-2">{tenTeam(e.teamId)}</td>
@@ -862,7 +862,7 @@ function AdminAudit() {
             ))}
           </tbody>
         </table>
-        {entries.length === 0 && <div className="p-4 text-center text-sm text-slate-400">Chưa có nhật ký nào.</div>}
+        {entries.length === 0 && <div className="p-4 text-center text-sm text-phu">Chưa có nhật ký nào.</div>}
       </div>
     </div>
   );
@@ -908,11 +908,11 @@ function AdminRedmine() {
   }
 
   return (
-    <div className="max-w-xl rounded-lg border bg-white p-4">
-      <h3 className="mb-2 text-sm font-semibold text-slate-700">URL Redmine hệ thống</h3>
-      <p className="mb-3 text-xs text-slate-500">Công ty chỉ có một Redmine — mỗi người tự nhập API key riêng ở màn Cài đặt.</p>
-      {error && <div className="mb-2 rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
-      <div className="mb-2 rounded border bg-slate-50 px-3 py-2 text-sm text-slate-600">{baseUrl || '(chưa cấu hình)'}</div>
+    <div className="max-w-xl rounded-lg border border-vien bg-surface p-4">
+      <h3 className="mb-2 text-sm font-semibold text-muc">URL Redmine hệ thống</h3>
+      <p className="mb-3 text-xs text-phu">Công ty chỉ có một Redmine — mỗi người tự nhập API key riêng ở màn Cài đặt.</p>
+      {error && <div className="mb-2 rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+      <div className="mb-2 rounded border border-vien bg-surface-2 px-3 py-2 text-sm text-phu">{baseUrl || '(chưa cấu hình)'}</div>
       <div className="flex gap-2">
         <input className="flex-1 rounded border px-3 py-1.5 text-sm" placeholder="https://redmine.example.com" value={input} disabled={busy} onChange={(e) => setInput(e.target.value)} />
         <button type="button" className={btnPrimary} disabled={busy || !input.trim()} onClick={luu}>Lưu</button>
@@ -927,7 +927,7 @@ type AdminMuc = 'teams' | 'feature_visibility' | 'release' | 'join_requests' | '
 export function ManHinhAdmin() {
   const [muc, setMuc] = useState<AdminMuc>('teams');
   const tabClass = (active: boolean) =>
-    `rounded-md px-3 py-1.5 text-sm font-medium ${active ? 'bg-teal-600 text-white' : 'border bg-white text-slate-600 hover:bg-slate-50'}`;
+    `rounded-md px-3 py-1.5 text-sm font-medium ${active ? 'bg-primary text-on-primary' : 'border border-vien bg-surface text-phu hover:bg-surface-2'}`;
 
   const MUCS: { key: AdminMuc; label: string }[] = [
     { key: 'teams', label: 'Team' },
@@ -941,7 +941,7 @@ export function ManHinhAdmin() {
 
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="rounded-lg border bg-white p-4">
+      <div className="rounded-lg border border-vien bg-surface p-4">
         <h2 className="text-lg font-bold">Quản trị hệ thống</h2>
       </div>
       <div className="flex flex-wrap gap-2">
