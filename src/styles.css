@@ -1148,11 +1148,11 @@
   }
 
   .release-emergency-batch-badge.is-posted {
-    @apply border-teal-300 bg-teal-50 text-teal-700;
+    @apply border-primary bg-primary-soft text-primary;
   }
 
   .release-emergency-already-posted-warning {
-    @apply mt-2 flex flex-col gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800;
+    @apply mt-2 flex flex-col gap-2 rounded-md border border-warning bg-warning-soft p-3 text-sm text-warning;
   }
 
   .release-sync-action {
@@ -1181,7 +1181,7 @@
   }
 
   .release-error {
-    @apply text-sm font-bold text-rose-600;
+    @apply text-sm font-bold text-danger;
   }
 
   .release-manager-layout {
@@ -1202,13 +1202,13 @@
 
   .popup-release-task-manager .release-manager-detail {
     @apply border-l pl-4;
-    border-color: #9ca3af;
+    border-color: var(--color-border);
   }
 
   .popup-release-task-manager .field input,
   .popup-release-task-manager .field textarea,
   .popup-release-task-manager .field select {
-    border-color: #9ca3af;
+    border-color: var(--color-border);
   }
 
   .popup-release-task-manager .field input:focus,
@@ -1227,13 +1227,13 @@
 
   .popup-release-template-manager .release-manager-detail {
     @apply border-l pl-4;
-    border-color: #9ca3af;
+    border-color: var(--color-border);
   }
 
   .popup-release-template-manager .field input,
   .popup-release-template-manager .field textarea,
   .popup-release-template-manager .field select {
-    border-color: #9ca3af;
+    border-color: var(--color-border);
   }
 
   .popup-release-template-manager .field input:focus,
@@ -1247,12 +1247,12 @@
   }
 
   .popup-release-emergency-manager .release-manager-header {
-    border-color: #9ca3af;
+    border-color: var(--color-border);
   }
 
   .popup-release-emergency-manager .release-manager-list {
     background: #f3f4f6;
-    border-color: #9ca3af;
+    border-color: var(--color-border);
   }
 
   .popup-release-emergency-manager .release-manager-list > .nut-phu {
@@ -1268,23 +1268,23 @@
   }
 
   .popup-release-emergency-manager .release-manager-detail {
-    border-color: #9ca3af;
-    background: #f3f4f6;
+    border-color: var(--color-border);
+    background: var(--color-surface-2);
   }
 
   .popup-release-emergency-manager .release-manager-item {
-    @apply bg-gray-100 text-gray-800 hover:bg-white hover:text-gray-950;
+    @apply bg-surface-2 text-phu hover:bg-surface hover:text-muc;
   }
 
   .popup-release-emergency-manager .release-manager-item-active {
-    @apply bg-gray-800 text-white;
+    @apply bg-primary text-on-primary;
   }
 
   .popup-release-emergency-manager .field input,
   .popup-release-emergency-manager .field textarea,
   .popup-release-emergency-manager .field select {
-    @apply bg-white;
-    border-color: #9ca3af;
+    @apply bg-surface;
+    border-color: var(--color-border);
   }
 
   .popup-release-emergency-task-manager .release-task-manager-layout {
@@ -1293,48 +1293,46 @@
 
   .popup-release-emergency-task-manager .release-manager-list {
     @apply overflow-x-hidden rounded-r-none border-r-0;
-    background: #f3f4f6;
+    background: var(--color-surface-2);
   }
 
   .popup-release-emergency-task-manager .release-manager-detail {
     @apply border-l pl-4;
-    border-color: #9ca3af;
+    border-color: var(--color-border);
   }
 
   .popup-release-emergency-task-manager .release-manager-list > .nut-phu {
-    border-color: #0284c7;
+    border-color: var(--color-secondary);
   }
 
   .release-emergency-task-item {
-    --release-week-accent: #4b5563;
-    --release-week-soft: #f3f4f6;
-    --release-week-text: #374151;
-    border-left-color: #4b5563;
+    --release-week-accent: var(--color-muted-2);
+    --release-week-soft: var(--color-surface-2);
+    --release-week-text: var(--color-text);
+    border-left-color: var(--color-muted-2);
   }
 
   .release-emergency-stage-group {
-    --release-week-accent: #4b5563;
-    --release-week-soft: #f3f4f6;
-    --release-week-text: #374151;
+    --release-week-accent: var(--color-muted-2);
+    --release-week-soft: var(--color-surface-2);
+    --release-week-text: var(--color-text);
   }
 
   .release-manager-list {
     @apply flex min-h-0 flex-col gap-2 overflow-auto rounded-md border p-3;
-    background: #f3f4f6;
-    border-color: #9ca3af;
+    background: var(--color-surface-2);
+    border-color: var(--color-border);
     border-width: 1px;
   }
 
   .release-manager-list > .nut-phu {
-    border-color: #0284c7;
-    background: #0284c7;
-    color: white;
+    border-color: var(--color-secondary);
+    background: var(--color-secondary);
+    color: var(--color-on-secondary);
   }
 
   .release-manager-list > .nut-phu:hover {
-    border-color: #0369a1;
-    background: #0369a1;
-    color: white;
+    opacity: 0.9;
   }
 
   .release-manager-item,
@@ -1348,22 +1346,22 @@
   }
 
   .release-manager-item {
-    @apply bg-gray-100 text-gray-800 hover:bg-white hover:text-gray-950;
+    @apply bg-surface-2 text-phu hover:bg-surface hover:text-muc;
   }
 
   .release-manager-item-active {
-    @apply bg-gray-800 text-white;
+    @apply bg-primary text-on-primary;
   }
 
   .release-manager-detail {
-    @apply min-h-0 space-y-4 overflow-auto rounded-md border bg-white p-4;
-    background: #f3f4f6;
-    border-color: #9ca3af;
+    @apply min-h-0 space-y-4 overflow-auto rounded-md border p-4;
+    background: var(--color-surface-2);
+    border-color: var(--color-border);
     border-width: 1px;
   }
 
   .release-manager-empty {
-    @apply grid h-full min-h-72 place-items-center rounded-md border border-dashed border-slate-300 bg-slate-50 text-sm font-bold text-slate-400;
+    @apply grid h-full min-h-72 place-items-center rounded-md border border-dashed border-vien bg-surface-2 text-sm font-bold text-phu;
   }
 
   .release-note-preview-grid {
@@ -1380,8 +1378,8 @@
   }
 
   .release-template-preview {
-    @apply overflow-auto whitespace-pre-wrap rounded-md border bg-white px-3 py-2 text-xs font-normal leading-5 text-muc;
-    border-color: #9ca3af;
+    @apply overflow-auto whitespace-pre-wrap rounded-md border bg-surface px-3 py-2 text-xs font-normal leading-5 text-muc;
+    border-color: var(--color-border);
     margin: 0;
   }
 
@@ -1394,22 +1392,22 @@
   }
 
   .release-manager-header {
-    @apply mb-4 flex shrink-0 items-center justify-between rounded-md border bg-white px-4 py-3;
-    background: #1f2937;
-    border-color: #9ca3af;
+    @apply mb-4 flex shrink-0 items-center justify-between rounded-md border px-4 py-3;
+    background: var(--color-surface-2);
+    border-color: var(--color-border);
     border-width: 1px;
   }
 
   .release-manager-header h2 {
-    @apply text-white;
+    @apply text-muc;
   }
 
   .release-task-week-group {
-    --release-week-accent: #4b5563;
-    --release-week-soft: #f3f4f6;
-    --release-week-text: #374151;
+    --release-week-accent: var(--color-text);
+    --release-week-soft: var(--color-surface-2);
+    --release-week-text: var(--color-text);
     @apply relative grid gap-2 border-t py-3 pl-5 first:border-t-0 first:pt-0 last:pb-0;
-    border-color: #9ca3af;
+    border-color: var(--color-border);
   }
 
   .release-task-week-group::before {
@@ -1426,7 +1424,8 @@
 
   .release-task-week-title::before {
     content: '';
-    @apply absolute -left-5 h-4 w-4 rounded-full border-4 border-white;
+    @apply absolute -left-5 h-4 w-4 rounded-full border-4;
+    border-color: var(--color-surface-2);
     background: var(--release-week-accent);
   }
 
@@ -1440,15 +1439,15 @@
   }
 
   .release-task-item.release-manager-item-active {
-    background: #1f2937;
-    border-color: #1f2937;
-    border-left-color: #1f2937;
-    color: white;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    border-left-color: var(--color-primary);
+    color: var(--color-on-primary);
   }
 
   .release-task-item.release-manager-item-active small,
   .release-task-item.release-manager-item-active .release-task-item-title {
-    color: white;
+    color: var(--color-on-primary);
   }
 
   .release-task-item-title {
@@ -1460,43 +1459,45 @@
   }
 
   .release-task-priority-badge {
-    @apply ml-auto inline-flex h-5 shrink-0 items-center justify-center rounded-full bg-slate-900 px-2 text-[10px] font-black text-white;
+    @apply ml-auto inline-flex h-5 shrink-0 items-center justify-center rounded-full bg-muc px-2 text-[10px] font-black text-nen;
   }
 
   .release-task-week-badge {
     @apply shrink-0 rounded px-1.5 py-0.5 text-[10px] font-black uppercase leading-none;
     background: var(--release-week-accent);
-    color: white;
+    color: var(--color-bg);
   }
 
   .release-task-template-icon {
-    @apply absolute right-2 top-2 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border bg-white;
+    @apply absolute right-2 top-2 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border bg-surface;
     border-color: var(--release-week-accent);
     color: var(--release-week-text);
   }
 
+  /* 4 giai đoạn (jack/develop/staging/demo) — giữ đúng ý gốc: 1 thang xám đậm->nhạt để phân biệt,
+     đổi sang thang token đậm->nhạt tương ứng cho nền tối (text đậm nhất -> border nhạt nhất). */
   .release-week-jack {
-    --release-week-accent: #374151;
-    --release-week-soft: #f3f4f6;
-    --release-week-text: #374151;
+    --release-week-accent: var(--color-text);
+    --release-week-soft: var(--color-surface-2);
+    --release-week-text: var(--color-text);
   }
 
   .release-week-develop {
-    --release-week-accent: #4b5563;
-    --release-week-soft: #f3f4f6;
-    --release-week-text: #374151;
+    --release-week-accent: var(--color-muted-2);
+    --release-week-soft: var(--color-surface-2);
+    --release-week-text: var(--color-text);
   }
 
   .release-week-staging {
-    --release-week-accent: #6b7280;
-    --release-week-soft: #f9fafb;
-    --release-week-text: #4b5563;
+    --release-week-accent: var(--color-muted);
+    --release-week-soft: var(--color-surface-2);
+    --release-week-text: var(--color-muted);
   }
 
   .release-week-demo {
-    --release-week-accent: #9ca3af;
-    --release-week-soft: #f9fafb;
-    --release-week-text: #4b5563;
+    --release-week-accent: var(--color-border);
+    --release-week-soft: var(--color-surface-2);
+    --release-week-text: var(--color-muted);
   }
 
   .release-week-afterDemo {
