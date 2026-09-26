@@ -25,9 +25,15 @@ export default {
         'primary-hover': 'var(--color-primary-hover)',
         'primary-soft': 'var(--color-primary-soft)',
         record: 'var(--color-record)',
+        // *-soft (Pha 3): dùng thay vì `bg-danger/15` v.v. — hậu tố opacity Tailwind KHÔNG sinh ra
+        // rule nào cho màu custom dạng chuỗi `var(--...)` (xác nhận bằng build thật), nền sẽ trong
+        // suốt âm thầm nếu dùng opacity trên các token này. Luôn dùng *-soft, không dùng /NN.
         danger: 'var(--color-danger)',
+        'danger-soft': 'var(--color-danger-soft)',
         warning: 'var(--color-warning)',
+        'warning-soft': 'var(--color-warning-soft)',
         success: 'var(--color-success)',
+        'success-soft': 'var(--color-success-soft)',
         // Thêm CR-20260926 (Pha 1, bảng "Chàm Nửa Đêm"): surface phụ, muted yếu hơn, cặp
         // secondary (accent phụ hồng tím) + chữ-trên-nền-primary/secondary.
         'surface-2': 'var(--color-surface-2)',

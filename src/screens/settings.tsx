@@ -144,7 +144,7 @@ function ManHinhQuanLyPic() {
         <h2 className="text-lg font-bold">Quản lý PIC</h2>
       </div>
 
-      {error && <div className="rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+      {error && <div className="rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
 
       <div className="max-w-xl rounded-lg border border-vien bg-surface p-4">
         <div className="mb-3 flex gap-2">
@@ -223,7 +223,7 @@ function ManHinhQuanLyPic() {
                 </button>
                 <button
                   type="button"
-                  className="rounded p-1.5 text-phu hover:bg-danger/15 hover:text-danger disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-phu"
+                  className="rounded p-1.5 text-phu hover:bg-danger-soft hover:text-danger disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-phu"
                   title={item.dangSuDung ? 'Không thể xóa: còn task chưa hoàn thành' : 'Xóa khỏi danh sách'}
                   disabled={item.dangSuDung}
                   onClick={() => setPicDangXoa(item)}
@@ -321,7 +321,7 @@ function ManHinhCauHinhRedmine() {
 
   return (
     <div className="flex max-w-xl flex-col gap-4">
-      <div className="rounded-md border border-warning bg-warning/15 p-3 text-xs text-warning">
+      <div className="rounded-md border border-warning bg-warning-soft p-3 text-xs text-warning">
         API key chỉ dùng riêng cho tài khoản của bạn, không ai khác đọc được (kể cả người trong cùng
         team). Sửa URL Redmine hệ thống là việc của Admin, không nằm ở màn này.
       </div>
@@ -368,7 +368,7 @@ function ManHinhCauHinhRedmine() {
         {cfg?.hasKey && (
           <button
             type="button"
-            className="rounded-md border border-danger bg-surface px-3 py-1.5 text-sm font-medium text-danger hover:bg-danger/15 disabled:opacity-50"
+            className="rounded-md border border-danger bg-surface px-3 py-1.5 text-sm font-medium text-danger hover:bg-danger-soft disabled:opacity-50"
             onClick={xoaKey}
             disabled={busy}
           >

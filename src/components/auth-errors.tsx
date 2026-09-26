@@ -70,9 +70,9 @@ export function Conflict409Notice({
   onReload: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border border-warning bg-warning/15 px-3 py-2 text-sm text-warning">
+    <div className="flex items-center justify-between gap-3 rounded-md border border-warning bg-warning-soft px-3 py-2 text-sm text-warning">
       <span className="flex items-center gap-2"><AlertTriangle size={16} /> {message}</span>
-      <button type="button" className="flex items-center gap-1 rounded-md border border-warning bg-surface px-2 py-1 text-xs font-medium text-warning hover:bg-warning/15" onClick={onReload}>
+      <button type="button" className="flex items-center gap-1 rounded-md border border-warning bg-surface px-2 py-1 text-xs font-medium text-warning hover:bg-warning-soft" onClick={onReload}>
         <RefreshCw size={13} /> Tải lại dữ liệu mới
       </button>
     </div>

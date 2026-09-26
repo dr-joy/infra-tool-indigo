@@ -16,7 +16,7 @@ function loiThanThien(e: unknown): string {
 
 const btnPrimary = 'rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-on-primary hover:bg-primary-hover disabled:opacity-50';
 const btnSecondary = 'rounded-md border border-vien bg-surface px-3 py-1.5 text-sm font-medium text-phu hover:bg-surface-2 disabled:opacity-50';
-const btnDanger = 'rounded-md border border-danger bg-surface px-3 py-1.5 text-sm font-medium text-danger hover:bg-danger/15 disabled:opacity-50';
+const btnDanger = 'rounded-md border border-danger bg-surface px-3 py-1.5 text-sm font-medium text-danger hover:bg-danger-soft disabled:opacity-50';
 
 const VALID_SYSTEMS = ['Dr.JOY', 'Pr.JOY'];
 const VALID_PLATFORMS = ['Web', 'Mobile'];
@@ -201,7 +201,7 @@ export function ManHinhLichReleaseChung() {
 
   return (
     <div className="flex flex-col gap-4">
-      {error && <div className="rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+      {error && <div className="rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
 
       {laDieuPhoi && (
         <div className="rounded-lg border border-vien bg-surface p-4">
@@ -269,7 +269,7 @@ export function ManHinhLichReleaseChung() {
                     <div>
                       <span className="text-sm font-medium">{tenTeam(reg.teamId)}</span>
                       {laTeamMinh && <span className="ml-1 rounded bg-primary-soft px-1.5 py-0.5 text-xs text-primary">Team bạn</span>}
-                      {reg.status === 'locked' && <span className="ml-1 rounded bg-warning/15 px-1.5 py-0.5 text-xs text-warning">Khoá</span>}
+                      {reg.status === 'locked' && <span className="ml-1 rounded bg-warning-soft px-1.5 py-0.5 text-xs text-warning">Khoá</span>}
                       {reg.status === 'cancelled' && <span className="ml-1 rounded bg-surface-2 px-1.5 py-0.5 text-xs text-phu">Đã huỷ</span>}
                     </div>
                     {laTeamMinh && full && reg.status !== 'cancelled' && (
@@ -304,7 +304,7 @@ export function ManHinhLichReleaseChung() {
             })}
           </div>
           {cycle.conflicts.length > 0 && (
-            <div className="border-t border-warning bg-warning/15 p-3">
+            <div className="border-t border-warning bg-warning-soft p-3">
               <div className="mb-1 text-xs font-semibold text-warning">Xung đột lịch</div>
               {cycle.conflicts.map((c) => {
                 const a = cycle.registrations.find((r) => r.id === c.registration_a_id);
@@ -412,7 +412,7 @@ function PopupDangKyLich({ teamId, existing, onClose, onDone }: {
           <h2 className="text-lg font-bold">{existing ? 'Sửa đăng ký lịch release khẩn cấp' : 'Đăng ký lịch release khẩn cấp'}</h2>
           <button type="button" className="nut-icon" onClick={onClose}><X size={18} /></button>
         </div>
-        {error && <div className="mb-2 rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+        {error && <div className="mb-2 rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-2">
             <label className="flex flex-col gap-1 text-sm">
@@ -550,7 +550,7 @@ function PopupEpGioChung({ conflictId, onClose, onDone }: { conflictId: number; 
       <div className="popup w-full max-w-md">
         <h2 className="mb-3 text-lg font-bold">Ép giờ chung</h2>
         <p className="mb-2 text-xs text-warning">Ghi đè trực tiếp giờ deploy staging/release của CẢ HAI team đang xung đột — không đụng ticket/nền tảng/ghi chú riêng của từng team.</p>
-        {error && <div className="mb-2 rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+        {error && <div className="mb-2 rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
         <div className="flex flex-col gap-2">
           <label className="flex flex-col gap-1 text-sm"><span className="text-phu">Ngày (giữ nguyên ngày đợt hiện tại)</span><input type="date" className="rounded border px-2 py-1" value={date} onChange={(e) => setDate(e.target.value)} /></label>
           <label className="flex flex-col gap-1 text-sm"><span className="text-phu">Giờ deploy staging</span><input type="time" className="rounded border px-2 py-1" value={stagingTime} onChange={(e) => setStagingTime(e.target.value)} /></label>

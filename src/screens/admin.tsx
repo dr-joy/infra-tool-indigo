@@ -15,7 +15,7 @@ function loiThanThien(e: unknown): string {
 
 const btnPrimary = 'rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-on-primary hover:bg-primary-hover disabled:opacity-50';
 const btnSecondary = 'rounded-md border border-vien bg-surface px-3 py-1.5 text-sm font-medium text-phu hover:bg-surface-2 disabled:opacity-50';
-const btnDanger = 'rounded-md border border-danger bg-surface px-3 py-1.5 text-sm font-medium text-danger hover:bg-danger/15 disabled:opacity-50';
+const btnDanger = 'rounded-md border border-danger bg-surface px-3 py-1.5 text-sm font-medium text-danger hover:bg-danger-soft disabled:opacity-50';
 
 // ── Kiểu dữ liệu — khớp NGUYÊN VĂN tên cột trả về từ server (không có tầng map camelCase ở các route
 // này, khác vài route khác trong app — xem server/routes/teams.ts, admin-config.ts, auth.ts, onboarding.ts).
@@ -119,7 +119,7 @@ function AdminTeams() {
 
   return (
     <div className="flex flex-col gap-3">
-      {error && <div className="rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+      {error && <div className="rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
 
       <div className="max-w-xl rounded-lg border border-vien bg-surface p-4">
         <h3 className="mb-2 text-sm font-semibold text-muc">Tạo team mới</h3>
@@ -213,7 +213,7 @@ function PopupChonLeader({ team, onClose, onDone }: { team: TeamRow; onClose: ()
           <button type="button" className="nut-icon" onClick={onClose}><X size={18} /></button>
         </div>
         {members === null && !error && <div className="py-4 text-sm text-phu">Đang tải danh sách thành viên…</div>}
-        {error && <div className="mb-2 rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+        {error && <div className="mb-2 rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
         {members !== null && members.length === 0 && (
           <div className="py-4 text-sm text-phu">Team này chưa có thành viên nào — phải có người tham gia (qua duyệt yêu cầu) trước khi chỉ định Leader.</div>
         )}
@@ -299,11 +299,11 @@ function AdminFeatureVisibility() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="rounded border border-warning bg-warning/15 p-3 text-xs text-warning">
+      <div className="rounded border border-warning bg-warning-soft p-3 text-xs text-warning">
         Tắt một chức năng không xoá dữ liệu đã có, chỉ ẩn giao diện. Tắt "Project" tự tắt theo "Báo cáo
         tuần" của đúng team đó (không tự bật lại khi bật Project lại).
       </div>
-      {error && <div className="rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+      {error && <div className="rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
       <div className="overflow-x-auto rounded-lg border border-vien bg-surface">
         <table className="w-full text-sm">
           <thead>
@@ -440,7 +440,7 @@ function AdminReleaseConfig() {
 
   return (
     <div className="flex flex-col gap-4">
-      {error && <div className="rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+      {error && <div className="rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
 
       <div className="max-w-xl rounded-lg border border-vien bg-surface p-4">
         <h3 className="mb-2 text-sm font-semibold text-muc">Team điều phối Release</h3>
@@ -607,7 +607,7 @@ function AdminJoinRequests() {
 
   return (
     <div className="flex flex-col gap-3">
-      {error && <div className="rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+      {error && <div className="rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
       {items.length === 0 && <div className="rounded-lg border border-vien bg-surface p-4 text-center text-sm text-phu">Không có yêu cầu nào đang chờ.</div>}
       {items.map((jr) => (
         <div key={jr.id} className="rounded-lg border border-vien bg-surface p-4">
@@ -725,7 +725,7 @@ function AdminUsers() {
 
   return (
     <div className="flex flex-col gap-3">
-      {error && <div className="rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+      {error && <div className="rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
       <div className="overflow-x-auto rounded-lg border border-vien bg-surface">
         <table className="w-full text-sm">
           <thead>
@@ -746,7 +746,7 @@ function AdminUsers() {
                     <div className="text-xs text-phu">{u.email}</div>
                   </td>
                   <td className="p-2">
-                    <span className={`rounded px-2 py-0.5 text-xs ${u.status === 'disabled' ? 'bg-danger/15 text-danger' : u.status === 'pending' ? 'bg-warning/15 text-warning' : 'bg-success/15 text-success'}`}>
+                    <span className={`rounded px-2 py-0.5 text-xs ${u.status === 'disabled' ? 'bg-danger-soft text-danger' : u.status === 'pending' ? 'bg-warning-soft text-warning' : 'bg-success-soft text-success'}`}>
                       {u.status === 'disabled' ? 'Đã khoá' : u.status === 'pending' ? 'Chờ duyệt' : 'Đang hoạt động'}
                     </span>
                   </td>
@@ -837,10 +837,10 @@ function AdminAudit() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="rounded border border-warning bg-warning/15 p-3 text-xs text-warning">
+      <div className="rounded border border-warning bg-warning-soft p-3 text-xs text-warning">
         Admin chỉ thấy AI làm gì, team nào, lúc nào — không thấy nội dung nghiệp vụ chi tiết (FR-11a).
       </div>
-      {error && <div className="rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+      {error && <div className="rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
       <div className="overflow-x-auto rounded-lg border border-vien bg-surface">
         <table className="w-full text-sm">
           <thead>
@@ -911,7 +911,7 @@ function AdminRedmine() {
     <div className="max-w-xl rounded-lg border border-vien bg-surface p-4">
       <h3 className="mb-2 text-sm font-semibold text-muc">URL Redmine hệ thống</h3>
       <p className="mb-3 text-xs text-phu">Công ty chỉ có một Redmine — mỗi người tự nhập API key riêng ở màn Cài đặt.</p>
-      {error && <div className="mb-2 rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+      {error && <div className="mb-2 rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
       <div className="mb-2 rounded border border-vien bg-surface-2 px-3 py-2 text-sm text-phu">{baseUrl || '(chưa cấu hình)'}</div>
       <div className="flex gap-2">
         <input className="flex-1 rounded border px-3 py-1.5 text-sm" placeholder="https://redmine.example.com" value={input} disabled={busy} onChange={(e) => setInput(e.target.value)} />

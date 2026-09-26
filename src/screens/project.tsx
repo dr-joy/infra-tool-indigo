@@ -1231,9 +1231,9 @@ function PopupLichSuProjectClose({
           <p className="project-list-state">{t('empty.closed_project')}</p>
         )}
         {!isLoading && !error && projects.length > 0 && (
-          <div className="min-h-0 flex-1 overflow-auto rounded-md border border-slate-300">
+          <div className="min-h-0 flex-1 overflow-auto rounded-md border border-vien">
             <table className="w-full min-w-[920px] text-left text-sm">
-              <thead className="bg-slate-100 text-xs uppercase text-phu">
+              <thead className="bg-surface-2 text-xs uppercase text-phu">
                 <tr>
                   <th className="px-4 py-3">{t('history.project.col_project')}</th>
                   <th className="px-4 py-3">{t('history.project.col_pic')}</th>
@@ -1244,7 +1244,7 @@ function PopupLichSuProjectClose({
                   <th className="px-4 py-3 text-right">{t('history.project.col_action')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 bg-white">
+              <tbody className="divide-y divide-vien bg-surface">
                 {projects.map((project) => (
                   <tr key={project.id}>
                     <td className="px-4 py-3 font-bold text-muc">{project.ten}</td>
@@ -2317,22 +2317,22 @@ function PopupGanttTong({
             {legendNames.length > 0 && (
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                 {legendNames.map((n) => (
-                  <span key={n} className="flex items-center gap-1 text-xs text-slate-600"><span className="h-3 w-3 rounded-sm" style={{ backgroundColor: picColors[n] }} />{n}</span>
+                  <span key={n} className="flex items-center gap-1 text-xs text-phu"><span className="h-3 w-3 rounded-sm" style={{ backgroundColor: picColors[n] }} />{n}</span>
                 ))}
               </div>
             )}
           </div>
           <div className="ml-auto mr-3 flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-600" title="Ẩn task đã xong 100% ở mọi dự án">
+            <label className="flex items-center gap-1 rounded border border-vien px-2 py-1 text-xs text-phu" title="Ẩn task đã xong 100% ở mọi dự án">
               <input type="checkbox" checked={hide100} onChange={(e) => setHide100(e.target.checked)} />
               Ẩn task 100%
             </label>
-            <select className="max-w-[13rem] truncate rounded border border-slate-300 py-1 pl-2 pr-7 text-xs" value={filterProject} onChange={(e) => setFilterProject(e.target.value)} title="Lọc theo dự án">
+            <select className="max-w-[13rem] truncate rounded border border-vien py-1 pl-2 pr-7 text-xs" value={filterProject} onChange={(e) => setFilterProject(e.target.value)} title="Lọc theo dự án">
               <option value="">— Lọc dự án —</option>
               <option value="all">Tất cả dự án</option>
               {projects.map((p) => <option key={p.id} value={p.id}>{p.ten}</option>)}
             </select>
-            <select className="max-w-[11rem] truncate rounded border border-slate-300 py-1 pl-2 pr-7 text-xs" value={filterPic} onChange={(e) => setFilterPic(e.target.value)} title="Lọc theo PIC">
+            <select className="max-w-[11rem] truncate rounded border border-vien py-1 pl-2 pr-7 text-xs" value={filterPic} onChange={(e) => setFilterPic(e.target.value)} title="Lọc theo PIC">
               <option value="">— Lọc PIC —</option>
               <option value="all">Tất cả PIC</option>
               {picList.map((n) => <option key={n} value={n}>{n}</option>)}

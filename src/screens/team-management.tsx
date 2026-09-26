@@ -15,7 +15,7 @@ function loiThanThien(e: unknown): string {
 
 const btnPrimary = 'rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-on-primary hover:bg-primary-hover disabled:opacity-50';
 const btnSecondary = 'rounded-md border border-vien bg-surface px-3 py-1.5 text-sm font-medium text-phu hover:bg-surface-2 disabled:opacity-50';
-const btnDanger = 'rounded-md border border-danger bg-surface px-3 py-1.5 text-sm font-medium text-danger hover:bg-danger/15 disabled:opacity-50';
+const btnDanger = 'rounded-md border border-danger bg-surface px-3 py-1.5 text-sm font-medium text-danger hover:bg-danger-soft disabled:opacity-50';
 
 // Khớp nguyên văn tên cột trả về từ server (server/routes/teams.ts, audit.ts) — xem ghi chú tương tự ở
 // src/screens/admin.tsx.
@@ -74,7 +74,7 @@ function TabTongQuan({ teamId, teamName, teamDesc, vaiTro }: { teamId: number | 
 
   return (
     <div className="flex max-w-xl flex-col gap-3">
-      {error && <div className="rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+      {error && <div className="rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
       <div className="rounded-lg border border-vien bg-surface p-4">
         <div className="text-base font-semibold">{teamName}</div>
         {teamDesc && <div className="mt-1 text-sm text-phu">{teamDesc}</div>}
@@ -152,7 +152,7 @@ function TabThanhVien({ teamId, laLeader }: { teamId: number | null; laLeader: b
 
   return (
     <div className="flex flex-col gap-3">
-      {error && <div className="rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+      {error && <div className="rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
       {laLeader && (
         <div>
           <button type="button" className={`${btnPrimary} flex w-fit items-center gap-1`} onClick={() => setShowAdd(true)}>
@@ -169,7 +169,7 @@ function TabThanhVien({ teamId, laLeader }: { teamId: number | null; laLeader: b
             </div>
             {m.role === 'leader' && <span className="rounded bg-primary-soft px-2 py-0.5 text-xs text-primary">Leader</span>}
             {laLeader && (
-              <button type="button" className="rounded p-1.5 text-phu hover:bg-danger/15 hover:text-danger" title="Bớt khỏi team" onClick={() => setRemoveTarget(m)}>
+              <button type="button" className="rounded p-1.5 text-phu hover:bg-danger-soft hover:text-danger" title="Bớt khỏi team" onClick={() => setRemoveTarget(m)}>
                 <UserMinus size={14} />
               </button>
             )}
@@ -249,7 +249,7 @@ function PopupThemThanhVien({ teamId, onClose, onDone }: { teamId: number; onClo
           />
           <button type="button" className={btnSecondary} disabled={busy || !email.trim()} onClick={traCuu}>Tra cứu</button>
         </div>
-        {error && <div className="mt-2 rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+        {error && <div className="mt-2 rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
         {found === null && <div className="mt-2 text-sm text-warning">Không tìm thấy — người này chưa từng đăng nhập vào hệ thống.</div>}
         {found && (
           <div className="mt-2 rounded border border-vien bg-surface-2 px-3 py-2 text-sm">
@@ -285,10 +285,10 @@ function PopupCanhBaoBotThanhVien({ teamId, member, busy, onClose, onConfirm }: 
     <Modal onClose={onClose} dismissable={!busy}>
       <div className="popup w-full max-w-md">
         <h2 className="mb-3 text-lg font-bold">Bớt {member.display_name} khỏi team?</h2>
-        {error && <div className="mb-2 rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+        {error && <div className="mb-2 rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
         {count === null && !error && <div className="text-sm text-phu">Đang kiểm tra task đang phụ trách…</div>}
         {count != null && count > 0 && (
-          <div className="rounded border border-warning bg-warning/15 p-3 text-sm text-warning">
+          <div className="rounded border border-warning bg-warning-soft p-3 text-sm text-warning">
             Người này còn <strong>{count}</strong> task project chưa hoàn thành. Bớt khỏi team không xoá
             các task đó, nhưng bạn cần tự phân công lại người phụ trách sau.
           </div>
@@ -335,7 +335,7 @@ function TabNhatKy({ teamId }: { teamId: number | null }) {
 
   return (
     <div className="flex flex-col gap-3">
-      {error && <div className="rounded bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+      {error && <div className="rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
       <div className="overflow-x-auto rounded-lg border border-vien bg-surface">
         <table className="w-full text-sm">
           <thead>

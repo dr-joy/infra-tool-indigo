@@ -229,7 +229,7 @@ function ComboKeys({ combo, duplicated }: { combo: string | null; duplicated: bo
       {keys.map((k, i) => (
         <kbd key={i}
           className={`box-border inline-flex h-7 min-w-[1.75rem] items-center justify-center rounded-md border px-2 font-mono text-xs font-semibold shadow-token-sm ${
-            duplicated ? 'border-danger bg-danger/15 text-danger' : 'border-vien bg-surface-2 text-muc'}`}>
+            duplicated ? 'border-danger bg-danger-soft text-danger' : 'border-vien bg-surface-2 text-muc'}`}>
           {k}
         </kbd>
       ))}
