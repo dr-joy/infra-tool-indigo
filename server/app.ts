@@ -26,6 +26,7 @@ import notificationsRouter from './routes/notifications.js';
 import teamsRouter from './routes/teams.js';
 import adminConfigRouter from './routes/admin-config.js';
 import auditRouter from './routes/audit.js';
+import adminLegacyMigrationTempRouter from './routes/admin-legacy-migration-temp.js';
 
 export const app = express();
 
@@ -85,6 +86,7 @@ app.use('/api', notificationsRouter);
 app.use('/api', teamsRouter);
 app.use('/api', adminConfigRouter);
 app.use('/api', auditRouter);
+app.use('/api', adminLegacyMigrationTempRouter);
 
 // Phục vụ giao diện đã build (chế độ chạy app 1 tiến trình).
 // Chỉ bật khi đã có thư mục dist (đã chạy `npm run build`).
