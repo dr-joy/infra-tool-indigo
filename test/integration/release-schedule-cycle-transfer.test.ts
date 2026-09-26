@@ -81,15 +81,6 @@ const leaderAHeaders = flow.H(leaderA.session);
 const leaderBHeaders = flow.H(leaderB.session);
 const leaderCHeaders = flow.H(leaderC.session);
 
-// 2026-09-25 (docs/exchanges/2026-09-25.md) — Admin bật autogen team chỉ mở khả năng, leaderA còn phải
-// tự bật riêng cho mình mới thật sự sinh task được.
-await (async () => {
-  const res = await fetch(`${base}/api/release/schedule/personal-task-pref`, {
-    method: 'PUT', headers: leaderAHeaders, body: JSON.stringify({ teamId: teamA, enabled: true })
-  });
-  if (!res.ok) throw new Error(`setOwnPref(teamA) thất bại: ${res.status}`);
-})();
-
 after(async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
   await mockAuth.close();

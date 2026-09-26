@@ -73,15 +73,6 @@ async function enableAutogen(): Promise<void> {
   if (!res.ok) throw new Error(`enableAutogen thất bại: ${res.status}`);
 }
 
-// 2026-09-25 (docs/exchanges/2026-09-25.md) — Admin bật autogen team chỉ mở khả năng, actor còn phải tự
-// bật riêng cho mình mới thật sự sinh task được.
-async function setOwnPref(enabled: boolean): Promise<void> {
-  const res = await fetch(`${base}/api/release/schedule/personal-task-pref`, {
-    method: 'PUT', headers: authHeaders, body: JSON.stringify({ teamId, enabled })
-  });
-  if (!res.ok) throw new Error(`setOwnPref thất bại: ${res.status}`);
-}
-
 test('FR-28a: Admin CHƯA bật Tab cá nhân cho team -> sinh task bị 403 FEATURE_DISABLED', async () => {
   const day = '2026-10-25';
   await req('POST', '/api/release/schedule/registrations', {
@@ -93,23 +84,8 @@ test('FR-28a: Admin CHƯA bật Tab cá nhân cho team -> sinh task bị 403 FEA
   assert.equal(r.json.code, 'FEATURE_DISABLED');
 });
 
-// 2026-09-25 (docs/exchanges/2026-09-25.md) — Admin bật autogen cho team chỉ mở khả năng, KHÔNG tự bật
-// hộ từng actor.
-test('FR-28a: Admin đã bật Tab cá nhân cho team NHƯNG actor CHƯA tự bật riêng -> vẫn 403 FEATURE_DISABLED', async () => {
-  await enableAutogen();
-  const day = '2026-10-30';
-  await req('POST', '/api/release/schedule/registrations', {
-    teamId, deployStagingAt: { date: day, time: '13:00' }, releaseAt: { date: day, time: '15:00' },
-    affectedSystems: ['Dr.JOY'], platforms: ['Web'], noJapanCoordinationReason: 'khong co'
-  });
-  const r = await req('POST', '/api/release/schedule/personal-emergency-tasks', { teamId, cycleId: 1 });
-  assert.equal(r.status, 403);
-  assert.equal(r.json.code, 'FEATURE_DISABLED');
-});
-
 test('FR-28a: sinh task cá nhân khẩn cấp khớp đúng 3 mốc giờ đăng ký thật, ghi_chu render đúng locale', async () => {
   await enableAutogen();
-  await setOwnPref(true);
   const day = '2026-10-26';
   const created = await req('POST', '/api/release/schedule/registrations', {
     teamId, deployStagingAt: { date: day, time: '13:00' }, releaseAt: { date: day, time: '15:00' },
@@ -149,7 +125,6 @@ test('FR-28a: sinh task cá nhân khẩn cấp khớp đúng 3 mốc giờ đăn
 
 test('FR-26 bước 5: registration đổi giờ -> task cá nhân đã sinh TỰ CẬP NHẬT lại giờ + nội dung', async () => {
   await enableAutogen();
-  await setOwnPref(true);
   const day = '2026-10-27';
   const created = await req('POST', '/api/release/schedule/registrations', {
     teamId, deployStagingAt: { date: day, time: '13:00' }, releaseAt: { date: day, time: '15:00' },
@@ -175,7 +150,6 @@ test('FR-26 bước 5: registration đổi giờ -> task cá nhân đã sinh T�
 
 test('FR-26 bước 6: huỷ registration -> task cá nhân CHƯA hoàn thành tự huỷ, task ĐÃ hoàn thành giữ nguyên lịch sử', async () => {
   await enableAutogen();
-  await setOwnPref(true);
   const day = '2026-10-28';
   const created = await req('POST', '/api/release/schedule/registrations', {
     teamId, deployStagingAt: { date: day, time: '13:00' }, releaseAt: { date: day, time: '15:00' },

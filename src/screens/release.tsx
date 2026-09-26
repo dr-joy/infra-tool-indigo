@@ -633,12 +633,10 @@ export function ManHinhLenLich({ onTasksCreated }: { onTasksCreated: (date?: str
 }
 
 // FR-28a — Tab cá nhân: "áp dụng checklist cá nhân theo lịch team" (2026-09-23, nối 2 route đã có sẵn
-// từ Lát 6 vào 2 layout release.tsx). 2026-09-25 (docs/exchanges/2026-09-25.md): tách thành 2 lớp —
-// `teamCapable` = Admin đã Bật "Task cá nhân" + "Tab cá nhân" cho team đang chọn (KHẢ NĂNG tồn tại cho
-// cả team); `enabled` = teamCapable VÀ chính actor đã tự bật riêng cho mình (mặc định Tắt, KHÔNG tự bật
-// theo team) — route chỉ dùng để FE ẩn/hiện nút, không phải nguồn phân quyền (2 route
-// personal-emergency-tasks/personal-regular-tasks vẫn tự kiểm lại đầy đủ cả 3 điều kiện).
-interface PersonalTaskStatus { teamCapable: boolean; enabled: boolean; }
+// từ Lát 6 vào 2 layout release.tsx). `enabled` = false khi Admin chưa Bật "Task cá nhân" cho team đang
+// chọn HOẶC team đó chưa tự Bật autogen riêng — route chỉ dùng để FE ẩn/hiện nút, không phải nguồn phân
+// quyền (2 route personal-emergency-tasks/personal-regular-tasks vẫn tự kiểm lại đầy đủ).
+interface PersonalTaskStatus { enabled: boolean; }
 interface PersonalRegularCycleRow { id: number; releaseKey: string; regularReleaseDate: string; }
 interface PersonalEmergencyCycleOption { cycleId: number; releaseKey: string; releaseDateLabel: string; }
 interface PersonalGenerateSummary { created: number; skippedExisting: number; }
@@ -670,23 +668,11 @@ function LayoutReleaseDinhKy({ onTasksCreated }: { onTasksCreated: (date?: strin
         setPersonalStatus(status);
         setPersonalCycles(cycles);
       } catch {
-        if (alive) { setPersonalStatus({ teamCapable: false, enabled: false }); setPersonalCycles([]); }
+        if (alive) { setPersonalStatus({ enabled: false }); setPersonalCycles([]); }
       }
     })();
     return () => { alive = false; };
   }, [activeTeamId]);
-
-  async function setPersonalAutogenPref(enabled: boolean) {
-    if (activeTeamId == null) return;
-    try {
-      const status = await apiTeam<PersonalTaskStatus>(activeTeamId, '/api/release/schedule/personal-task-pref', {
-        method: 'PUT', body: JSON.stringify({ teamId: activeTeamId, enabled })
-      });
-      setPersonalStatus(status);
-    } catch (e) {
-      setPersonalApplyStatus(e instanceof Error ? e.message : 'Không thể đổi tuỳ chọn.');
-    }
-  }
 
   async function applyPersonalRegularChecklist() {
     if (!selectedPersonalCycleId) return;
@@ -914,38 +900,26 @@ function LayoutReleaseDinhKy({ onTasksCreated }: { onTasksCreated: (date?: strin
             </span>
           </div>
           {taskStatus && <p className="release-copy-status">{taskStatus}</p>}
-          {personalStatus?.teamCapable && (
+          {personalStatus?.enabled && (
             <div className="release-management-actions">
-              <label className="flex items-center gap-1.5">
-                <input
-                  type="checkbox"
-                  checked={personalStatus.enabled}
-                  onChange={(e) => setPersonalAutogenPref(e.target.checked)}
-                />
-                Tự động sinh task cá nhân theo lịch team (tự bật/tắt riêng cho bạn, không ảnh hưởng người khác)
+              <label className="field">
+                Đợt release định kỳ (Lịch chung)
+                <select value={selectedPersonalCycleId} onChange={(e) => setSelectedPersonalCycleId(e.target.value)}>
+                  <option value="">— Chọn đợt —</option>
+                  {personalCycles.map((cycle) => (
+                    <option key={cycle.id} value={cycle.id}>{formatVNDate(taoNgayTuInput(cycle.regularReleaseDate))}</option>
+                  ))}
+                </select>
               </label>
-              {personalStatus.enabled && (
-                <>
-                  <label className="field">
-                    Đợt release định kỳ (Lịch chung)
-                    <select value={selectedPersonalCycleId} onChange={(e) => setSelectedPersonalCycleId(e.target.value)}>
-                      <option value="">— Chọn đợt —</option>
-                      {personalCycles.map((cycle) => (
-                        <option key={cycle.id} value={cycle.id}>{formatVNDate(taoNgayTuInput(cycle.regularReleaseDate))}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <button
-                    type="button"
-                    className="nut-phu release-hover-emerald"
-                    disabled={!selectedPersonalCycleId || isApplyingPersonal}
-                    title="Sinh task cá nhân của bạn theo đúng ngày đợt release định kỳ đã chọn ở Lịch chung"
-                    onClick={applyPersonalRegularChecklist}
-                  >
-                    Áp dụng checklist cá nhân theo lịch team
-                  </button>
-                </>
-              )}
+              <button
+                type="button"
+                className="nut-phu release-hover-emerald"
+                disabled={!selectedPersonalCycleId || isApplyingPersonal}
+                title="Sinh task cá nhân của bạn theo đúng ngày đợt release định kỳ đã chọn ở Lịch chung"
+                onClick={applyPersonalRegularChecklist}
+              >
+                Áp dụng checklist cá nhân theo lịch team
+              </button>
               {personalApplyStatus && <p className="release-copy-status">{personalApplyStatus}</p>}
             </div>
           )}
@@ -2357,23 +2331,11 @@ function LayoutReleaseKhanCap({ onTasksCreated }: { onTasksCreated: (date?: stri
           .map((cycle) => ({ cycleId: cycle.id, releaseKey: cycle.releaseKey, releaseDateLabel: formatVNDate(taoNgayTuInput(releaseKeyDatePart(cycle.releaseKey))) }));
         setPersonalEmergencyCycles(options);
       } catch {
-        if (alive) { setPersonalStatus({ teamCapable: false, enabled: false }); setPersonalEmergencyCycles([]); }
+        if (alive) { setPersonalStatus({ enabled: false }); setPersonalEmergencyCycles([]); }
       }
     })();
     return () => { alive = false; };
   }, [activeTeamId]);
-
-  async function setPersonalAutogenPref(enabled: boolean) {
-    if (activeTeamId == null) return;
-    try {
-      const status = await apiTeam<PersonalTaskStatus>(activeTeamId, '/api/release/schedule/personal-task-pref', {
-        method: 'PUT', body: JSON.stringify({ teamId: activeTeamId, enabled })
-      });
-      setPersonalStatus(status);
-    } catch (e) {
-      setPersonalApplyStatus(e instanceof Error ? e.message : 'Không thể đổi tuỳ chọn.');
-    }
-  }
 
   async function applyPersonalEmergencyChecklist() {
     if (!selectedPersonalCycleId) return;
@@ -2648,45 +2610,33 @@ function LayoutReleaseKhanCap({ onTasksCreated }: { onTasksCreated: (date?: stri
           </button>
         </div>
         {status && <p className="release-copy-status">{status}</p>}
-        {personalStatus?.teamCapable && (
+        {personalStatus?.enabled && (
           <div className="release-management-actions">
-            <label className="flex items-center gap-1.5">
-              <input
-                type="checkbox"
-                checked={personalStatus.enabled}
-                onChange={(e) => setPersonalAutogenPref(e.target.checked)}
-              />
-              Tự động sinh task cá nhân theo lịch team (tự bật/tắt riêng cho bạn, không ảnh hưởng người khác)
+            <label className="field">
+              Đợt release khẩn cấp team đã đăng ký (Lịch chung)
+              <select value={selectedPersonalCycleId} onChange={(e) => setSelectedPersonalCycleId(e.target.value)}>
+                <option value="">— Chọn đợt —</option>
+                {personalEmergencyCycles.map((cycle) => (
+                  <option key={cycle.cycleId} value={cycle.cycleId}>{cycle.releaseDateLabel}</option>
+                ))}
+              </select>
             </label>
-            {personalStatus.enabled && (
-              <>
-                <label className="field">
-                  Đợt release khẩn cấp team đã đăng ký (Lịch chung)
-                  <select value={selectedPersonalCycleId} onChange={(e) => setSelectedPersonalCycleId(e.target.value)}>
-                    <option value="">— Chọn đợt —</option>
-                    {personalEmergencyCycles.map((cycle) => (
-                      <option key={cycle.cycleId} value={cycle.cycleId}>{cycle.releaseDateLabel}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
-                  Ngôn ngữ nội dung
-                  <select value={personalLocale} onChange={(e) => setPersonalLocale(e.target.value === 'ja' ? 'ja' : 'vi')}>
-                    <option value="vi">Tiếng Việt</option>
-                    <option value="ja">日本語</option>
-                  </select>
-                </label>
-                <button
-                  type="button"
-                  className="nut-phu release-hover-emerald"
-                  disabled={!selectedPersonalCycleId || isApplyingPersonal}
-                  title="Sinh task cá nhân của bạn theo đúng lịch khẩn cấp CHÍNH THỨC team đã đăng ký ở Lịch chung"
-                  onClick={applyPersonalEmergencyChecklist}
-                >
-                  Áp dụng checklist cá nhân theo lịch team
-                </button>
-              </>
-            )}
+            <label className="field">
+              Ngôn ngữ nội dung
+              <select value={personalLocale} onChange={(e) => setPersonalLocale(e.target.value === 'ja' ? 'ja' : 'vi')}>
+                <option value="vi">Tiếng Việt</option>
+                <option value="ja">日本語</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              className="nut-phu release-hover-emerald"
+              disabled={!selectedPersonalCycleId || isApplyingPersonal}
+              title="Sinh task cá nhân của bạn theo đúng lịch khẩn cấp CHÍNH THỨC team đã đăng ký ở Lịch chung"
+              onClick={applyPersonalEmergencyChecklist}
+            >
+              Áp dụng checklist cá nhân theo lịch team
+            </button>
             {personalApplyStatus && <p className="release-copy-status">{personalApplyStatus}</p>}
           </div>
         )}
