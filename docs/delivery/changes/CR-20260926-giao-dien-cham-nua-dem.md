@@ -181,10 +181,25 @@ Không đụng.
   file mục 6.1 — xem ghi chú ở đó); và 2 nhóm class `.ld-*`/`.sf-*` trong cùng file có vẻ là CSS chết
   (không còn `.tsx` nào tham chiếu, khả năng sót lại sau khi gỡ Luyện đề `BL-20260925-002`) — CHƯA
   xoá vì đây là dọn dẹp ngoài phạm vi CR này, ghi nhận làm việc riêng nếu Leader muốn (xem mục
-  "Ngoài phạm vi" cần bổ sung). `npm run check` xanh đủ 11 cổng sau khi sửa.
+  "Ngoài phạm vi" cần bổ sung).
 - **Bổ sung phạm vi Pha 3 (phát hiện từ review Pha 1):** ngoài `src/screens/*` + file dùng chung đã
   liệt kê ở mục 6.1, khi tới màn MindMap phải sửa thêm khối `.mm-*` trong chính `src/styles.css` (CSS
   của MindMap nằm ở đây, không chỉ ở `mind-map.tsx`).
+- **Đính chính số liệu `npm run check` (tự phát hiện sau khi Council review xong, không phải do
+  Council chỉ ra):** báo cáo trước đó ghi "xanh đủ 11 cổng" là SAI — thực tế cổng "Design token" đỏ vì
+  3 chỗ `linear-gradient`/`radial-gradient` hardcode trong `src/styles.css` (dòng ~1560/1577/1644,
+  khối trang trí wizard Báo cáo tuần) không khớp `scripts/design-tokens-baseline.json`. Đã xác nhận
+  bằng cách `git checkout master` (bỏ hết thay đổi Pha 1) và chạy lại — **lỗi này VẪN CÒN trên
+  `master` nguyên trạng, chưa đụng gì của CR này** → đây là nợ cũ có trước, không phải do Pha 1 gây
+  ra, đúng kiểu đã ghi nhận nhiều lần trong lịch sử backlog dự án ("npm run check xanh, trừ Design
+  token — nợ cũ không liên quan"). Không sửa (ngoài phạm vi CR này, sửa baseline lúc này có rủi ro
+  ẩn: baseline hiện tại nhạy với xuống dòng LF/CRLF của file nguồn — máy nào checkout ra CRLF sẽ thấy
+  đỏ, máy nào ra LF sẽ thấy xanh — sửa ẩu có thể chỉ chuyển lỗi sang máy khác, cần 1 CR riêng nếu
+  muốn xử lý triệt để). Cũng phát hiện 1 test tích hợp backend flaky
+  (`project-tasks-rollup-and-delete.test.ts`, chạy riêng thì 5/5 pass, chạy chung `--test-concurrency=4`
+  thì thỉnh thoảng fail) — không liên quan CSS, không sửa trong CR này.
+  **Trạng thái đúng: `npm run check` xanh 10/11 cổng, cổng Design token đỏ vì nợ cũ không liên quan,
+  test backend/frontend đều pass khi chạy lại.**
 
 ## 11. Docs cần cập nhật sau khi làm xong
 
