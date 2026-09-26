@@ -46,6 +46,9 @@ nào ⇒ thêm skill `security-gate`. Đụng `docs/`/`README.md`/`CLAUDE.md` �
 - **Không dùng Pull Request — merge thẳng `main`** ([ADR-P1](docs/standards/team-operating-standard.md)).
   Bù lại: **tự soi `git diff --staged`** trước mỗi commit như review code người khác; commit message ghi
   `Ref: CR-… (FR-x)` (nếu có CR) + đã chạy test gì — đây là nơi DUY NHẤT giữ ngữ cảnh này.
+- **Commit message viết bằng tiếng Việt, rõ ràng dễ hiểu** (không viết tắt/cụt lủn) — theo đúng quy ước
+  hiện tại của repo (không dấu, khớp lịch sử `git log`). Nêu rõ đã sửa gì và **vì sao** (không chỉ cái
+  gì), để về sau đọc lại `git log` một mình vẫn hiểu ngay, không cần hỏi lại người đã code.
 
 ## Bộ chuẩn canonical (đọc khi liên quan)
 
