@@ -91,19 +91,21 @@
   input,
   textarea,
   select {
-    @apply rounded-md border border-vien bg-white px-3 py-2 text-sm outline-none transition;
+    @apply rounded-md border border-vien bg-surface px-3 py-2 text-sm text-muc outline-none transition;
   }
 
   input:focus,
   textarea:focus,
   select:focus {
-    border-color: #0d9488;
-    box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.14);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-primary-soft);
   }
 
   select {
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23111827' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    /* Mũi tên SVG không dùng var() được trong data-URI — hardcode đúng hex hiện tại của
+       --color-muted (#9498b3, "Chàm Nửa Đêm"). Đổi token muted thì phải tự sửa lại hex ở đây. */
+    background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239498b3' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 14px center;
     background-size: 16px 16px;
