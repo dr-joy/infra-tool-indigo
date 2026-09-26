@@ -242,41 +242,6 @@ test('POST /admin/teams/:id/leader: 2 Admin đổi Leader đồng thời cùng r
   assert.equal(leaders.length, 1, 'chỉ đúng 1 Leader sau cùng, không có 2 lần gán cùng thành công');
 });
 
-// ── POST /admin/self-join-team — VÁ TẠM THỜI, XOÁ SAU KHI DÙNG XONG (2026-09-26) ──────
-test('POST /admin/self-join-team: Admin tự thêm chính mình làm Leader của team trống, không cần đã là thành viên', async () => {
-  const adminSession = await loginAsAdmin();
-  const teamId = await makeTeam(adminSession, 'Team Dev13 Kẹt');
-  const me = await (await fetch(`${base}/api/auth/me`, { headers: H(adminSession) })).json() as { user: { id: number } };
-
-  const res = await fetch(`${base}/api/admin/self-join-team`, {
-    method: 'POST', headers: H(adminSession), body: JSON.stringify({ teamId })
-  });
-  assert.equal(res.status, 200, JSON.stringify(await res.json().catch(() => null)));
-  const member = db.prepare('SELECT role FROM team_members WHERE team_id = ? AND user_id = ?').get(teamId, me.user.id) as { role: string } | undefined;
-  assert.equal(member?.role, 'leader');
-});
-
-test('POST /admin/self-join-team: team không tồn tại -> 404', async () => {
-  const adminSession = await loginAsAdmin();
-  const res = await fetch(`${base}/api/admin/self-join-team`, {
-    method: 'POST', headers: H(adminSession), body: JSON.stringify({ teamId: 999999 })
-  });
-  assert.equal(res.status, 404);
-});
-
-test('POST /admin/self-join-team: user thường (không phải Admin) gọi -> 403 ROLE_FORBIDDEN', async () => {
-  const adminSession = await loginAsAdmin();
-  const teamId = await makeTeam(adminSession, 'Team Self Join Khong Phai Admin');
-  const { session } = await joinAndApprove('self-join-not-admin@drjoy.jp', 'Khong phai Admin', teamId, 'member', adminSession);
-
-  const res = await fetch(`${base}/api/admin/self-join-team`, {
-    method: 'POST', headers: H(session), body: JSON.stringify({ teamId })
-  });
-  assert.equal(res.status, 403);
-  const body = await res.json();
-  assert.equal(body.code, 'ROLE_FORBIDDEN');
-});
-
 test('GET /me/teams: trả đúng team + role của actor', async () => {
   const adminSession = await loginAsAdmin();
   const teamId = await makeTeam(adminSession, 'Team Me');

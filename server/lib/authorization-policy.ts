@@ -47,13 +47,7 @@ export const AUTHORIZATION_POLICY: Record<string, Record<string, PolicyEntry>> =
     // Resource RIÊNG (không tái dùng 'team_member'.'list', vốn chỉ cho leader/member trong team đó —
     // FR-11 coi danh sách roster phục vụ đúng việc "chỉ định Leader" là cấu hình Admin quản lý, KHÁC dữ
     // liệu nghiệp vụ team như task/project mà Admin không được xem).
-    list_members: { feature: null, roles: ['admin'] },
-    // 2026-09-26 (docs/exchanges/2026-09-26.md) — VÁ TẠM THỜI, XOÁ SAU KHI DÙNG XONG. Admin bootstrap bị
-    // tạo ra 'active' nhưng không thuộc team nào (bug ĐÃ SỬA ở a9f126bb, nhưng chỉ chặn tài khoản MỚI —
-    // tài khoản đã lỡ tạo sai từ trước không có đường tự thoát: /onboarding/join-request chỉ nhận
-    // 'pending', /admin/teams/:id/leader đòi phải ĐÃ là member). Route `/admin/self-join-team` dùng
-    // action này để actor tự thêm CHÍNH MÌNH (không phải người khác) làm Leader 1 team chỉ định.
-    self_join_bootstrap: { feature: null, roles: ['admin'] }
+    list_members: { feature: null, roles: ['admin'] }
   },
   feature_visibility: {
     read: { feature: null, roles: ['admin'] },
