@@ -1802,7 +1802,7 @@
   }
 
   .task-link-editor {
-    @apply grid gap-2 rounded-md border border-dashed border-slate-300 bg-slate-50 p-3;
+    @apply grid gap-2 rounded-md border border-dashed border-vien bg-surface-2 p-3;
   }
 
   .task-link-editor-actions {
@@ -1822,7 +1822,7 @@
   }
 
   .note-copy-btn {
-    @apply inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-vien bg-white text-slate-600 transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-300;
+    @apply inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-vien bg-surface text-phu transition hover:border-secondary hover:bg-secondary-soft hover:text-secondary disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-muted-2;
   }
 
   .note-inline-preview {
@@ -2090,19 +2090,21 @@
 
   .task-dinh-ky {
     @apply absolute flex min-h-[26px] w-full cursor-move items-center gap-1.5 overflow-hidden rounded-md border border-l-2 px-2 py-1 text-muc transition;
-    @apply border-sky-300 border-l-sky-500 bg-sky-50;
+    @apply border-primary border-l-primary bg-primary-soft;
   }
 
+  /* 3 nguồn task định kỳ đổi sang mượn đúng token ngữ nghĩa thay vì màu tuỳ ý — vẫn phân biệt được
+     rõ 3 nguồn, đồng thời "khẩn cấp" tự nhiên đọc là "nguy hiểm/gấp" (đúng ý đồ hơn màu rose cũ). */
   .task-dinh-ky.task-source-manual:not(.task-dinh-ky-done) {
-    @apply border-sky-300 border-l-sky-500 bg-sky-50;
+    @apply border-primary border-l-primary bg-primary-soft;
   }
 
   .task-dinh-ky.task-source-regular-release:not(.task-dinh-ky-done) {
-    @apply border-violet-300 border-l-violet-500 bg-violet-50;
+    @apply border-secondary border-l-secondary bg-secondary-soft;
   }
 
   .task-dinh-ky.task-source-emergency-release:not(.task-dinh-ky-done) {
-    @apply border-rose-300 border-l-rose-500 bg-rose-50;
+    @apply border-danger border-l-danger bg-danger-soft;
   }
 
   .task-dinh-ky-content {
@@ -2122,40 +2124,40 @@
   .task-dinh-ky-content span.ai-badge {
     @apply shrink-0 whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] font-bold leading-none;
   }
-  .ai-badge-pending { @apply bg-amber-100 text-amber-700; }
-  .ai-badge-approved { @apply bg-sky-100 text-sky-700; }
-  .ai-badge-running { @apply bg-indigo-100 text-indigo-700; }
-  .ai-badge-done { @apply bg-emerald-100 text-emerald-700; }
-  .ai-badge-failed { @apply bg-rose-100 text-rose-700; }
-  .ai-badge-canceled { @apply bg-slate-200 text-slate-600; }
-  .ai-badge-missed { @apply bg-orange-100 text-orange-700; }
+  .ai-badge-pending { @apply bg-warning-soft text-warning; }
+  .ai-badge-approved { @apply bg-secondary-soft text-secondary; }
+  .ai-badge-running { @apply bg-primary-soft text-primary; }
+  .ai-badge-done { @apply bg-success-soft text-success; }
+  .ai-badge-failed { @apply bg-danger-soft text-danger; }
+  .ai-badge-canceled { @apply bg-surface-2 text-phu; }
+  .ai-badge-missed { @apply bg-warning-soft text-warning; }
 
   /* FR-5 (CR-20260814-hop-nhat): dấu lệch definition trên dòng task định kỳ dashboard */
   .drift-flag {
-    @apply flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700;
+    @apply flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-warning-soft text-warning;
   }
 
   .nut-hoan-thanh-timeline {
-    @apply flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-white transition disabled:cursor-not-allowed;
-    background: #0d9488;
-    border-color: #0d9488;
+    @apply flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-on-primary transition disabled:cursor-not-allowed;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
   }
 
   .nut-hoan-thanh-timeline-done {
-    @apply text-white;
-    background: #0d9488;
-    border-color: #0d9488;
+    @apply text-on-primary;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
   }
 
   .task-dinh-ky-done {
     @apply cursor-pointer text-muc opacity-90;
-    border-color: #99f6e4;
-    border-left-color: #0d9488;
-    background: #ccfbf1;
+    border-color: var(--color-success);
+    border-left-color: var(--color-primary);
+    background: var(--color-success-soft);
   }
 
   .task-dinh-ky-done:hover {
-    background: #ccfbf1;
+    background: var(--color-success-soft);
   }
 
   .task-dinh-ky-done .task-dinh-ky-content h3,
@@ -2169,7 +2171,7 @@
 
   .resize-thoi-gian::after {
     content: '';
-    @apply absolute bottom-0 left-1/2 h-0.5 w-10 -translate-x-1/2 rounded-full bg-slate-300 opacity-0 transition;
+    @apply absolute bottom-0 left-1/2 h-0.5 w-10 -translate-x-1/2 rounded-full bg-vien opacity-0 transition;
   }
 
   .task-dinh-ky:hover .resize-thoi-gian::after {
@@ -2177,7 +2179,7 @@
   }
 
   .timeline {
-    @apply min-h-0 flex-1 overflow-y-auto rounded-md border border-slate-300 bg-slate-50 p-3;
+    @apply min-h-0 flex-1 overflow-y-auto rounded-md border border-vien bg-surface-2 p-3;
   }
 
   .timeline-canvas {
@@ -2185,7 +2187,7 @@
   }
 
   .stt {
-    @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 text-xs font-bold text-phu;
+    @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-surface-2 text-xs font-bold text-phu;
   }
 
   .badge {
@@ -2193,11 +2195,11 @@
   }
 
   .neutral {
-    @apply bg-slate-100 text-slate-600;
+    @apply bg-surface-2 text-phu;
   }
 
   .dem-task {
-    @apply rounded bg-slate-50 px-2 py-1 text-xs font-bold text-phu;
+    @apply rounded bg-surface-2 px-2 py-1 text-xs font-bold text-phu;
   }
 
   .nut-them {
