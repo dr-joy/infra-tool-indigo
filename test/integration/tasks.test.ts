@@ -41,8 +41,14 @@ const onboarding = makeOnboardingHelpers(() => base, flow);
 // policyKind 'personal_task' (FR-14: chỉ cần 1 team Bật, không có khái niệm activeTeamId).
 const adminSession = await flow.loginAs(ADMIN_EMAIL, 'Admin Thật', 'tasks-itest-admin-sub');
 const teamId = await onboarding.makeTeam(adminSession, '[itest] Team Task Cá Nhân');
+await onboarding.setFeatureVisibility(adminSession, teamId, 'release', 'on');
 await onboarding.setFeatureVisibility(adminSession, teamId, 'personal_task', 'on');
+await onboarding.enableAutogen(adminSession, teamId);
 const actor = await onboarding.joinAndApprove('tasks-itest@drjoy.jp', 'Người test Task cá nhân', teamId, 'member', adminSession);
+// 2026-09-26 (docs/exchanges/2026-09-26.md) — vài route trong file này thật ra gọi
+// server/routes/schedules.ts (vd sync-preview) — file đó giờ còn đòi thêm quyền vùng cá nhân này,
+// khác gate 'personal_task' chung mà phần lớn test file này dùng (tasks.ts, KHÔNG đổi).
+await onboarding.enablePersonalAreaPref(adminSession, actor.userId);
 const authHeaders = flow.H(actor.session);
 
 after(async () => {

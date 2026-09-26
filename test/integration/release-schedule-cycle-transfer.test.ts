@@ -75,6 +75,9 @@ const leaderB = await onboarding.joinAndApprove('rs-ct-leaderB@drjoy.jp', 'Leade
 const leaderC = await onboarding.joinAndApprove('rs-ct-leaderC@drjoy.jp', 'Leader CT C', teamC, 'leader', adminSession);
 await setReleaseCoordinator(teamCoord);
 await enableAutogen(teamA);
+// 2026-09-26 (docs/exchanges/2026-09-26.md) — ngoài 3 điều kiện theo team ở trên, Admin còn phải bật
+// riêng cho TỪNG USER mới dùng được vùng cá nhân (leaderA là người duy nhất file này gọi route đó).
+await onboarding.enablePersonalAreaPref(adminSession, leaderA.userId);
 
 const coordHeaders = flow.H(coordLeader.session);
 const leaderAHeaders = flow.H(leaderA.session);

@@ -40,8 +40,13 @@ const flow = loginFlow(() => base, mockAuth.issueAuthCode);
 const onboarding = makeOnboardingHelpers(() => base, flow);
 const adminSession = await flow.loginAs(ADMIN_EMAIL, 'Admin Thật', 'emg-batches-itest-admin-sub');
 const teamId = await onboarding.makeTeam(adminSession, '[itest] Team Emergency Batches');
+await onboarding.setFeatureVisibility(adminSession, teamId, 'release', 'on');
 await onboarding.setFeatureVisibility(adminSession, teamId, 'personal_task', 'on');
+await onboarding.enableAutogen(adminSession, teamId);
 const actor = await onboarding.joinAndApprove('emg-batches-itest@drjoy.jp', 'Người test emergency batches', teamId, 'member', adminSession);
+// 2026-09-26 (docs/exchanges/2026-09-26.md) — route file này (schedules.ts) giờ còn đòi Admin bật riêng
+// "vùng cá nhân" cho TỪNG USER, ngoài 3 điều kiện theo team ở trên.
+await onboarding.enablePersonalAreaPref(adminSession, actor.userId);
 const authHeaders = flow.H(actor.session);
 
 after(async () => {

@@ -36,14 +36,18 @@ describe('Release định kỳ — tạo task báo lỗi khi BE từ chối', ()
       },
       // Màn mặc định mở "Release khẩn cấp" trước khi bấm chuyển tab -> effect của nó vẫn chạy.
       'GET /api/release/emergency/templates': [],
-      'GET /api/release/emergency/task-definitions': []
+      'GET /api/release/emergency/task-definitions': [],
+      // 2026-09-26 — nút "Cá nhân" (và cả 2 tab con Khẩn cấp/Định kỳ bên trong) giờ chỉ hiện khi Admin
+      // đã bật riêng cho user — test này cần vào được nhánh "Cá nhân" nên phải mock đủ điều kiện.
+      'GET /api/release/schedule/personal-area-status': { enabled: true }
     });
     vi.stubGlobal('fetch', fetchMock);
 
     render(<ManHinhLenLich onTasksCreated={async () => {}} />);
 
-    // Chuyển sang tab "Release định kỳ" (mặc định màn hiện "Release khẩn cấp").
-    fireEvent.click(screen.getByRole('button', { name: /Release định kỳ|định kỳ/i }));
+    // Chuyển sang tab "Release định kỳ" (mặc định màn hiện "Release khẩn cấp"). Nút này chỉ hiện SAU
+    // khi fetch personal-area-status xong (2026-09-26) — dùng findByRole (chờ), không getByRole (đồng bộ).
+    fireEvent.click(await screen.findByRole('button', { name: /Release định kỳ|định kỳ/i }));
 
     const dateInput = await screen.findByLabelText(/Ngày release/i);
     fireEvent.change(dateInput, { target: { value: '2026-09-18' } });

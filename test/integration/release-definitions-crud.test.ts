@@ -41,8 +41,11 @@ const flow = loginFlow(() => base, mockAuth.issueAuthCode);
 const onboarding = makeOnboardingHelpers(() => base, flow);
 const adminSession = await flow.loginAs(ADMIN_EMAIL, 'Admin Thật', 'release-defs-crud-itest-admin-sub');
 const teamId = await onboarding.makeTeam(adminSession, '[itest] Team Release Defs CRUD');
+await onboarding.setFeatureVisibility(adminSession, teamId, 'release', 'on');
 await onboarding.setFeatureVisibility(adminSession, teamId, 'personal_task', 'on');
+await onboarding.enableAutogen(adminSession, teamId);
 const actor = await onboarding.joinAndApprove('release-defs-crud-itest@drjoy.jp', 'Người test Release Defs CRUD', teamId, 'member', adminSession);
+await onboarding.enablePersonalAreaPref(adminSession, actor.userId);
 const authHeaders = flow.H(actor.session);
 
 after(async () => {
@@ -103,6 +106,7 @@ test('SEC: GET /release/task-definitions chưa đăng nhập -> 401', async () =
 
 test('SEC: mỗi User chỉ thấy template/definition CỦA MÌNH, không thấy của người khác', async () => {
   const otherActor = await onboarding.joinAndApprove('release-defs-crud-itest-other@drjoy.jp', 'Người khác', teamId, 'member', adminSession);
+  await onboarding.enablePersonalAreaPref(adminSession, otherActor.userId);
   const otherHeaders = flow.H(otherActor.session);
 
   const mine = await req('POST', '/api/release/task-definitions', { id: 'qa-owner-mine', title: '[itest] của tôi', startTime: '10:00', dateToken: 'release.date' });

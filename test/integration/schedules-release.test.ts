@@ -38,8 +38,11 @@ const flow = loginFlow(() => base, mockAuth.issueAuthCode);
 const onboarding = makeOnboardingHelpers(() => base, flow);
 const adminSession = await flow.loginAs(ADMIN_EMAIL, 'Admin Thật', 'schedules-release-itest-admin-sub');
 const teamId = await onboarding.makeTeam(adminSession, '[itest] Team Schedules Release');
+await onboarding.setFeatureVisibility(adminSession, teamId, 'release', 'on');
 await onboarding.setFeatureVisibility(adminSession, teamId, 'personal_task', 'on');
+await onboarding.enableAutogen(adminSession, teamId);
 const actor = await onboarding.joinAndApprove('schedules-release-itest@drjoy.jp', 'Người test schedules-release', teamId, 'member', adminSession);
+await onboarding.enablePersonalAreaPref(adminSession, actor.userId);
 const authHeaders = flow.H(actor.session);
 
 // CR-20260913 Lát 6 (§6.3) — retrofit auth: team KHÔNG bật "Task cá nhân" + 1 actor thứ 2 CÙNG team
@@ -48,6 +51,7 @@ const teamNoFeature = await onboarding.makeTeam(adminSession, '[itest] Team Sche
 const actorNoFeature = await onboarding.joinAndApprove('schedules-release-itest-nofeature@drjoy.jp', 'Người test không Bật Task cá nhân', teamNoFeature, 'member', adminSession);
 const authHeadersNoFeature = flow.H(actorNoFeature.session);
 const actorOther = await onboarding.joinAndApprove('schedules-release-itest-other@drjoy.jp', 'Người test khác (owner scoping)', teamId, 'member', adminSession);
+await onboarding.enablePersonalAreaPref(adminSession, actorOther.userId);
 const authHeadersOther = flow.H(actorOther.session);
 
 after(async () => {

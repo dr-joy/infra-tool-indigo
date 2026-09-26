@@ -24,6 +24,14 @@ function mockApi() {
       body = { teams: [{ id: 1, name: 'Dev13', description: null, role: 'leader' }] };
     } else if (u.includes('/api/notifications')) {
       body = { notifications: [] };
+    } else if (u.includes('/api/release/schedule/personal-area-status')) {
+      // 2026-09-26 — mặc định Tắt (Admin chưa bật), giống trạng thái thật của user mới.
+      body = { enabled: false };
+    } else if (u.includes('/api/release/schedule-board')) {
+      // Trước đây route này KHÔNG được smoke test này gọi tới (mount mặc định luôn rơi vào "Cá nhân"),
+      // nên `[]` mặc định chưa từng lộ ra — giờ nút "Cá nhân" ẩn mặc định, "Lịch chung" mới là nhánh
+      // hiện thật (release-calendar.tsx đọc `board.cycles`, không chấp nhận mảng rỗng thay object).
+      body = { cycles: [], coordinatorTeamId: null };
     }
     return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
   }) as typeof fetch;

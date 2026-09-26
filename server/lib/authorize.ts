@@ -151,6 +151,48 @@ export function assertTeamFeatureOn(teamId: number, feature: FeatureKey): void {
   }
 }
 
+// 2026-09-26 (docs/exchanges/2026-09-26.md) — gate RIÊNG cho "vùng cá nhân" trong Release (cả phần tự
+// tạo template/task riêng LẪN phần tự sinh theo lịch team). CỐ Ý KHÔNG nhét vào authorizePersonalTask()/
+// policyKind 'personal_task' ở trên — hàm đó dùng CHUNG cho Mind Map (`mindmaps.ts`) và Task cá nhân
+// (`tasks.ts`/`schedules.ts` qua `requireOwnPersonalTaskSchedule()`), đổi nó sẽ vô tình khoá luôn 2 tính
+// năng không liên quan. Route thuộc "vùng cá nhân" Release (release.ts, schedules.ts,
+// release-schedule.ts) tự gọi THÊM hàm này SAU authorize()/requireOwnPersonalTaskSchedule() như cũ,
+// giống đúng khuôn assertTeamFeatureOn() ở trên.
+//
+// "Đủ điều kiện" = actor có ÍT NHẤT 1 team đã bật đủ 3 cờ (release + personal_task + autogen team) —
+// đúng điều kiện Leader xác nhận. "Được dùng" = đủ điều kiện VÀ Admin đã bật riêng cho user này ở
+// user_release_personal_area_pref (Admin set, không phải self-service — khác hẳn cơ chế cũ đã revert).
+export function assertPersonalReleaseAreaEnabled(actor: Actor): void {
+  const teamIds = actor.memberships.map((m) => m.teamId);
+  const eligible = teamIds.length > 0 && Boolean(db.prepare(`
+    SELECT 1 FROM team_release_task_autogen_settings a
+    JOIN team_feature_visibility rv ON rv.team_id = a.team_id AND rv.feature = 'release' AND rv.level = 'on'
+    JOIN team_feature_visibility pv ON pv.team_id = a.team_id AND pv.feature = 'personal_task' AND pv.level = 'on'
+    WHERE a.enabled = 1 AND a.team_id IN (${teamIds.map(() => '?').join(',')})
+  `).get(...teamIds));
+  if (!eligible) {
+    throw new HttpError(403, 'Team của bạn chưa đủ điều kiện dùng vùng Cá nhân trong Release', 'FEATURE_DISABLED');
+  }
+  const pref = db.prepare('SELECT enabled FROM user_release_personal_area_pref WHERE user_id = ?')
+    .get(actor.userId) as { enabled: number } | undefined;
+  if (!pref || !pref.enabled) {
+    throw new HttpError(403, 'Admin chưa bật vùng Cá nhân trong Release cho bạn', 'FEATURE_DISABLED');
+  }
+}
+
+// Dùng cho route CHỈ ĐỌC trạng thái (GET .../personal-area-status) — KHÔNG throw, vì route đó phải trả
+// {enabled:false} êm cho FE tự ẩn nút, không phải 403 (403 dành cho route GHI/đọc dữ liệu thật bên
+// trong vùng cá nhân). Tách riêng thay vì bọc try/catch quanh assertPersonalReleaseAreaEnabled() ở route
+// để không phụ thuộc throw-as-control-flow cho đường đọc trạng thái đơn thuần.
+export function personalReleaseAreaEnabled(actor: Actor): boolean {
+  try {
+    assertPersonalReleaseAreaEnabled(actor);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // policyKind: 'cross_team_release' (FR-24, và Lát 5 FR-32 dùng lại cho gate "đang thuộc ≥1 team Bật
 // Mind Map" trước khi route tự lọc theo từng dòng riêng — cùng lý do tổng quát hoá như trên: đọc
 // `feature` từ policy thay vì hardcode 'release'). Không phải allow/deny theo team đích — mọi

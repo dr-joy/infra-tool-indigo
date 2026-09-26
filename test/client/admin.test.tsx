@@ -61,6 +61,7 @@ function baseFetchMock(overrides?: Record<string, (url: URL, init?: RequestInit)
     if (url.pathname === '/api/admin/feature-visibility' && method === 'GET') return jsonResponse({ visibility: VISIBILITY });
     if (url.pathname === '/api/admin/release-coordinator' && method === 'GET') return jsonResponse({ release_coordinator_team_id: 1, row_version: 1 });
     if (url.pathname === '/api/admin/release-task-autogen' && method === 'GET') return jsonResponse({ settings: [{ team_id: 1, enabled: 0, row_version: 1, updated_at: '' }, { team_id: 2, enabled: 1, row_version: 2, updated_at: '' }] });
+    if (url.pathname === '/api/admin/release-personal-area-users' && method === 'GET') return jsonResponse({ users: [] });
     if (url.pathname === '/api/admin/join-requests' && method === 'GET') return jsonResponse({ joinRequests: JOIN_REQUESTS });
     if (url.pathname === '/api/admin/users' && method === 'GET') return jsonResponse({ users: USERS });
     if (url.pathname === '/api/audit') return jsonResponse({ entries: [{ id: 1, actorUserId: 1, teamId: 1, action: 'team.create', createdAt: '2026-09-22T00:00:00.000Z' }], nextCursor: null });
@@ -151,6 +152,31 @@ describe('ManHinhAdmin — mục Release', () => {
     fireEvent.click(dev5Switch);
     await waitFor(() => expect(calls.some((c) => c.method === 'PUT' && c.url === '/api/admin/release-task-autogen')).toBe(true));
     expect(calls.find((c) => c.method === 'PUT' && c.url === '/api/admin/release-task-autogen')?.body).toMatchObject({ teamId: 1, enabled: true, rowVersion: 1 });
+  });
+
+  it('2026-09-26: hiện danh sách user đủ điều kiện, bật switch gọi đúng PUT /api/admin/release-personal-area-pref', async () => {
+    const calls = baseFetchMock({
+      'GET /api/admin/release-personal-area-users': () => jsonResponse({
+        users: [{ id: 2, email: 'member@drjoy.jp', display_name: 'Nguyễn Văn A', avatar: null, enabled: 0, row_version: 0 }]
+      })
+    });
+    renderAdmin();
+    fireEvent.click(screen.getByRole('button', { name: 'Release' }));
+    await waitFor(() => expect(screen.getByText('Vùng Cá nhân trong Release — theo từng người')).toBeInTheDocument());
+
+    const userSwitch = screen.getByRole('switch', { name: 'Vùng Cá nhân Release — Nguyễn Văn A' });
+    expect(userSwitch).toHaveAttribute('aria-checked', 'false');
+    fireEvent.click(userSwitch);
+    await waitFor(() => expect(calls.some((c) => c.method === 'PUT' && c.url === '/api/admin/release-personal-area-pref')).toBe(true));
+    expect(calls.find((c) => c.method === 'PUT' && c.url === '/api/admin/release-personal-area-pref')?.body).toMatchObject({ userId: 2, enabled: true, rowVersion: 0 });
+  });
+
+  it('2026-09-26: không có user nào đủ điều kiện -> hiện thông báo rỗng, không có switch nào', async () => {
+    baseFetchMock();
+    renderAdmin();
+    fireEvent.click(screen.getByRole('button', { name: 'Release' }));
+    await waitFor(() => expect(screen.getByText('Vùng Cá nhân trong Release — theo từng người')).toBeInTheDocument());
+    expect(screen.getByText('Chưa có user nào đủ điều kiện.')).toBeInTheDocument();
   });
 });
 

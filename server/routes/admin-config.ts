@@ -149,4 +149,72 @@ router.put('/admin/release-task-autogen', requireSession, requireActiveAccount, 
   }
 });
 
+// ── GET/PUT /admin/release-personal-area-users — bật/tắt riêng "vùng cá nhân" Release cho TỪNG USER
+// (2026-09-26, docs/exchanges/2026-09-26.md) — KHÁC 'release-task-autogen' ở trên (theo từng TEAM).
+// Chỉ liệt kê user thuộc ÍT NHẤT 1 team đã đủ 3 cờ (release + personal_task + autogen team) — user
+// không thuộc team nào đủ điều kiện thì Admin không thấy/không sửa được gì cho họ ở đây (đúng yêu cầu
+// "không phải user nào cũng setting được"). Xem server/lib/authorize.ts:assertPersonalReleaseAreaEnabled()
+// cho phía enforce thật.
+router.get('/admin/release-personal-area-users', requireSession, requireActiveAccount, (req, res) => {
+  authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'release_personal_area_pref', action: 'read', scope: {} });
+  const rows = db.prepare(`
+    SELECT DISTINCT u.id, u.email, u.display_name, u.avatar,
+      COALESCE(p.enabled, 0) as enabled, COALESCE(p.row_version, 0) as row_version
+    FROM users u
+    JOIN team_members tm ON tm.user_id = u.id
+    JOIN team_release_task_autogen_settings a ON a.team_id = tm.team_id AND a.enabled = 1
+    JOIN team_feature_visibility rv ON rv.team_id = tm.team_id AND rv.feature = 'release' AND rv.level = 'on'
+    JOIN team_feature_visibility pv ON pv.team_id = tm.team_id AND pv.feature = 'personal_task' AND pv.level = 'on'
+    LEFT JOIN user_release_personal_area_pref p ON p.user_id = u.id
+    ORDER BY u.display_name
+  `).all();
+  res.json({ users: rows });
+});
+
+// "Không phải user nào cũng setting được" (yêu cầu trực tiếp, docs/exchanges/2026-09-26.md) — PUT tự
+// chặn user chưa đủ 3 điều kiện team (release + personal_task + autogen), không chỉ ẩn ở danh sách GET.
+function isEligibleForPersonalArea(userId: number): boolean {
+  return Boolean(db.prepare(`
+    SELECT 1 FROM team_members tm
+    JOIN team_release_task_autogen_settings a ON a.team_id = tm.team_id AND a.enabled = 1
+    JOIN team_feature_visibility rv ON rv.team_id = tm.team_id AND rv.feature = 'release' AND rv.level = 'on'
+    JOIN team_feature_visibility pv ON pv.team_id = tm.team_id AND pv.feature = 'personal_task' AND pv.level = 'on'
+    WHERE tm.user_id = ?
+  `).get(userId));
+}
+
+router.put('/admin/release-personal-area-pref', requireSession, requireActiveAccount, (req, res) => {
+  authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'release_personal_area_pref', action: 'update', scope: {} });
+  const body = req.body as { userId?: number; enabled?: boolean; rowVersion?: number };
+  const userId = Number(body.userId);
+  if (!Number.isInteger(userId)) return res.status(400).json({ message: 'userId không hợp lệ' });
+  if (typeof body.enabled !== 'boolean') return res.status(400).json({ message: 'enabled phải là boolean' });
+  if (!db.prepare('SELECT 1 FROM users WHERE id = ?').get(userId)) return res.status(404).json({ message: 'Không tìm thấy user' });
+  if (!isEligibleForPersonalArea(userId)) {
+    return res.status(404).json({ message: 'User chưa thuộc team nào đủ điều kiện (release + personal_task + autogen)' });
+  }
+
+  try {
+    withTransaction(() => {
+      const now = new Date().toISOString();
+      const existing = db.prepare('SELECT row_version FROM user_release_personal_area_pref WHERE user_id = ?').get(userId) as { row_version: number } | undefined;
+      if (!existing) {
+        db.prepare(`
+          INSERT INTO user_release_personal_area_pref (user_id, enabled, updated_at, updated_by, row_version) VALUES (?, ?, ?, ?, 1)
+        `).run(userId, body.enabled ? 1 : 0, now, req.user!.id);
+      } else {
+        const updated = db.prepare(`
+          UPDATE user_release_personal_area_pref SET enabled = ?, updated_at = ?, updated_by = ?, row_version = row_version + 1
+          WHERE user_id = ? AND row_version = ?
+        `).run(body.enabled ? 1 : 0, now, req.user!.id, userId, body.rowVersion ?? -1);
+        if (updated.changes === 0) throw new HttpError(409, 'Có người vừa đổi cấu hình này, vui lòng tải lại', 'VERSION_CONFLICT');
+      }
+      writeAudit(req.user!.id, null, 'release_personal_area_pref.update', `user:${userId}`, { enabled: body.enabled });
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    sendRouteError(res, error, 'Không đổi được quyền dùng vùng cá nhân');
+  }
+});
+
 export default router;

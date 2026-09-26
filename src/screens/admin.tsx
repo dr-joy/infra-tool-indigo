@@ -23,6 +23,9 @@ interface TeamRow { id: number; name: string; description: string | null; row_ve
 interface TeamMemberRow { id: number; email: string; display_name: string; avatar: string | null; role: 'leader' | 'member'; }
 interface VisibilityRow { team_id: number; feature: string; level: 'off' | 'on'; row_version: number; updated_at: string; }
 interface AutogenRow { team_id: number; enabled: 0 | 1; row_version: number; updated_at: string; }
+// 2026-09-26 — user thuộc ÍT NHẤT 1 team đủ điều kiện (release + personal_task + autogen team đều Bật);
+// enabled/row_version = 0 khi user chưa từng có dòng ở user_release_personal_area_pref (mặc định Tắt).
+interface PersonalAreaUserRow { id: number; email: string; display_name: string; avatar: string | null; enabled: 0 | 1; row_version: number; }
 interface JoinRequestRow {
   id: number; user_id: number; email: string; display_name: string;
   requested_team_id: number; requested_role: 'leader' | 'member'; row_version: number; created_at: string;
@@ -350,21 +353,24 @@ function AdminReleaseConfig() {
   const [teams, setTeams] = useState<TeamRow[]>([]);
   const [coord, setCoord] = useState<{ release_coordinator_team_id: number | null; row_version: number } | null>(null);
   const [autogen, setAutogen] = useState<AutogenRow[]>([]);
+  const [personalAreaUsers, setPersonalAreaUsers] = useState<PersonalAreaUserRow[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
   async function tai(alive?: { current: boolean }) {
     try {
-      const [t, c, a] = await Promise.all([
+      const [t, c, a, pu] = await Promise.all([
         api<{ teams: TeamRow[] }>('/api/admin/teams?limit=200'),
         api<{ release_coordinator_team_id: number | null; row_version: number }>('/api/admin/release-coordinator'),
-        api<{ settings: AutogenRow[] }>('/api/admin/release-task-autogen')
+        api<{ settings: AutogenRow[] }>('/api/admin/release-task-autogen'),
+        api<{ users: PersonalAreaUserRow[] }>('/api/admin/release-personal-area-users')
       ]);
       if (alive && !alive.current) return;
       setTeams(t.teams);
       setCoord(c);
       setAutogen(a.settings);
+      setPersonalAreaUsers(pu.users);
       setError('');
     } catch (e) {
       if (alive && !alive.current) return;
@@ -405,6 +411,24 @@ function AdminReleaseConfig() {
       });
       await tai();
       toast('Đã đổi cấu hình Tab cá nhân Release');
+    } catch (e) {
+      setError(loiThanThien(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function togglePersonalArea(userId: number) {
+    const row = personalAreaUsers.find((u) => u.id === userId);
+    setBusy(true);
+    setError('');
+    try {
+      await api('/api/admin/release-personal-area-pref', {
+        method: 'PUT',
+        body: JSON.stringify({ userId, enabled: !(row?.enabled), rowVersion: row?.row_version ?? -1 })
+      });
+      await tai();
+      toast('Đã đổi quyền dùng vùng Cá nhân Release');
     } catch (e) {
       setError(loiThanThien(e));
     } finally {
@@ -464,6 +488,44 @@ function AdminReleaseConfig() {
             );
           })}
         </div>
+      </div>
+
+      <div className="rounded-lg border bg-white p-4">
+        <h3 className="mb-1 text-sm font-semibold text-slate-700">Vùng Cá nhân trong Release — theo từng người</h3>
+        <p className="mb-2 text-xs text-slate-500">
+          Chỉ liệt kê user thuộc ít nhất 1 team đã Bật đủ Release + Tab cá nhân ở trên. Mặc định Tắt —
+          user không thấy nút "Cá nhân" ở màn Release cho tới khi Admin bật riêng ở đây.
+        </p>
+        {personalAreaUsers.length === 0 ? (
+          <p className="text-xs text-slate-400">Chưa có user nào đủ điều kiện.</p>
+        ) : (
+          <div className="divide-y">
+            {personalAreaUsers.map((u) => {
+              const on = !!u.enabled;
+              return (
+                <div key={u.id} className="flex items-center justify-between py-2">
+                  <div className="flex flex-col">
+                    <span className="text-sm">{u.display_name}</span>
+                    <span className="text-xs text-slate-400">{u.email}</span>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={on}
+                    aria-label={`Vùng Cá nhân Release — ${u.display_name}`}
+                    disabled={busy}
+                    onClick={() => togglePersonalArea(u.id)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${on ? 'bg-teal-600' : 'bg-slate-300'}`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${on ? 'translate-x-6' : 'translate-x-1'}`}
+                    />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

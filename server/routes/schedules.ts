@@ -8,7 +8,7 @@ import {
   compareReleaseTaskDefinitions, type ReleaseTaskDefinitionRow, type DefinitionTargetPayload, type TaskRowForDiff
 } from '../lib/release-render.js';
 import { requireSession, requireActiveAccount, actorFromRequest } from '../lib/auth-middleware.js';
-import { authorize } from '../lib/authorize.js';
+import { authorize, assertPersonalReleaseAreaEnabled } from '../lib/authorize.js';
 
 // CR-20260913 Lát 6 (§6.3) — retrofit auth: file này (release ĐỊNH KỲ hiện tại + nhánh khẩn cấp CŨ,
 // đơn-team, tiền Lát 6) trước đây KHÔNG hề qua requireSession/authorize() — cùng lớp lỗ hổng đã tìm ở
@@ -42,6 +42,10 @@ import { authorize } from '../lib/authorize.js';
 function requireOwnPersonalTaskSchedule(req: Parameters<typeof actorFromRequest>[0]) {
   const actor = actorFromRequest(req);
   authorize({ actor, policyKind: 'personal_task', resource: 'personal_task', action: 'own', scope: { ownerId: actor.userId } });
+  // 2026-09-26 (docs/exchanges/2026-09-26.md) — mọi route file này đều thuộc "vùng cá nhân" Release
+  // (sync/sinh task từ định nghĩa cá nhân), khác resource 'personal_task' dùng ở tasks.ts (Task cá nhân
+  // nói chung, KHÔNG gate bởi cờ này) — xem authorize.ts:assertPersonalReleaseAreaEnabled().
+  assertPersonalReleaseAreaEnabled(actor);
   return actor;
 }
 
