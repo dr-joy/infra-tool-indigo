@@ -237,6 +237,29 @@ Không đụng.
   pass 100%. Ngoài phạm vi đợt này (để dành cho lượt riêng): `quick-add-*`/`quick-project-*` (thuộc
   popup "thêm task nhanh" của Task cá nhân/Project, không phải file dùng chung thật).
 
+- **Council review Pha 2 XONG (run `759c9024`, Codex 2 lượt `invalid_turn_output` — Claude tự tổng
+  hợp).** Tìm ra và đã SỬA (commit `d8116b99`): popup `TeamSwitcher` mở xuống dưới (`top-full`) sau
+  khi dời xuống chân sidebar sẽ tràn khỏi viewport, bị `overflow-hidden` của `<main>` cắt mất — đổi
+  hướng mở lên trên (`bottom-full`). Council cũng nêu 1 điểm CẦN CÂN NHẮC, chưa sửa (nằm ngoài phạm
+  vi Pha 2 đã khai): topbar mới lấy tiêu đề từ `i18nKey` của tab (số nhiều, vd "Projects"), trong khi
+  `project.tsx:729` vẫn tự vẽ `<h2>{t('project.title')}</h2>` riêng (số ít, "Project") làm header cho
+  sidebar-con CỦA MÀN Project — không hẳn trùng lặp (2 ngữ cảnh khác nhau: tiêu đề app-level vs tiêu
+  đề panel danh sách project bên trong màn), nhưng cần Dev quyết định khi tới lượt di trú màn Project
+  (Pha 3): giữ nguyên, đổi chữ cho khác biệt rõ hơn, hay bỏ hẳn. Chưa quyết định vội để không tự ý
+  đụng vào cấu trúc màn Project trước đúng lượt của nó.
+
+- **Pha 3 — đợt 2/N XONG (commit `60f9a43f`, nhánh `feature/style-cham-nua-dem`) — màn Settings (màn
+  đầu tiên theo thứ tự dễ→khó).** Di trú `settings.tsx` (PIC/Redmine/Phím tắt). Phát hiện thêm 1 điểm
+  đòn bẩy cao trong lúc làm: rule nền `input`/`textarea`/`select` ở `@layer base` (`styles.css`) vẫn
+  hardcode `bg-white` + mũi tên SVG của `<select>` hardcode màu gần-đen (`#111827`) — ảnh hưởng MỌI ô
+  nhập/droplist trong toàn app, không riêng Settings. Đã sửa: `bg-surface`/`text-muc`, focus dùng
+  token primary, mũi tên SVG đổi sang hex hiện tại của `--color-muted` (data-URI không dùng `var()`
+  được, đã ghi chú rõ trong code). Cũng xác nhận thêm 1 quy tắc cần áp dụng nhất quán cho các màn
+  sau: Tailwind class `border` (không kèm màu) trên `<div>`/`<button>` dùng màu xám nhạt MẶC ĐỊNH của
+  Tailwind (không phải `--color-border` của app) — phải thêm `border-vien` tường minh; riêng
+  `<input>`/`<textarea>`/`<select>` thì KHÔNG cần vì rule nền ở trên đã lo (trừ khi JSX tự ghi đè bằng
+  1 class màu viền khác). `npm run check` xanh 10/11 cổng.
+
 ## 11. Docs cần cập nhật sau khi làm xong
 
 - [ ] `docs/standards/design-standard.md` (bộ token mới) · [ ] không đụng docs/01-05 khác (không đổi
