@@ -3,30 +3,47 @@
 @tailwind utilities;
 
 /* Design token — nguồn canonical duy nhất cho màu/typography/spacing/control (BL-20260913-005,
-   CR-20260913-c). tailwind.config.js CHỈ ánh xạ var(--...) từ đây, không định nghĩa hex riêng.
-   Mở rộng từ pattern đã có `--project-task-frame-height` (dòng ~322 khi CR này viết) thành lớp
-   token toàn cục. Radius/shadow KHÔNG có token riêng: kiểm kê thực tế (2026-09-13) cho thấy
-   rounded-md/rounded-lg và shadow-sm đã nhất quán, không có drift đáng kể — Council quyết định
-   chỉ thêm token khi có drift thật, không thêm cho đủ bộ. Đổi giá trị ở đây thì phải chạy
-   `node scripts/check-design-tokens.mjs` để cập nhật baseline nếu cần. */
+   CR-20260913-c; bảng màu đổi sang "Chàm Nửa Đêm" theo CR-20260926-giao-dien-cham-nua-dem — Pha 1).
+   tailwind.config.js CHỈ ánh xạ var(--...) từ đây, không định nghĩa hex riêng.
+   Mở rộng từ pattern đã có `--project-task-frame-height` (dòng ~322 khi CR-20260913-c viết) thành
+   lớp token toàn cục. Đổi giá trị ở đây thì phải chạy `node scripts/gen-design-tokens-baseline.mjs`
+   để cập nhật baseline, rồi `node scripts/check-design-tokens.mjs` để xác nhận xanh. */
 @layer base {
   :root {
     /* Màu ngữ nghĩa — border/text/muted tái dùng đúng hex vien/muc/phu đã có trong
        tailwind.config.js (không tạo hệ đặt tên song song); primary/surface/record/danger/warning/
-       success là khái niệm mới, giá trị chọn theo màu ĐANG dùng nhiều nhất thật trong code (không
-       phải chọn tuỳ ý — xem inventory trong CR-20260913-c). */
-    --color-bg: #f6f8f7;
-    --color-surface: #ffffff;
-    --color-border: #9ca3af;
-    --color-text: #1f2a2e;
-    --color-muted: #647174;
-    --color-primary: #0d9488;
-    --color-primary-hover: #0f766e;
-    --color-primary-soft: #f0fdfa;
-    --color-record: #f43f5e;
-    --color-danger: #dc2626;
-    --color-warning: #b45309;
-    --color-success: #059669;
+       success là khái niệm mới. Giá trị dưới đây là bảng "Chàm Nửa Đêm" đã chốt qua Council +
+       prototype (link: https://claude.ai/code/artifact/7e12a424-42bd-4e40-ae47-2eb4b9b95685) —
+       đây là giao diện tối DUY NHẤT, Leader xác nhận 26/09 không cần fallback sáng. */
+    --color-bg: #12131f;
+    --color-surface: #1b1d2e;
+    --color-surface-2: #20223a;
+    --color-border: #33364d;
+    --color-text: #e7e8f2;
+    --color-muted: #9498b3;
+    --color-muted-2: #6b7093;
+    --color-primary: #5ad1c9;
+    --color-primary-hover: #78ded5;
+    --color-primary-soft: #153331;
+    --color-on-primary: #062421;
+    --color-secondary: #d68bd0;
+    --color-secondary-soft: #301f33;
+    --color-on-secondary: #2c1730;
+    --color-record: #e08bab;
+    --color-danger: #e08b8b;
+    --color-warning: #e3b96e;
+    --color-success: #7fd08f;
+
+    /* Bo góc — MỚI (CR-20260926), thay `rounded-md`/`rounded-lg` hardcode bằng token để khớp
+       thang "Chàm Nửa Đêm" (nhỏ hơn thang Tailwind mặc định: 6/8px). */
+    --radius-sm: 5px;
+    --radius-md: 8px;
+    --radius-lg: 10px;
+
+    /* Shadow — MỚI (CR-20260926), đậm hơn hẳn bản sáng cũ (`shadow-mem`) vì nền tối cần shadow
+       tối/đậm hơn mới thấy được độ nổi. */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.5);
 
     /* Typography theo VAI TRÒ (label/body/heading), không phải theo số — mỗi vai trò khớp đúng
        cỡ Tailwind đang dùng nhiều nhất thật (text-xs/text-sm/text-xl), kèm line-height cùng cặp. */
@@ -48,6 +65,8 @@
        dùng nhiều nhất thật trong code. */
     --control-height: 2rem;
     --control-icon-size: 16px;
+
+    color-scheme: dark;
   }
 
   * {
