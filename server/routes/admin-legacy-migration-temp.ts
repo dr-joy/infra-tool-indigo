@@ -22,7 +22,7 @@ import { dataDir } from '../paths.js';
 import { requireSession, requireActiveAccount, actorFromRequest } from '../lib/auth-middleware.js';
 import { authorize } from '../lib/authorize.js';
 import { writeAudit } from '../lib/audit.js';
-import { sendRouteError } from '../lib/utils.js';
+import { HttpError, sendRouteError } from '../lib/utils.js';
 import {
   createVerifiedBackup, ensureDev13Identity, backfillDev13Scope, backfillReleasePersonalOwnership,
   BACKUP_VERIFY_TABLES
@@ -64,7 +64,21 @@ router.post('/admin/legacy-data/migrate', requireSession, requireActiveAccount, 
     writeAudit(actor.userId, teamId, 'legacy_data.migrate', `team:${teamId}`, { ...scopeCounts, ...releaseCounts });
     res.json({ ok: true, teamId, ...scopeCounts, ...releaseCounts });
   } catch (error) {
-    sendRouteError(res, error, 'Không chạy được bước di trú dữ liệu cũ');
+    // 2026-09-26 — CHỈ route tạm này mới trả `detail` (message gốc của lỗi) ra client, khác hành vi
+    // an toàn mặc định của sendRouteError. Lý do: Admin gọi route này KHÔNG có SSH để tự xem log
+    // server console (nơi sendRouteError vẫn ghi đầy đủ), nên cần tự đọc được lý do thật để biết
+    // hướng xử lý (vd "team đã có Leader khác", "có >1 project hệ thống chưa gán team") — đúng tinh
+    // thần "route thay SSH" của cả file này. Route này Admin-only + xoá sau khi dùng xong, không áp
+    // dụng cho route khác.
+    if (error instanceof HttpError) {
+      sendRouteError(res, error, 'Không chạy được bước di trú dữ liệu cũ');
+    } else {
+      console.error('[route-error]', error);
+      res.status(500).json({
+        message: 'Không chạy được bước di trú dữ liệu cũ',
+        detail: error instanceof Error ? error.message : String(error)
+      });
+    }
   }
 });
 
