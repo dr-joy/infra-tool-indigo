@@ -107,8 +107,19 @@ export function InfoTip({ children, className = '' }: { children: React.ReactNod
   }
 
   return (
-    <span ref={iconRef} className={`group relative inline-flex align-middle ${className}`} onMouseEnter={placeTip} onFocus={placeTip}>
-      <Info size={16} className="cursor-help text-primary" aria-hidden="true" tabIndex={0} />
+    <span
+      ref={iconRef}
+      className={`group relative inline-flex align-middle ${className}`}
+      onMouseEnter={placeTip}
+      onFocus={placeTip}
+      tabIndex={0}
+      role="button"
+      aria-label="Xem giải thích thêm"
+    >
+      {/* Council review Pha 3 (run bc2f9540) phát hiện: icon KHÔNG được vừa aria-hidden vừa
+          tabIndex — trình đọc màn hình bỏ qua hoàn toàn 1 điểm dừng Tab, không có tên. Chuyển
+          tabIndex + nhãn lên span bao ngoài, icon bên trong giữ aria-hidden vì đã có nhãn ở ngoài. */}
+      <Info size={16} className="cursor-help text-primary" aria-hidden="true" />
       <span
         ref={tipRef}
         style={tipStyle}
