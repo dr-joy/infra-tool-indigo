@@ -571,6 +571,23 @@ export function ManHinhLenLich({ onTasksCreated }: { onTasksCreated: (date?: str
   const { t } = useLang();
   const [khuVuc, setKhuVuc] = useState<KhuVucLenLich>('ca_nhan');
   const [releaseType, setReleaseType] = useState<ReleaseType>('khan_cap');
+  // 2026-09-26 (docs/exchanges/2026-09-26.md) — Admin bật/tắt riêng cho TỪNG USER quyền dùng "vùng cá
+  // nhân". null = đang tải (coi như false, an toàn hơn là loé hiện rồi ẩn lại). Route
+  // personal-area-status chỉ là gợi ý hiển thị — mọi route ghi/đọc thật bên trong vẫn tự kiểm lại.
+  const [caNhanDuocDung, setCaNhanDuocDung] = useState<boolean | null>(null);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const status = await api<{ enabled: boolean }>('/api/release/schedule/personal-area-status');
+        if (alive) setCaNhanDuocDung(status.enabled);
+      } catch {
+        if (alive) setCaNhanDuocDung(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+  const hienVungCaNhan = khuVuc === 'ca_nhan' && Boolean(caNhanDuocDung);
 
   return (
     <section className="man-hinh-len-lich">
@@ -586,21 +603,23 @@ export function ManHinhLenLich({ onTasksCreated }: { onTasksCreated: (date?: str
           <div className="release-type-options">
             <button
               type="button"
-              className={`release-type-button ${khuVuc === 'lich_chung' ? 'release-type-button-active' : ''}`}
+              className={`release-type-button ${!hienVungCaNhan ? 'release-type-button-active' : ''}`}
               onClick={() => setKhuVuc('lich_chung')}
             >
               Lịch chung
             </button>
-            <button
-              type="button"
-              className={`release-type-button ${khuVuc === 'ca_nhan' ? 'release-type-button-active' : ''}`}
-              onClick={() => setKhuVuc('ca_nhan')}
-            >
-              Cá nhân
-            </button>
+            {caNhanDuocDung && (
+              <button
+                type="button"
+                className={`release-type-button ${khuVuc === 'ca_nhan' ? 'release-type-button-active' : ''}`}
+                onClick={() => setKhuVuc('ca_nhan')}
+              >
+                Cá nhân
+              </button>
+            )}
           </div>
         </div>
-        {khuVuc === 'ca_nhan' && (
+        {hienVungCaNhan && (
           <div className="release-type-field">
             <span className="release-type-label">{t('release.type')}</span>
             <div className="release-type-options">
@@ -623,7 +642,7 @@ export function ManHinhLenLich({ onTasksCreated }: { onTasksCreated: (date?: str
         )}
       </div>
 
-      {khuVuc === 'lich_chung' ? (
+      {!hienVungCaNhan ? (
         <ManHinhLichReleaseChung />
       ) : (
         releaseType === 'dinh_ky' ? <LayoutReleaseDinhKy onTasksCreated={onTasksCreated} /> : <LayoutReleaseKhanCap onTasksCreated={onTasksCreated} />

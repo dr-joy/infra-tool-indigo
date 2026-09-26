@@ -39,8 +39,11 @@ const flow = loginFlow(() => base, mockAuth.issueAuthCode);
 const onboarding = makeOnboardingHelpers(() => base, flow);
 const adminSession = await flow.loginAs(ADMIN_EMAIL, 'Admin Thật', 'reply-to-def-itest-admin-sub');
 const teamId = await onboarding.makeTeam(adminSession, '[itest] Team Reply To Def');
+await onboarding.setFeatureVisibility(adminSession, teamId, 'release', 'on');
 await onboarding.setFeatureVisibility(adminSession, teamId, 'personal_task', 'on');
+await onboarding.enableAutogen(adminSession, teamId);
 const actor = await onboarding.joinAndApprove('reply-to-def-itest@drjoy.jp', 'Người test reply-to-def', teamId, 'member', adminSession);
+await onboarding.enablePersonalAreaPref(adminSession, actor.userId);
 const authHeaders = flow.H(actor.session);
 
 after(async () => {

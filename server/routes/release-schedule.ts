@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { db, withTransaction } from '../db.js';
 import { HttpError, sendRouteError } from '../lib/utils.js';
 import { requireSession, requireActiveAccount, actorFromRequest } from '../lib/auth-middleware.js';
-import { authorize, assertTeamFeatureOn } from '../lib/authorize.js';
+import { authorize, assertTeamFeatureOn, assertPersonalReleaseAreaEnabled, personalReleaseAreaEnabled } from '../lib/authorize.js';
 import { writeAudit } from '../lib/audit.js';
 import { vietnamDateKey } from '../lib/vn-time.js';
 import { VALID_EMERGENCY_SYSTEMS } from './schedules.js';
@@ -621,6 +621,16 @@ router.get('/release/schedule-board', requireSession, requireActiveAccount, (req
   }
 });
 
+// ── 2026-09-26 (docs/exchanges/2026-09-26.md) — gate CẤP CAO NHẤT cho FE: có nên hiện nút "Cá nhân"
+// (cạnh "Lịch chung") ở màn Release hay ẩn hẳn. KHÔNG cần `teamId` (khác route personal-task-status
+// ngay dưới) vì đây là quyết định của Admin theo TỪNG USER (assertPersonalReleaseAreaEnabled), không
+// theo team đang chọn — chỉ cần actor đủ điều kiện ở BẤT KỲ team nào là đủ. Đây cũng chỉ là gợi ý hiển
+// thị (không throw 403) — mọi route ghi/đọc thật bên trong vùng cá nhân đều tự gọi lại đúng hàm này.
+router.get('/release/schedule/personal-area-status', requireSession, requireActiveAccount, (req, res) => {
+  const actor = actorFromRequest(req);
+  res.json({ enabled: personalReleaseAreaEnabled(actor) });
+});
+
 // ── 2026-09-23 (nối Tab cá nhân FR-28a vào release.tsx) — actor tự kiểm team đang chọn có dùng được
 // "áp dụng checklist cá nhân theo lịch team" không, để FE ẩn/hiện nút cho gọn (KHÔNG phải nguồn phân
 // quyền — 2 route personal-emergency-tasks/personal-regular-tasks bên dưới vẫn tự kiểm lại đầy đủ
@@ -649,6 +659,7 @@ router.post('/release/schedule/personal-emergency-tasks', requireSession, requir
   try {
     const actor = actorFromRequest(req);
     authorize({ actor, policyKind: 'personal_task', resource: 'emergency_release_task_definition_personal', action: 'own', scope: { ownerId: actor.userId } });
+    assertPersonalReleaseAreaEnabled(actor);
 
     const body = req.body as { teamId?: number; cycleId?: number; locale?: string };
     const teamId = parseIntIdOrThrow(body.teamId, 'teamId');
@@ -753,6 +764,7 @@ router.post('/release/schedule/personal-regular-tasks', requireSession, requireA
   try {
     const actor = actorFromRequest(req);
     authorize({ actor, policyKind: 'personal_task', resource: 'release_task_definition_personal', action: 'own', scope: { ownerId: actor.userId } });
+    assertPersonalReleaseAreaEnabled(actor);
 
     const body = req.body as { teamId?: number; cycleId?: number };
     const teamId = parseIntIdOrThrow(body.teamId, 'teamId');

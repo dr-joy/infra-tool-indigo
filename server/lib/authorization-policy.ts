@@ -219,6 +219,13 @@ export const AUTHORIZATION_POLICY: Record<string, Record<string, PolicyEntry>> =
     read: { feature: null, roles: ['admin'] },
     update: { feature: null, roles: ['admin'] }
   },
+  // 2026-09-26 (docs/exchanges/2026-09-26.md) — Admin bật/tắt riêng "vùng cá nhân" trong Release cho
+  // TỪNG USER (khác 'release_task_autogen_setting' ở trên, vốn theo TỪNG TEAM). Toàn cục, giống khuôn
+  // 'feature_visibility'/'release_task_autogen_setting' — chỉ Admin đọc/sửa được.
+  release_personal_area_pref: {
+    read: { feature: null, roles: ['admin'] },
+    update: { feature: null, roles: ['admin'] }
+  },
 
   // Lát 6 (FR-23c/FR-28a) — template/định nghĩa task cá nhân (định kỳ + khẩn cấp) của TỪNG NGƯỜI. Dùng
   // policyKind 'personal_task' (feature 'personal_task' — điều kiện bắt buộc: chỉ có tác dụng khi Task

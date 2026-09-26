@@ -174,5 +174,32 @@ export function makeOnboardingHelpers(getBase: () => string, flow: LoginFlow) {
     return { session, userId: me.user.id };
   }
 
-  return { makeTeam, setFeatureVisibility, joinAndApprove };
+  // 2026-09-26 — Admin bật autogen cho TEAM (điều kiện CẦN, cùng bảng team_release_task_autogen_settings
+  // dùng ở nhiều file test trước đây tự viết inline — gom lại đây để dùng chung, không đổi hành vi).
+  async function enableAutogen(adminSession: string, teamId: number): Promise<void> {
+    const list = await (await fetch(`${getBase()}/api/admin/release-task-autogen`, { headers: flow.H(adminSession) })).json() as
+      { settings: { team_id: number; row_version: number }[] };
+    const current = list.settings.find((s) => s.team_id === teamId);
+    const res = await fetch(`${getBase()}/api/admin/release-task-autogen`, {
+      method: 'PUT', headers: flow.H(adminSession), body: JSON.stringify({ teamId, enabled: true, rowVersion: current?.row_version })
+    });
+    if (!res.ok) throw new Error(`enableAutogen(${teamId}) thất bại: ${res.status}`);
+  }
+
+  // 2026-09-26 (docs/exchanges/2026-09-26.md) — Admin bật riêng cho TỪNG USER quyền dùng "vùng cá nhân"
+  // Release (server/lib/authorize.ts:assertPersonalReleaseAreaEnabled()). KHÁC setFeatureVisibility/
+  // enableAutogen (2 cái đó chỉ lo điều kiện CẦN theo team) — thiếu bước này thì mọi route thuộc vùng
+  // cá nhân (release.ts/schedules.ts/2 route sinh task cá nhân) đều 403 dù team đã đủ điều kiện.
+  async function enablePersonalAreaPref(adminSession: string, userId: number): Promise<void> {
+    const list = await (await fetch(`${getBase()}/api/admin/release-personal-area-users`, { headers: flow.H(adminSession) })).json() as
+      { users: { id: number; row_version: number }[] };
+    const current = list.users.find((u) => u.id === userId);
+    if (!current) throw new Error(`enablePersonalAreaPref: user ${userId} chưa đủ điều kiện (team chưa Bật đủ release+personal_task+autogen)`);
+    const res = await fetch(`${getBase()}/api/admin/release-personal-area-pref`, {
+      method: 'PUT', headers: flow.H(adminSession), body: JSON.stringify({ userId, enabled: true, rowVersion: current.row_version })
+    });
+    if (!res.ok) throw new Error(`enablePersonalAreaPref(${userId}) thất bại: ${res.status}`);
+  }
+
+  return { makeTeam, setFeatureVisibility, joinAndApprove, enableAutogen, enablePersonalAreaPref };
 }

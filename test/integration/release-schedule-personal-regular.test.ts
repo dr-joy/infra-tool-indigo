@@ -72,6 +72,23 @@ async function setReleaseCoordinator(teamId: number): Promise<void> {
 }
 await setReleaseCoordinator(teamCoord);
 
+// 2026-09-26 (docs/exchanges/2026-09-26.md) — outsider PHẢI đủ điều kiện dùng vùng cá nhân (qua chính
+// teamOutsider của nó) để test "actor không thuộc teamWork -> NOT_TEAM_MEMBER" (dòng ~124) đi đúng
+// nhánh kiểm teamId cụ thể, không bị chặn sớm hơn bởi gate chung mới thêm — cùng tinh thần comment gốc
+// ở khai báo teamOutsider phía trên cho gate personal_task cũ.
+{
+  const listAutogen = await (await fetch(`${base}/api/admin/release-task-autogen`, { headers: flow.H(adminSession) })).json() as
+    { settings: { team_id: number; row_version: number }[] };
+  const currentOutsider = listAutogen.settings.find((s) => s.team_id === teamOutsider);
+  await onboarding.setFeatureVisibility(adminSession, teamOutsider, 'release', 'on');
+  const enableOutsiderAutogen = await fetch(`${base}/api/admin/release-task-autogen`, {
+    method: 'PUT', headers: flow.H(adminSession),
+    body: JSON.stringify({ teamId: teamOutsider, enabled: true, rowVersion: currentOutsider?.row_version })
+  });
+  if (!enableOutsiderAutogen.ok) throw new Error(`bật autogen cho teamOutsider thất bại: ${enableOutsiderAutogen.status}`);
+  await onboarding.enablePersonalAreaPref(adminSession, outsider.userId);
+}
+
 after(async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
   await mockAuth.close();
@@ -98,6 +115,9 @@ async function enableAutogen(teamId: number): Promise<void> {
     body: JSON.stringify({ teamId, enabled: true, rowVersion: current?.row_version })
   });
   if (!res.ok) throw new Error(`enableAutogen thất bại: ${res.status}`);
+  // 2026-09-26 (docs/exchanges/2026-09-26.md) — file này chỉ gọi enableAutogen(teamWork), actor vừa đủ
+  // điều kiện (release+personal_task đã Bật ở setup, autogen vừa Bật) nên GIỜ mới gọi được.
+  await onboarding.enablePersonalAreaPref(adminSession, actor.userId);
 }
 
 async function makeRegularCycle(date: string): Promise<number> {

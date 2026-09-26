@@ -193,5 +193,19 @@ export function applyReleaseSchema(db: DatabaseSync): void {
       updated_by INTEGER REFERENCES users(id),
       row_version INTEGER NOT NULL DEFAULT 1
     );
+
+    -- 2026-09-26 (docs/exchanges/2026-09-26.md) — Admin bật/tắt riêng cho TỪNG USER quyền dùng "vùng cá
+    -- nhân" trong Release (cả 2 phần: tự tạo template/task riêng VÀ tự sinh theo lịch team). KHÁC bảng
+    -- team_release_task_autogen_settings ở trên (đó là điều kiện CẦN theo team, bảng này là quyết định
+    -- CUỐI theo từng người — chỉ Admin sửa được, không phải self-service). Không có dòng = coi như Tắt
+    -- (mặc định Tắt cho MỌI user, kể cả user đã có dữ liệu từ trước — Leader xác nhận chấp nhận đánh
+    -- đổi này). Không có team_id vì template/task cá nhân vốn không gắn 1 team cụ thể (owner_user_id).
+    CREATE TABLE IF NOT EXISTS user_release_personal_area_pref (
+      user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      enabled INTEGER NOT NULL DEFAULT 0 CHECK (enabled IN (0, 1)),
+      updated_at TEXT NOT NULL,
+      updated_by INTEGER REFERENCES users(id),
+      row_version INTEGER NOT NULL DEFAULT 1
+    );
   `);
 }

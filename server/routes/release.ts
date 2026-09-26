@@ -13,7 +13,7 @@ import {
 import { normalizeTaskLinks, invalidTemplateTokens, sanitizeReleaseTemplateContent, hashEmergencyDefinitionSnapshot } from '../lib/utils.js';
 import { mapReleaseTemplate, mapReleaseTaskDefinition, mapEmergencyReleaseTaskDefinition } from '../lib/mappers.js';
 import { requireSession, requireActiveAccount, actorFromRequest } from '../lib/auth-middleware.js';
-import { authorize } from '../lib/authorize.js';
+import { authorize, assertPersonalReleaseAreaEnabled } from '../lib/authorize.js';
 import { writeAudit } from '../lib/audit.js';
 
 // CR-20260913 Lát 6 (§6.3, FR-23c/FR-28a) — 4 bảng ở file này ("checklist cá nhân": template + định
@@ -65,6 +65,9 @@ function resolveReplyToDefinitionId(
 function requirePersonalOwn(req: Parameters<typeof actorFromRequest>[0], resource: string) {
   const actor = actorFromRequest(req);
   authorize({ actor, policyKind: 'personal_task', resource, action: 'own', scope: { ownerId: actor.userId } });
+  // 2026-09-26 (docs/exchanges/2026-09-26.md) — gate riêng "vùng cá nhân" Release, xem
+  // server/lib/authorize.ts:assertPersonalReleaseAreaEnabled() để biết vì sao KHÔNG gộp vào authorize() ở trên.
+  assertPersonalReleaseAreaEnabled(actor);
   return actor;
 }
 
@@ -101,6 +104,7 @@ router.patch('/release/templates/:id', requireSession, requireActiveAccount, (re
   const actor = actorFromRequest(req);
   const row = db.prepare('SELECT owner_user_id FROM release_templates WHERE id = ?').get(String(req.params.id)) as { owner_user_id: number | null } | undefined;
   authorize({ actor, policyKind: 'personal_task', resource: 'release_template_personal', action: 'own', scope: { ownerId: row?.owner_user_id ?? -1 } });
+  assertPersonalReleaseAreaEnabled(actor);
   const body = req.body as ReleaseTemplateBody;
   const name = body.name?.trim();
   const content = sanitizeReleaseTemplateContent(body.content ?? '');
@@ -119,6 +123,7 @@ router.delete('/release/templates/:id', requireSession, requireActiveAccount, (r
   const actor = actorFromRequest(req);
   const row = db.prepare('SELECT owner_user_id FROM release_templates WHERE id = ?').get(String(req.params.id)) as { owner_user_id: number | null } | undefined;
   authorize({ actor, policyKind: 'personal_task', resource: 'release_template_personal', action: 'own', scope: { ownerId: row?.owner_user_id ?? -1 } });
+  assertPersonalReleaseAreaEnabled(actor);
   db.prepare('UPDATE release_task_definitions SET template_id = NULL WHERE template_id = ? AND owner_user_id = ?').run(String(req.params.id), actor.userId);
   const result = db.prepare('DELETE FROM release_templates WHERE id = ?').run(String(req.params.id));
   if (result.changes === 0) return res.status(404).json({ message: 'Không tìm thấy template' });
@@ -159,6 +164,7 @@ router.patch('/release/emergency/templates/:id', requireSession, requireActiveAc
   const actor = actorFromRequest(req);
   const row = db.prepare('SELECT owner_user_id FROM emergency_release_templates WHERE id = ?').get(String(req.params.id)) as { owner_user_id: number | null } | undefined;
   authorize({ actor, policyKind: 'personal_task', resource: 'emergency_release_template_personal', action: 'own', scope: { ownerId: row?.owner_user_id ?? -1 } });
+  assertPersonalReleaseAreaEnabled(actor);
   const body = req.body as ReleaseTemplateBody;
   const name = body.name?.trim();
   const content = sanitizeReleaseTemplateContent(body.content ?? '');
@@ -177,6 +183,7 @@ router.delete('/release/emergency/templates/:id', requireSession, requireActiveA
   const actor = actorFromRequest(req);
   const row = db.prepare('SELECT owner_user_id FROM emergency_release_templates WHERE id = ?').get(String(req.params.id)) as { owner_user_id: number | null } | undefined;
   authorize({ actor, policyKind: 'personal_task', resource: 'emergency_release_template_personal', action: 'own', scope: { ownerId: row?.owner_user_id ?? -1 } });
+  assertPersonalReleaseAreaEnabled(actor);
   db.prepare('UPDATE emergency_release_task_definitions SET template_id = NULL WHERE template_id = ? AND owner_user_id = ?').run(String(req.params.id), actor.userId);
   const result = db.prepare('DELETE FROM emergency_release_templates WHERE id = ?').run(String(req.params.id));
   if (result.changes === 0) return res.status(404).json({ message: 'Không tìm thấy template' });
@@ -248,6 +255,7 @@ router.patch('/release/emergency/task-definitions/:id', requireSession, requireA
   const actor = actorFromRequest(req);
   const existing = db.prepare('SELECT owner_user_id FROM emergency_release_task_definitions WHERE id = ?').get(String(req.params.id)) as { owner_user_id: number | null } | undefined;
   authorize({ actor, policyKind: 'personal_task', resource: 'emergency_release_task_definition_personal', action: 'own', scope: { ownerId: existing?.owner_user_id ?? -1 } });
+  assertPersonalReleaseAreaEnabled(actor);
   const body = req.body as EmergencyReleaseTaskDefinitionBody;
   const title = body.title?.trim();
   const timingToken = body.timingToken?.trim() as EmergencyTimingToken | undefined;
@@ -285,6 +293,7 @@ router.delete('/release/emergency/task-definitions/:id', requireSession, require
   const actor = actorFromRequest(req);
   const existing = db.prepare('SELECT owner_user_id FROM emergency_release_task_definitions WHERE id = ?').get(String(req.params.id)) as { owner_user_id: number | null } | undefined;
   authorize({ actor, policyKind: 'personal_task', resource: 'emergency_release_task_definition_personal', action: 'own', scope: { ownerId: existing?.owner_user_id ?? -1 } });
+  assertPersonalReleaseAreaEnabled(actor);
   // Council thiết kế run 7fd3e4d1: xoá definition đang được definition khác chọn làm nơi trả lời
   // phải báo lỗi, không âm thầm để dangling reply_to_definition_id.
   const referencedBy = db.prepare('SELECT id, title FROM emergency_release_task_definitions WHERE reply_to_definition_id = ? AND owner_user_id = ?')
@@ -339,6 +348,7 @@ router.patch('/release/task-definitions/:id', requireSession, requireActiveAccou
   const actor = actorFromRequest(req);
   const existing = db.prepare('SELECT owner_user_id FROM release_task_definitions WHERE id = ?').get(String(req.params.id)) as { owner_user_id: number | null } | undefined;
   authorize({ actor, policyKind: 'personal_task', resource: 'release_task_definition_personal', action: 'own', scope: { ownerId: existing?.owner_user_id ?? -1 } });
+  assertPersonalReleaseAreaEnabled(actor);
   const body = req.body as ReleaseTaskDefinitionBody;
   const title = body.title?.trim();
   const startTime = body.startTime?.trim();
@@ -365,6 +375,7 @@ router.delete('/release/task-definitions/:id', requireSession, requireActiveAcco
   const actor = actorFromRequest(req);
   const existing = db.prepare('SELECT owner_user_id FROM release_task_definitions WHERE id = ?').get(String(req.params.id)) as { owner_user_id: number | null } | undefined;
   authorize({ actor, policyKind: 'personal_task', resource: 'release_task_definition_personal', action: 'own', scope: { ownerId: existing?.owner_user_id ?? -1 } });
+  assertPersonalReleaseAreaEnabled(actor);
   const referencedBy = db.prepare('SELECT id, title FROM release_task_definitions WHERE reply_to_definition_id = ? AND owner_user_id = ?')
     .all(String(req.params.id), actor.userId) as { id: string; title: string }[];
   if (referencedBy.length > 0) {

@@ -71,6 +71,10 @@ async function enableAutogen(): Promise<void> {
     body: JSON.stringify({ teamId, enabled: true, rowVersion: current?.row_version })
   });
   if (!res.ok) throw new Error(`enableAutogen thất bại: ${res.status}`);
+  // 2026-09-26 (docs/exchanges/2026-09-26.md) — team vừa đủ điều kiện (release+personal_task đã Bật ở
+  // setup phía trên, autogen vừa Bật ở trên) nên GIỜ mới gọi được — gọi SỚM hơn (trước khi autogen Bật)
+  // sẽ bị chính enablePersonalAreaPref() từ chối vì actor chưa đủ điều kiện ở BẤT KỲ team nào.
+  await onboarding.enablePersonalAreaPref(adminSession, actor.userId);
 }
 
 test('FR-28a: Admin CHƯA bật Tab cá nhân cho team -> sinh task bị 403 FEATURE_DISABLED', async () => {
