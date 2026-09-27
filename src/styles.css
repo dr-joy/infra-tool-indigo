@@ -43,6 +43,17 @@
     --color-warning-soft: #332711;
     --color-success-soft: #173323;
 
+    /* Quy ước hover cho danger/secondary (Council review CR-20260926, run c45edac5, đợt 3-15 —
+       không có phản đối chặn, chỉ nêu "chưa có quy tắc thành văn"): không có token `*-hover` riêng
+       cho danger/secondary/warning/success như `--color-primary-hover`, vì 2 vai trò dùng đủ:
+       (1) nút nền đặc (background = chính màu đó, vd `.nut-nguy-hiem-text`,
+       `.release-manager-list > .nut-phu`) -> `hover:opacity-90`, không đổi màu nền;
+       (2) icon/toggle nền mờ theo tông (vd `.mm-fbtn-danger:hover`, `.mm-fbtn-on`) -> dùng
+       `color-mix(in srgb, var(--color-X) NN%, transparent)` giống hệt cách dựng token `*-soft`,
+       không phải mỗi nơi tự nghĩ ra cách riêng. `--color-primary-hover` là ngoại lệ có lý do: primary
+       là màu nền đặc dùng NHIỀU nhất trong app (mọi nút chính), nên xứng đáng 1 token riêng thay vì
+       lặp `hover:opacity-90` ở hàng chục chỗ. */
+
     /* Bo góc — MỚI (CR-20260926), thay `rounded-md`/`rounded-lg` hardcode bằng token để khớp
        thang "Chàm Nửa Đêm" (nhỏ hơn thang Tailwind mặc định: 6/8px). */
     --radius-sm: 5px;

@@ -38,6 +38,14 @@ export default {
         // secondary (accent phụ hồng tím) + chữ-trên-nền-primary/secondary.
         'surface-2': 'var(--color-surface-2)',
         'muted-2': 'var(--color-muted-2)',
+        // Quy tắc chọn primary hay secondary khi thay 1 màu xanh dương/indigo/sky hardcode cũ
+        // (Council review CR-20260926, run c45edac5, đợt 3-15 nêu: 2 đợt khác nhau đổi "cùng là
+        // xanh dương" ra 2 token khác nhau, không có quy tắc thành văn — ghi lại đây, KHÔNG phải giữ
+        // đúng tông màu gốc): xét VAI TRÒ phần tử, không xét hue cũ. Chữ định danh/nhãn đi kèm nội
+        // dung khác (vd tên PIC cạnh ngày tháng, `project.tsx`) -> `primary` (màu nhấn chính, dùng
+        // cho MỌI thứ "thông tin nổi bật" trong app). Nút hành động độc lập/toggle bật-tắt tách biệt
+        // khỏi luồng nút chính (vd nút thêm trong 1 popup phụ, toggle định dạng trong MindMap) ->
+        // `secondary` (accent phụ, để không lẫn với nút hành động primary chính của màn).
         secondary: 'var(--color-secondary)',
         'secondary-soft': 'var(--color-secondary-soft)',
         'on-primary': 'var(--color-on-primary)',
