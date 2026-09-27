@@ -25,6 +25,9 @@ export default {
         'primary-hover': 'var(--color-primary-hover)',
         'primary-soft': 'var(--color-primary-soft)',
         record: 'var(--color-record)',
+        // Màu thương hiệu app "Indigo" (2026-09-27) — logo sidebar/favicon, KHÔNG phải accent UI lặp
+        // lại (đó vẫn là primary/secondary), xem lý do tách trong src/styles.css :root.
+        brand: 'var(--color-brand)',
         // *-soft (Pha 3): dùng thay vì `bg-danger/15` v.v. — hậu tố opacity Tailwind KHÔNG sinh ra
         // rule nào cho màu custom dạng chuỗi `var(--...)` (xác nhận bằng build thật), nền sẽ trong
         // suốt âm thầm nếu dùng opacity trên các token này. Luôn dùng *-soft, không dùng /NN.

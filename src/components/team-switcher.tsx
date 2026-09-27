@@ -50,7 +50,12 @@ export function TeamSwitcher({ collapsed = false }: { collapsed?: boolean }) {
           // h-screen) — mở xuống dưới (top-full cũ) sẽ tràn khỏi viewport và bị `overflow-hidden`
           // của <main> cắt mất (Council review run 759c9024 phát hiện). Mở LÊN TRÊN thay vì xuống
           // dưới vì luôn còn đủ chỗ trống phía trên (toàn bộ chiều cao sidebar).
-          className="absolute bottom-full right-0 z-40 mb-1 w-72 rounded-md border border-vien bg-surface py-1 shadow-token-md"
+          // 2026-09-27: neo `right-0` khiến popup (w-72=288px) tràn NGANG khỏi sidebar hẹp — div bọc
+          // ngoài (`relative`) rộng bằng cả `.sidebar-foot` (~200-224px, hẹp hơn cả bình thường khi
+          // sidebar thu gọn), neo theo cạnh phải của nó đẩy popup lấn sang trái ra ngoài viewport, bị
+          // cắt mất phần đầu (Leader phát hiện qua ảnh chụp thật). Đổi sang `left-0` để popup mở về
+          // phía nội dung chính (bên phải, luôn đủ chỗ) thay vì lấn ra mép trái màn hình.
+          className="absolute bottom-full left-0 z-40 mb-1 w-72 rounded-md border border-vien bg-surface py-1 shadow-token-md"
           role="listbox"
         >
           <div className="border-b border-vien px-3 py-2 text-xs text-phu">

@@ -37,6 +37,12 @@
     --color-secondary-soft: #301f33;
     --color-on-secondary: #2c1730;
     --color-record: #e08bab;
+    /* Màu THƯƠNG HIỆU riêng của app "Indigo" (2026-09-27, Leader đặt tên + yêu cầu icon đồng nhất
+       logo sidebar/tab trình duyệt) — cố ý TÁCH khỏi primary/secondary: đây là màu định danh app
+       (logo, favicon, tiêu đề tab trình duyệt), không phải màu accent UI dùng lặp lại khắp nơi như
+       primary/secondary. Đổi giá trị này thì cũng phải đổi `public/favicon.svg` (hardcode hex riêng,
+       không đọc được biến CSS từ file SVG tĩnh) để 2 nơi khớp nhau. */
+    --color-brand: #6366f1;
     --color-danger: #e08b8b;
     --color-warning: #e3b96e;
     --color-success: #7fd08f;
@@ -187,12 +193,14 @@
     @apply mb-3 flex items-center justify-between gap-2 px-1;
   }
 
+  /* Thu gọn: logo (icon Indigo) và nút mở-rộng-lại không đủ chỗ nằm ngang -> xếp dọc, vẫn đủ 2 nút
+     bấm được (không mất nút mở rộng lại như thiết kế đầu, chỉ ẩn chữ). */
   .sidebar-collapsed .sidebar-brand-row {
-    @apply justify-center px-0;
+    @apply flex-col gap-1 px-0;
   }
 
   .sidebar-brand {
-    @apply truncate text-sm font-black uppercase tracking-wide text-muc;
+    @apply flex min-w-0 items-center gap-2 truncate text-sm font-black uppercase tracking-wide text-brand;
   }
 
   .sidebar-collapse-btn {

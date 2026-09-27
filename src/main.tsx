@@ -32,6 +32,7 @@ import {
   Copy,
   FileSpreadsheet,
   FolderKanban,
+  Gem,
   Github,
   GripVertical,
   Info,
@@ -218,7 +219,10 @@ export function App() {
     <main className="flex h-screen overflow-hidden bg-nen text-muc">
       <aside className={`sidebar ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
         <div className="sidebar-brand-row">
-          {!sidebarCollapsed && <span className="sidebar-brand">Personal Tool</span>}
+          <div className="sidebar-brand" title="Indigo">
+            <Gem size={18} className="shrink-0 text-brand" />
+            {!sidebarCollapsed && <span className="truncate">Indigo</span>}
+          </div>
           <button
             type="button"
             className="sidebar-collapse-btn"
