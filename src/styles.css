@@ -271,11 +271,7 @@
   }
 
   .project-sidebar-header {
-    @apply mb-4 flex items-center justify-between gap-3;
-  }
-
-  .project-sidebar-header h2 {
-    @apply min-w-0 flex-1 truncate text-xl font-bold text-muc;
+    @apply mb-4 flex items-center gap-3;
   }
 
   .project-sidebar-actions {
@@ -633,9 +629,15 @@
     @apply inline-block w-[5.75rem] text-muc;
   }
 
-  /* Droplist % phủ trong suốt lên thanh tiến độ — bấm vào thanh để chọn, không chiếm thêm chỗ */
+  /* Droplist % phủ trong suốt lên thanh tiến độ — bấm vào thanh để chọn, không chiếm thêm chỗ.
+     2026-09-27: nền dùng `bg-surface` (KHÔNG phải `transparent`) dù widget lúc đóng vẫn vô hình nhờ
+     `opacity-0` (áp cho cả khối, nền màu gì cũng không thấy) — lý do đổi: khi mở, trình duyệt render
+     danh sách option bằng popup native RIÊNG (không bị opacity-0 của widget đóng ảnh hưởng), và có vẻ
+     dùng chính nền `background` đã tính của select để quyết theme sáng/tối cho popup đó; `transparent`
+     khiến trình duyệt suy ra popup SÁNG trong khi chữ vẫn `text-muc` (màu sáng) -> chữ mờ gần như
+     không đọc được trên nền sáng (Leader phát hiện qua ảnh chụp thật). */
   .project-task-progress-overlay {
-    @apply absolute inset-0 z-20 w-full cursor-pointer appearance-none border-0 bg-transparent p-0 opacity-0;
+    @apply absolute inset-0 z-20 w-full cursor-pointer appearance-none border-0 bg-surface p-0 opacity-0;
   }
 
   .project-task-pic-options {

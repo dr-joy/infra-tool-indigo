@@ -726,7 +726,6 @@ export function ManHinhProject() {
         {hienThiDanhSachProject && (
         <aside className="project-sidebar" aria-label={t('project.sidebar_label')}>
           <div className="project-sidebar-header">
-            <h2 title={t('project.title')}>{t('project.title')}</h2>
             <div className="project-sidebar-actions">
               <button
                 type="button"
