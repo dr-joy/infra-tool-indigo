@@ -359,6 +359,18 @@ Không đụng.
   toàn bộ đợt 3-15 (chưa chạy từ sau run `bc2f9540`, chỉ phủ đợt 1-2) sắp chạy; sau đó đến bước thêm
   lại `color-scheme: dark` (đủ điều kiện vì mọi màn đã xong) rồi merge 1 lần theo đúng kế hoạch.
 
+- **Đính chính ngay dòng trên (trong vòng vài phút sau khi viết, trước khi Leader kịp đọc) — kết luận
+  "fail cả khi chạy riêng, 3/3 lần" là SAI, xin lỗi vì đã viết vội.** Chạy lại `npm run check` lần nữa
+  để soi cổng test lần này lại thấy 1 file KHÁC fail
+  (`release-schedule-cycle-transfer.test.ts`), không phải file đã nêu — dấu hiệu rõ đây là flaky do
+  chạy đồng thời (`--test-concurrency=4`), không phải lỗi cố định ở 1 file. Chạy cô lập file đó: 2/2
+  pass. Quay lại chạy cô lập `project-tasks-rollup-and-delete.test.ts` thêm 8 lần liên tiếp (1+2+2+3):
+  **8/8 pass**, không lặp lại được lần fail 3/3 trước đó — nhiều khả năng lần fail đó dính trạng thái
+  tạm còn sót (port/temp dir) từ việc gọi liên tiếp nhiều tiến trình test trong cùng 1 phiên shell, chứ
+  không phải bug thật cố định. **Rút lại phần "nghiêm trọng hơn flaky đã biết"** — quay về đúng mô tả
+  gốc đã có từ trước CR này: 2 test tích hợp này chỉ flaky khi chạy đồng thời trong bộ đầy đủ, pass ổn
+  định khi chạy riêng — không phải lỗi mới, không liên quan CSS, không sửa trong CR này.
+
 ## 11. Docs cần cập nhật sau khi làm xong
 
 - [ ] `docs/standards/design-standard.md` (bộ token mới) · [ ] không đụng docs/01-05 khác (không đổi
