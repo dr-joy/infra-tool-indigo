@@ -37,6 +37,12 @@ export default {
         'warning-soft': 'var(--color-warning-soft)',
         success: 'var(--color-success)',
         'success-soft': 'var(--color-success-soft)',
+        // Màu RIÊNG cho Gantt tổng (2026-09-27) — tách khỏi primary vì biểu đồ dữ liệu cần rực hơn
+        // UI điềm tĩnh, xem lý do đầy đủ trong src/styles.css :root.
+        'gantt-default': 'var(--color-gantt-default)',
+        'gantt-default-light': 'var(--color-gantt-default-light)',
+        'gantt-done': 'var(--color-gantt-done)',
+        'gantt-neutral': 'var(--color-gantt-neutral)',
         // Thêm CR-20260926 (Pha 1, bảng "Chàm Nửa Đêm"): surface phụ, muted yếu hơn, cặp
         // secondary (accent phụ hồng tím) + chữ-trên-nền-primary/secondary.
         'surface-2': 'var(--color-surface-2)',

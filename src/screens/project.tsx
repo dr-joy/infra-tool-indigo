@@ -2032,7 +2032,7 @@ function PopupGanttTong({
       if (!byPic.has(a.pic)) { byPic.set(a.pic, []); order.push(a.pic); }
       byPic.get(a.pic)!.push({ start: a.startDate, end: a.endDate, index, estimateHours: a.estimateHours });
     });
-    return order.map((pic) => ({ pic, color: picColors[pic] || '#94a3b8', segs: byPic.get(pic)! }));
+    return order.map((pic) => ({ pic, color: picColors[pic] || 'var(--color-gantt-neutral)', segs: byPic.get(pic)! }));
   }
   function rowHeightOf(task: ProjectTaskItem) {
     const segs = (task.assignments || []).filter((a) => !activePic || a.pic === activePic);

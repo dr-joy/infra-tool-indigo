@@ -46,6 +46,20 @@
     --color-danger: #e08b8b;
     --color-warning: #e3b96e;
     --color-success: #7fd08f;
+    /* Màu RIÊNG cho biểu đồ Gantt tổng (2026-09-27, Leader phản hồi qua ảnh chụp thật: màu Gantt khó
+       nhìn hơn bản sáng cũ) — CỐ Ý tách khỏi primary/secondary. Lý do: primary còn phải điềm tĩnh,
+       nhất quán cho MỌI nút bấm/accent UI trong app; còn Gantt là biểu đồ dữ liệu, cần màu RỰC hơn để
+       mắt phân biệt nhanh nhiều thanh cùng lúc trên nền tối — 2 nhu cầu khác nhau, dùng chung 1 token
+       (như bản cũ: bar mặc định = primary) sẽ kéo cả 2 về giữa, không bên nào đủ tốt. */
+    --color-gantt-default: #22d3ee;
+    --color-gantt-default-light: #67e8f9;
+    /* Bar "đã xong 100%" — cố ý TỐI/nhạt hơn hẳn màu mặc định để mắt thấy ngay "việc này lùi lại",
+       tương phản rõ với bar đang làm (khác PIC_COLOR_PALETTE trong task-utils.ts — đó là màu NGƯỜI
+       DÙNG CHỌN cho từng PIC, giữ nguyên không đổi). */
+    --color-gantt-done: #454a5e;
+    /* Bar của 1 giai đoạn có PIC nhưng PIC đó CHƯA được gán màu riêng (Cài đặt > PIC) — trung tính,
+       KHÔNG tối như gantt-done (chưa gán màu không có nghĩa là đã xong/kém quan trọng). */
+    --color-gantt-neutral: #94a3b8;
     /* *-soft thêm ở Pha 3 (CR-20260926) — PHÁT HIỆN THẬT: `bg-danger/15` (hậu tố opacity Tailwind)
        không sinh ra rule CSS nào khi màu là custom token dạng chuỗi `var(--color-...)` (xác nhận
        bằng build thật + soi CSS đã biên dịch — class tồn tại trong JSX nhưng KHÔNG có định nghĩa
@@ -996,7 +1010,7 @@
   }
 
   .project-gantt-bar {
-    @apply absolute flex h-4 cursor-grab select-none items-center overflow-hidden rounded-md border-0 bg-primary text-xs font-black text-on-primary shadow-token-sm;
+    @apply absolute flex h-4 cursor-grab select-none items-center overflow-hidden rounded-md border-0 bg-gantt-default text-xs font-black text-on-primary shadow-token-sm;
     touch-action: none;
   }
 
@@ -1044,15 +1058,15 @@
   }
 
   .project-gantt-bar-level-2 {
-    @apply bg-primary;
+    @apply bg-gantt-default;
   }
 
   .project-gantt-bar-level-3 {
-    @apply bg-primary-hover;
+    @apply bg-gantt-default-light;
   }
 
   .project-gantt-bar-done {
-    background-color: var(--color-muted-2);
+    background-color: var(--color-gantt-done);
   }
 
   .project-gantt-resize {
