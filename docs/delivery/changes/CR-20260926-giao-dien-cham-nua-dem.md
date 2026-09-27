@@ -371,6 +371,32 @@ Không đụng.
   gốc đã có từ trước CR này: 2 test tích hợp này chỉ flaky khi chạy đồng thời trong bộ đầy đủ, pass ổn
   định khi chạy riêng — không phải lỗi mới, không liên quan CSS, không sửa trong CR này.
 
+- **Council review đợt 3-15 XONG (run `c45edac5`, Codex 2 lượt `invalid_turn_output` — Claude tự tổng
+  hợp, đúng mẫu hình đã lặp lại nhiều lần trong dự án này).** `blocking_objections: 0`. Xác nhận đúng
+  3 điểm nghi vấn nêu trong đề bài (MindMap indigo→secondary, release-manager blue→secondary, bug
+  hậu tố opacity đã dọn sạch). Nêu 2 rủi ro không chặn, đã xử lý bằng cách **ghi rõ thành văn** (không
+  đổi hành vi, không thêm token/hạ tầng mới — hiện trạng đã nhất quán theo vai trò, chỉ thiếu giải
+  thích) trong commit `53970859`:
+  1. Thiếu quy tắc thành văn cho việc cùng 1 hex xanh dương cũ đổi ra token khác nhau tuỳ nơi (primary
+     vs secondary) → ghi quy tắc "xét vai trò phần tử, không xét hue gốc" vào `tailwind.config.js`.
+  2. Thiếu token `*-hover` cho danger/secondary/warning/success (chỉ primary có) → ghi rõ lý do trong
+     `styles.css` `:root`: nút nền đặc dùng `hover:opacity-90`, icon/toggle nền mờ dùng `color-mix`
+     giống `*-soft`, primary là ngoại lệ vì dùng nhiều nhất.
+
+  **3 điểm còn lại đòi hỏi Leader tự nhìn bằng mắt (agent không có công cụ chụp màn hình trong môi
+  trường này, không thể tự xác nhận):**
+  1. Cảm giác thẩm mỹ khi đổi indigo (`.mm-fbtn-on` MindMap, ngả xanh-tím) sang secondary hồng tím —
+     đổi tông màu thật, không chỉ đổi giá trị, áp dụng nhất quán nhưng là quyết định thẩm mỹ.
+  2. Thang 5 giai đoạn `--release-week-*` (jack→develop→staging→demo→afterDemo) sau khi đợt 14 hoàn
+     tất cặp cuối — cần so cạnh nhau xem còn phân biệt rõ 5 mức đậm→nhạt hay không.
+  3. Độ nhất quán "cảm giác" hover giữa nút nền đặc (opacity-90) và icon/toggle (color-mix) khi nhìn
+     trực tiếp trên các popup khác nhau.
+
+  Reviewer cũng tự nêu giới hạn của chính vòng review này: chỉ tự diff sâu 3 commit trọng tâm đề bài
+  nêu đích danh (MindMap/release-manager/opacity-bug) + 2 đợt quét cuối; các đợt Team/Release-calendar/
+  Project/Release-timeline/task-định-kỳ/quét-Tailwind-class dựa vào tường thuật CR doc, chưa tự diff
+  riêng — ghi nhận minh bạch, không che giấu.
+
 ## 11. Docs cần cập nhật sau khi làm xong
 
 - [ ] `docs/standards/design-standard.md` (bộ token mới) · [ ] không đụng docs/01-05 khác (không đổi
