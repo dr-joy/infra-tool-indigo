@@ -1127,7 +1127,7 @@ export function ManHinhMindMap({ toast, guardRef }: { toast?: ToastFn; guardRef?
                         style={{
                           left: p.x, top: p.y - p.h / 2, width: NODE_W, minHeight: NODE_H,
                           border: isRoot ? 'none' : undefined, borderColor: p.color,
-                          background: p.node.bgColor || (isRoot ? p.color : '#fff'), color: isRoot ? '#fff' : '#0f172a',
+                          background: p.node.bgColor || (isRoot ? p.color : 'var(--color-surface)'), color: isRoot ? '#fff' : 'var(--color-text)',
                           boxShadow: isSel ? `0 0 0 3px ${p.color}40, 0 4px 14px rgba(15,23,42,0.13)` : undefined,
                           ...shapeCss(p.node.shape),
                         }}
@@ -1168,7 +1168,7 @@ export function ManHinhMindMap({ toast, guardRef }: { toast?: ToastFn; guardRef?
                         {p.hasChildren && !isEdit && (
                           <button
                             className={`mm-collapse ${p.side < 0 ? 'mm-collapse-l' : 'mm-collapse-r'}`}
-                            style={{ borderColor: p.color, color: isRoot ? '#fff' : p.color, background: isRoot ? p.color : '#fff' }}
+                            style={{ borderColor: p.color, color: isRoot ? '#fff' : p.color, background: isRoot ? p.color : 'var(--color-surface)' }}
                             title={p.collapsed ? 'Mở rộng' : 'Thu gọn'}
                             onMouseDown={(e) => { e.stopPropagation(); }}
                             onClick={(e) => { e.stopPropagation(); thuGonNode(p.node.id); }}
@@ -1217,11 +1217,11 @@ export function ManHinhMindMap({ toast, guardRef }: { toast?: ToastFn; guardRef?
               const AlignIcon = selNode?.align === 'center' ? AlignCenter : selNode?.align === 'right' ? AlignRight : AlignLeft;
               return (
                 <div className="mm-floating" style={{ left: tx, top: Math.max(8, ty - 8) }} onMouseDown={(e) => e.stopPropagation()}>
-                  <button className={`mm-fbtn ${popover === 'bg' ? 'mm-fbtn-on' : ''}`} title="Màu nền box" onClick={() => togglePop('bg')}><PaintBucket size={16} /><i className="mm-fbtn-bar" style={{ background: selNode?.bgColor || '#fff' }} /></button>
+                  <button className={`mm-fbtn ${popover === 'bg' ? 'mm-fbtn-on' : ''}`} title="Màu nền box" onClick={() => togglePop('bg')}><PaintBucket size={16} /><i className="mm-fbtn-bar" style={{ background: selNode?.bgColor || 'var(--color-surface)' }} /></button>
                   <div className="mm-fbtn-sep" />
                   <button className={`mm-fbtn ${popover === 'font' ? 'mm-fbtn-on' : ''}`} title="Phông chữ" onClick={() => togglePop('font')}><Type size={16} /></button>
                   <button className={`mm-fbtn ${popover === 'size' ? 'mm-fbtn-on' : ''}`} title="Cỡ chữ" onClick={() => togglePop('size')}><span className="mm-fbtn-aa">{selNode?.fontSize ?? DEFAULT_FONT_SIZE}</span></button>
-                  <button className={`mm-fbtn ${popover === 'text' ? 'mm-fbtn-on' : ''}`} title="Màu chữ" onClick={() => togglePop('text')}><Baseline size={16} /><i className="mm-fbtn-bar" style={{ background: selNode?.textColor || '#0f172a' }} /></button>
+                  <button className={`mm-fbtn ${popover === 'text' ? 'mm-fbtn-on' : ''}`} title="Màu chữ" onClick={() => togglePop('text')}><Baseline size={16} /><i className="mm-fbtn-bar" style={{ background: selNode?.textColor || 'var(--color-text)' }} /></button>
                   <button className={`mm-fbtn ${popover === 'box' ? 'mm-fbtn-on' : ''}`} title="Màu box" onClick={() => togglePop('box')}><Palette size={16} /></button>
                   <button className={`mm-fbtn ${popover === 'shape' ? 'mm-fbtn-on' : ''}`} title="Hình dạng box" onClick={() => togglePop('shape')}><Square size={16} /></button>
                   <div className="mm-fbtn-sep" />
@@ -1277,7 +1277,7 @@ export function ManHinhMindMap({ toast, guardRef }: { toast?: ToastFn; guardRef?
                   {popover === 'bg' && (
                     <div className="mm-swatches">
                       {BG_SWATCHES.map((c) => (
-                        <button key={c} className="mm-swatch" style={{ background: c, boxShadow: c === '#ffffff' ? '0 0 0 1px #cbd5e1' : undefined }} title={c} onClick={() => { datTT({ bgColor: c }); setPopover(null); }} />
+                        <button key={c} className="mm-swatch" style={{ background: c, boxShadow: (c === '#ffffff' || c === '#0f172a') ? '0 0 0 1px var(--color-border)' : undefined }} title={c} onClick={() => { datTT({ bgColor: c }); setPopover(null); }} />
                       ))}
                       <button className="mm-swatch mm-swatch-reset" title="Mặc định (trắng)" onClick={() => { datTT({ bgColor: undefined }); setPopover(null); }}>↺</button>
                     </div>
