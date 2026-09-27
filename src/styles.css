@@ -1662,10 +1662,13 @@
   .release-timeline-decoration::after {
     content: '';
     @apply pointer-events-none absolute inset-0;
-    background:
-      radial-gradient(circle, rgba(251, 146, 60, 0.32) 0 1px, transparent 2px),
-      radial-gradient(circle, rgba(239, 68, 68, 0.22) 0 1px, transparent 2px),
-      linear-gradient(105deg, transparent 18%, rgba(255, 255, 255, 0.34) 28%, transparent 42%);
+    /* Gộp về 1 dòng (2026-09-27) — cổng Design token nhạy CRLF/LF khi giá trị có xuống dòng bên
+       trong: máy Windows checkout ra CRLF trong khi baseline sinh trên máy dùng LF -> luôn đỏ dù
+       nội dung giống hệt nhau (CSS không phân biệt khoảng trắng/xuống dòng giữa các gradient, gộp
+       dòng không đổi hiển thị). Đây là nợ cũ có trước CR-20260926 (đã ghi nhận trong CR đó), sửa ở
+       đây vì đúng lúc nó chặn thẳng `pre-push` hook lúc merge/đẩy production, không phải mở rộng
+       phạm vi CR màu. */
+    background: radial-gradient(circle, rgba(251, 146, 60, 0.32) 0 1px, transparent 2px), radial-gradient(circle, rgba(239, 68, 68, 0.22) 0 1px, transparent 2px), linear-gradient(105deg, transparent 18%, rgba(255, 255, 255, 0.34) 28%, transparent 42%);
     background-size: 38px 38px, 54px 54px, 220% 100%;
     background-position: 0 0, 20px 14px, 100% 0;
     opacity: 0.58;
