@@ -235,7 +235,7 @@ export const ManHinhTaskCaNhan = forwardRef<ManHinhTaskCaNhanHandle, ManHinhTask
             />
           </section>
       )}
-      {dangTai &&<div className="fixed bottom-5 right-5 rounded-md bg-white px-4 py-3 text-sm">{t('loading.data')}</div>}
+      {dangTai &&<div className="fixed bottom-5 right-5 rounded-md border border-vien bg-surface px-4 py-3 text-sm text-muc">{t('loading.data')}</div>}
       {moTaoTask && <PopupTaoTask onClose={() => setMoTaoTask(false)} onCreated={() => taiDuLieu().then(() => {})} />}
       {moThemTaskNhanh && (
         <PopupThemTaskNhanh
@@ -427,7 +427,7 @@ export function CotDinhKy({
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold">{t('col.recurring')}</h2>
-          <p className="text-base font-extrabold capitalize text-slate-800">{dinhDangNgayDayDu(ngayDinhKy)}</p>
+          <p className="text-base font-extrabold capitalize text-muc">{dinhDangNgayDayDu(ngayDinhKy)}</p>
         </div>
         <div className="lich-dinh-ky">
           <button type="button" className="nut-ngay-dinh-ky" onClick={() => doiNgay(-1)} aria-label={t('cot.prev_day')}>
@@ -454,10 +454,10 @@ export function CotDinhKy({
         <div className="timeline-canvas" style={{ height: `${timelineHeight}px` }}>
           <div className="absolute inset-y-3 left-0 right-0">
             <div
-              className="absolute left-[72px] right-3 rounded-md border border-slate-400 bg-slate-400"
+              className="absolute left-[72px] right-3 rounded-md border border-muted-2 bg-muted-2"
               style={{ top: `${lunchStartTop}%`, height: `${lunchHeight}%` }}
             >
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 rounded bg-slate-500 px-2 py-1 text-xs font-bold text-white">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 rounded bg-muted-2 px-2 py-1 text-xs font-bold text-nen">
                 {t('cot.lunch_break')}
               </span>
             </div>
@@ -465,16 +465,16 @@ export function CotDinhKy({
               {mocGio.map((moc) => (
                 <div
                   key={moc}
-                  className="absolute left-0 right-0 border-t border-dashed border-slate-500"
+                  className="absolute left-0 right-0 border-t border-dashed border-muted-2"
                   style={{ top: timeTop(moc) }}
                 />
               ))}
               {coVachHienTai && (
                 <div className="absolute left-0 right-0 z-20" style={{ top: `${lineTop}%` }}>
-                  <span className="absolute -top-5 right-1 rounded bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                  <span className="absolute -top-5 right-1 rounded bg-danger px-1.5 py-0.5 text-[10px] font-bold leading-none text-on-primary">
                     {nowLabel}
                   </span>
-                  <div className="h-0.5 bg-rose-500" />
+                  <div className="h-0.5 bg-danger" />
                 </div>
               )}
             </div>
@@ -482,7 +482,7 @@ export function CotDinhKy({
             {mocGio.map((moc) => (
               <div
                 key={moc}
-                className="absolute grid -translate-y-1/2 grid-cols-[60px_1fr] gap-3 text-[15px] font-semibold leading-none text-slate-700"
+                className="absolute grid -translate-y-1/2 grid-cols-[60px_1fr] gap-3 text-[15px] font-semibold leading-none text-phu"
                 style={{ top: timeTop(moc) }}
               >
                   <span>{moc}</span>
@@ -818,7 +818,7 @@ function PopupSuaTask({
           <TaskLinkEditor links={links} onChange={setLinks} />
         </div>
         {laTaskDinhKyThuCong && (
-          <div className="rounded-md border border-slate-300 bg-slate-50/80 p-4">
+          <div className="rounded-md border border-vien bg-surface-2 p-4">
             <p className="mb-3 text-sm font-bold">{t('task.form.repeat_settings')}</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="field">
@@ -956,7 +956,7 @@ function PopupXacNhanSuaTaskDinhKy({
           </label>
         </div>
         {loi && (
-          <p className="mb-4 rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-800">
+          <p className="mb-4 rounded-md bg-danger-soft px-3 py-2 text-sm text-danger">
             Chưa lưu được: {loi}. Hãy thử lại.
           </p>
         )}
@@ -1021,7 +1021,7 @@ export function PopupXacNhanCancel({
           {t('task.confirm.cancel_question')}
         </p>
         {loi && (
-          <p className="mb-3 rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-800">
+          <p className="mb-3 rounded-md bg-danger-soft px-3 py-2 text-sm text-danger">
             Chưa huỷ được: {loi}. Bấm "{t('task.confirm.yes')}" để thử lại.
           </p>
         )}
@@ -1210,7 +1210,7 @@ function PopupTaoTask({ onClose, onCreated }: { onClose: () => void; onCreated: 
           <span>{t('task.form.execute_now')}</span>
         </label>
         {loaiTask === 'dinh_ky' && (
-          <div className="rounded-md border border-slate-300 bg-slate-50/80 p-4">
+          <div className="rounded-md border border-vien bg-surface-2 p-4">
             <p className="mb-3 text-sm font-bold">{t('task.form.repeat_settings')}</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="field">
@@ -1533,7 +1533,7 @@ function PopupThemTaskNhanh({
                 </label>
               </div>
               {loaiTask === 'dinh_ky' && (
-                <div className="rounded-md border border-slate-300 bg-slate-50/80 p-4">
+                <div className="rounded-md border border-vien bg-surface-2 p-4">
                   <p className="mb-3 text-sm font-bold">{t('task.form.repeat_settings')}</p>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="field">
@@ -1691,7 +1691,7 @@ function PopupLichSu({ tasks, onClose }: { tasks: Task[]; onClose: () => void })
         </div>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <form className="search-box" onSubmit={submitSearch}>
-            <button type="submit" className="text-phu transition hover:text-sky-700" title={t('history.search_title')}>
+            <button type="submit" className="text-phu transition hover:text-primary" title={t('history.search_title')}>
               <Search size={16} />
             </button>
             <input value={tuKhoaNhap} onChange={(event) => setTuKhoaNhap(event.target.value)} placeholder={t('history.search_placeholder')} />
@@ -1709,7 +1709,7 @@ function PopupLichSu({ tasks, onClose }: { tasks: Task[]; onClose: () => void })
         </div>
         <div className="min-h-0 flex-1 overflow-auto rounded-md border border-vien">
           <table className="w-full min-w-[820px] text-left text-sm">
-            <thead className="bg-slate-100 text-xs uppercase text-phu">
+            <thead className="bg-surface-2 text-xs uppercase text-phu">
               <tr>
                 <th className="px-4 py-3">#</th>
                 <th className="px-4 py-3">{t('history.col.name')}</th>
@@ -1719,9 +1719,9 @@ function PopupLichSu({ tasks, onClose }: { tasks: Task[]; onClose: () => void })
                 <th className="px-4 py-3">{t('history.col.status')}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-vien bg-white">
+            <tbody className="divide-y divide-vien bg-surface">
               {lichSuTrang.map((task, index) => (
-                <tr key={task.id} className="h-11 cursor-pointer hover:bg-slate-50" onClick={() => setTaskLichSuDangXem(task)}>
+                <tr key={task.id} className="h-11 cursor-pointer hover:bg-surface-2" onClick={() => setTaskLichSuDangXem(task)}>
                   <td className="px-4 py-2">{(trangHopLe - 1) * soRecordMoiTrang + index + 1}</td>
                   <td className="max-w-[260px] truncate px-4 py-2 font-semibold">{task.tenTask}</td>
                   <td className="max-w-[420px] px-4 py-2 text-phu">
@@ -1751,7 +1751,7 @@ function PopupLichSu({ tasks, onClose }: { tasks: Task[]; onClose: () => void })
             >
               {t('history.prev')}
             </button>
-            <span className="rounded-md bg-slate-100 px-3 py-2 font-bold text-muc">
+            <span className="rounded-md bg-surface-2 px-3 py-2 font-bold text-muc">
               {trangHopLe} / {tongTrang}
             </span>
             <button

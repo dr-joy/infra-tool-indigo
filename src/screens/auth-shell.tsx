@@ -36,8 +36,8 @@ function DisabledAccountScreen() {
   return (
     <div className="flex h-screen items-center justify-center bg-hoa-van">
       <div className="popup w-full max-w-md text-center">
-        <ShieldOff size={40} className="mx-auto mb-3 text-rose-600" />
-        <h1 className="mb-2 text-xl font-bold text-rose-700">Tài khoản của bạn đã bị vô hiệu hoá</h1>
+        <ShieldOff size={40} className="mx-auto mb-3 text-danger" />
+        <h1 className="mb-2 text-xl font-bold text-danger">Tài khoản của bạn đã bị vô hiệu hoá</h1>
         <p className="mb-5 text-sm leading-6 text-phu">
           Admin đã tạm khoá tài khoản này. Hãy liên hệ Admin nếu bạn cho rằng đây là nhầm lẫn.
         </p>
@@ -59,7 +59,7 @@ function GenericErrorScreen() {
   return (
     <div className="flex h-screen items-center justify-center bg-hoa-van">
       <div className="popup w-full max-w-md text-center">
-        <h1 className="mb-2 text-xl font-bold text-rose-700">Không tải được thông tin đăng nhập</h1>
+        <h1 className="mb-2 text-xl font-bold text-danger">Không tải được thông tin đăng nhập</h1>
         <p className="mb-5 text-sm leading-6 text-phu">Có lỗi khi kết nối tới server. Thử lại hoặc đăng nhập lại.</p>
         <div className="flex justify-center gap-2">
           <button type="button" className="nut-phu" onClick={() => void reload()}>Thử lại</button>
@@ -141,7 +141,7 @@ function ChooseTeamScreen() {
             : ' Đây chỉ là gửi yêu cầu, bạn chưa có quyền thao tác gì cho tới khi được duyệt.'}
         </p>
 
-        {loadError && <p className="mb-3 text-sm text-rose-600">{loadError}</p>}
+        {loadError && <p className="mb-3 text-sm text-danger">{loadError}</p>}
 
         {laAdmin && (
           <div className="field mb-3 flex gap-4 text-sm font-normal">
@@ -188,7 +188,7 @@ function ChooseTeamScreen() {
           </label>
         </fieldset>
 
-        {submitError && <p className="mb-3 text-sm text-rose-600">{submitError}</p>}
+        {submitError && <p className="mb-3 text-sm text-danger">{submitError}</p>}
 
         <div className="mt-4 flex justify-end">
           <button type="submit" className="nut-chinh" disabled={submitting || (tuLapTeam ? !newTeamName.trim() : teamId === '')}>
@@ -220,7 +220,7 @@ function PendingApprovalScreen() {
           Xin chào {actor?.displayName}. Yêu cầu tham gia team của bạn đang chờ Admin xem xét.
         </p>
         {joinRequest && (
-          <div className="mb-5 rounded-md border border-vien bg-slate-50 px-4 py-3 text-left text-sm">
+          <div className="mb-5 rounded-md border border-vien bg-surface-2 px-4 py-3 text-left text-sm">
             <div><span className="font-semibold">Team đã xin:</span> {joinRequest.teamName}</div>
             <div><span className="font-semibold">Vai trò đã xin:</span> {roleLabel[joinRequest.role]}</div>
           </div>
@@ -243,7 +243,7 @@ function ApprovalNoticeModal() {
   return (
     <Modal onClose={() => void ackApprovalNotice()}>
       <div className="popup w-full max-w-md text-center">
-        <CheckCircle2 size={36} className="mx-auto mb-3 text-emerald-600" />
+        <CheckCircle2 size={36} className="mx-auto mb-3 text-success" />
         <h2 className="mb-2 text-xl font-bold text-muc">Bạn đã được cấp quyền</h2>
         <p className="mb-5 text-sm leading-6 text-phu">
           Admin đã duyệt yêu cầu của bạn — team <b>{approvalNotice.teamName}</b>, vai trò{' '}

@@ -140,13 +140,13 @@ function ManHinhQuanLyPic() {
 
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="rounded-lg border bg-white p-4">
+      <div className="rounded-lg border border-vien bg-surface p-4">
         <h2 className="text-lg font-bold">Quản lý PIC</h2>
       </div>
 
-      {error && <div className="rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
+      {error && <div className="rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
 
-      <div className="max-w-xl rounded-lg border bg-white p-4">
+      <div className="max-w-xl rounded-lg border border-vien bg-surface p-4">
         <div className="mb-3 flex gap-2">
           <input
             className="flex-1 rounded border px-3 py-1.5 text-sm"
@@ -163,7 +163,7 @@ function ManHinhQuanLyPic() {
           />
           <button
             type="button"
-            className="flex items-center gap-1 rounded bg-teal-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+            className="flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-sm font-medium text-on-primary hover:bg-primary-hover disabled:opacity-50"
             disabled={busy || !newName.trim()}
             onClick={themPic}
           >
@@ -171,14 +171,14 @@ function ManHinhQuanLyPic() {
           </button>
         </div>
 
-        {items.length === 0 && <div className="py-4 text-center text-sm text-slate-400">Chưa có PIC nào.</div>}
+        {items.length === 0 && <div className="py-4 text-center text-sm text-phu">Chưa có PIC nào.</div>}
         {items.map((item, index) => (
-          <div key={item.id} className="flex items-center gap-2 border-b py-2 last:border-b-0">
+          <div key={item.id} className="flex items-center gap-2 border-b border-vien py-2 last:border-b-0">
             <div className="flex flex-col">
-              <button type="button" className="rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30" disabled={index === 0 || busy} title="Chuyển lên" onClick={() => diChuyen(index, -1)}>
+              <button type="button" className="rounded p-0.5 text-phu hover:bg-surface-2 hover:text-muc disabled:opacity-30" disabled={index === 0 || busy} title="Chuyển lên" onClick={() => diChuyen(index, -1)}>
                 <ChevronUp size={14} />
               </button>
-              <button type="button" className="rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30" disabled={index === items.length - 1 || busy} title="Chuyển xuống" onClick={() => diChuyen(index, 1)}>
+              <button type="button" className="rounded p-0.5 text-phu hover:bg-surface-2 hover:text-muc disabled:opacity-30" disabled={index === items.length - 1 || busy} title="Chuyển xuống" onClick={() => diChuyen(index, 1)}>
                 <ChevronDown size={14} />
               </button>
             </div>
@@ -195,10 +195,10 @@ function ManHinhQuanLyPic() {
                     if (e.key === 'Escape') setEditingId(null);
                   }}
                 />
-                <button type="button" className="rounded bg-teal-600 p-1.5 text-white hover:bg-teal-700 disabled:opacity-50" disabled={busy} title="Lưu tên" onClick={() => luuTen(item)}>
+                <button type="button" className="rounded bg-primary p-1.5 text-on-primary hover:bg-primary-hover disabled:opacity-50" disabled={busy} title="Lưu tên" onClick={() => luuTen(item)}>
                   <Check size={14} />
                 </button>
-                <button type="button" className="rounded border p-1.5 hover:bg-slate-50" title="Hủy" onClick={() => setEditingId(null)}>
+                <button type="button" className="rounded border border-vien p-1.5 hover:bg-surface-2" title="Hủy" onClick={() => setEditingId(null)}>
                   <X size={14} />
                 </button>
               </>
@@ -206,9 +206,9 @@ function ManHinhQuanLyPic() {
               <>
                 <span className="flex-1 text-sm font-medium">{item.name}</span>
                 {/* Màu hiển thị trên Gantt: ô xem trước + droplist chọn màu */}
-                <span className="h-5 w-5 shrink-0 rounded border border-slate-300" style={{ backgroundColor: item.color || 'transparent' }} title="Màu trên Gantt" />
+                <span className="h-5 w-5 shrink-0 rounded border border-vien" style={{ backgroundColor: item.color || 'transparent' }} title="Màu trên Gantt" />
                 <select
-                  className="shrink-0 rounded border border-slate-300 px-1 py-1 text-xs"
+                  className="shrink-0 rounded border border-vien px-1 py-1 text-xs"
                   value={item.color || ''}
                   disabled={busy}
                   title="Chọn màu hiển thị trên Gantt"
@@ -218,12 +218,12 @@ function ManHinhQuanLyPic() {
                   {PIC_COLOR_PALETTE.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
                   {item.color && !PIC_COLOR_PALETTE.some((c) => c.value === item.color) && <option value={item.color}>Khác</option>}
                 </select>
-                <button type="button" className="rounded p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Đổi tên" onClick={() => { setEditingId(item.id); setEditName(item.name); }}>
+                <button type="button" className="rounded p-1.5 text-phu hover:bg-surface-2 hover:text-muc" title="Đổi tên" onClick={() => { setEditingId(item.id); setEditName(item.name); }}>
                   <Pencil size={14} />
                 </button>
                 <button
                   type="button"
-                  className="rounded p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400"
+                  className="rounded p-1.5 text-phu hover:bg-danger-soft hover:text-danger disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-phu"
                   title={item.dangSuDung ? 'Không thể xóa: còn task chưa hoàn thành' : 'Xóa khỏi danh sách'}
                   disabled={item.dangSuDung}
                   onClick={() => setPicDangXoa(item)}
@@ -321,18 +321,18 @@ function ManHinhCauHinhRedmine() {
 
   return (
     <div className="flex max-w-xl flex-col gap-4">
-      <div className="rounded-md border bg-amber-50 p-3 text-xs text-amber-800">
+      <div className="rounded-md border border-warning bg-warning-soft p-3 text-xs text-warning">
         API key chỉ dùng riêng cho tài khoản của bạn, không ai khác đọc được (kể cả người trong cùng
         team). Sửa URL Redmine hệ thống là việc của Admin, không nằm ở màn này.
       </div>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-slate-600">URL Redmine (do Admin cấu hình)</span>
-        <input className="rounded-md border bg-slate-50 px-3 py-2 text-sm text-slate-500" value={cfg?.baseUrl || '(chưa cấu hình)'} disabled />
+        <span className="font-medium text-phu">URL Redmine (do Admin cấu hình)</span>
+        <input className="rounded-md border bg-surface-2 px-3 py-2 text-sm text-phu" value={cfg?.baseUrl || '(chưa cấu hình)'} disabled />
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-slate-600">API key của bạn</span>
+        <span className="font-medium text-phu">API key của bạn</span>
         <input
           type="password"
           className="rounded-md border px-3 py-2 text-sm"
@@ -342,16 +342,16 @@ function ManHinhCauHinhRedmine() {
           autoComplete="off"
         />
         {cfg?.hasKey && (
-          <span className="text-xs text-slate-500">Đã có key ({cfg.keyMask}).</span>
+          <span className="text-xs text-phu">Đã có key ({cfg.keyMask}).</span>
         )}
       </label>
 
-      {error && <p className="text-sm text-rose-600">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
 
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          className="rounded-md bg-teal-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+          className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-on-primary hover:bg-primary-hover disabled:opacity-50"
           onClick={luu}
           disabled={busy || !apiKey.trim()}
         >
@@ -359,7 +359,7 @@ function ManHinhCauHinhRedmine() {
         </button>
         <button
           type="button"
-          className="rounded-md border bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+          className="rounded-md border border-vien bg-surface px-3 py-1.5 text-sm font-medium text-phu hover:bg-surface-2 disabled:opacity-50"
           onClick={test}
           disabled={busy || !cfg?.hasKey}
         >
@@ -368,7 +368,7 @@ function ManHinhCauHinhRedmine() {
         {cfg?.hasKey && (
           <button
             type="button"
-            className="rounded-md border border-rose-200 bg-white px-3 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+            className="rounded-md border border-danger bg-surface px-3 py-1.5 text-sm font-medium text-danger hover:bg-danger-soft disabled:opacity-50"
             onClick={xoaKey}
             disabled={busy}
           >
@@ -385,7 +385,7 @@ function ManHinhCauHinhRedmine() {
 export function ManHinhQuanLyDanhMuc() {
   const [muc, setMuc] = useState<'pic' | 'redmine' | 'phim_tat'>('pic');
   const tabClass = (active: boolean) =>
-    `rounded-md px-3 py-1.5 text-sm font-medium ${active ? 'bg-teal-600 text-white' : 'border bg-white text-slate-600 hover:bg-slate-50'}`;
+    `rounded-md px-3 py-1.5 text-sm font-medium ${active ? 'bg-primary text-on-primary' : 'border border-vien bg-surface text-phu hover:bg-surface-2'}`;
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex gap-2">

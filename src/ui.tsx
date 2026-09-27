@@ -1,5 +1,5 @@
 import { Info } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 
 // ── Nhập giờ dạng text + convert thông minh ───────────────────────────────────
 // Quy tắc FE: MỌI ô nhập giờ trong hệ thống dùng <TimeInput> (KHÔNG dùng <input type="time">).
@@ -77,16 +77,54 @@ export function TimeInput({
 
 // Icon (?) + tooltip hover: gom text hướng dẫn/giải thích dài vào đây cho gọn giao diện.
 // Quy tắc FE: text mang tính hướng dẫn KHÔNG để inline chiếm chỗ — nhét vào InfoTip.
+// Pha 3 CR-20260926 (FR-6): thêm tính lại vị trí lúc hover/focus (lật trên/dưới, kẹp trái/phải theo
+// mép màn hình bằng `position:fixed`) — tooltip w-72 (288px) trước đây đặt cứng `left-0 top-full` có
+// thể bị tràn ra ngoài màn hình hoặc bị vùng cuộn cha cắt mất nếu icon nằm gần mép; hiện/ẩn vẫn dùng
+// đúng cơ chế CSS `group-hover:block` cũ (không đổi), JS chỉ chỉnh `top`/`left` ngay khi bắt đầu hover.
 export function InfoTip({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  const iconRef = useRef<HTMLSpanElement>(null);
+  const tipRef = useRef<HTMLSpanElement>(null);
+  const [tipStyle, setTipStyle] = useState<CSSProperties>({});
+
+  function placeTip() {
+    const icon = iconRef.current;
+    const tip = tipRef.current;
+    if (!icon || !tip) return;
+    const gap = 6;
+    const pad = 8;
+    const r = icon.getBoundingClientRect();
+    const tw = tip.offsetWidth;
+    const th = tip.offsetHeight;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    let top = r.bottom + gap;
+    if (top + th > vh - pad) top = r.top - th - gap;
+    if (top < pad) top = pad;
+    let left = r.left;
+    if (left + tw > vw - pad) left = vw - tw - pad;
+    if (left < pad) left = pad;
+    setTipStyle({ position: 'fixed', top, left, margin: 0 });
+  }
+
   return (
-    <span className={`group relative inline-flex align-middle ${className}`}>
-      <Info size={16} className="cursor-help text-teal-600" aria-hidden="true" />
-      {/* w-72 (288px, trước là 34rem=544px): bề rộng cứng cũ rộng hơn cả nhiều popup nhỏ (vd max-w-md
-          =448px) — mỗi lần hover, container cha có overflow-y-auto (tự kéo theo overflow-x:auto theo
-          quy tắc CSS) phải tính lại vùng cuộn ngang vì tooltip tràn ra ngoài, gây giật + cắt mất chữ
-          không cuộn tới được (pointer-events-none nên không kéo được). 288px an toàn hơn nhiều với các
-          popup hẹp; text dài hơn thì tự xuống dòng, không mất nội dung. */}
-      <span className="pointer-events-none absolute left-0 top-full z-30 mt-1 hidden w-72 max-w-[80vw] rounded-md border border-teal-100 bg-white px-3 py-2 text-xs leading-relaxed text-slate-600 shadow-lg group-hover:block">
+    <span
+      ref={iconRef}
+      className={`group relative inline-flex align-middle ${className}`}
+      onMouseEnter={placeTip}
+      onFocus={placeTip}
+      tabIndex={0}
+      role="button"
+      aria-label="Xem giải thích thêm"
+    >
+      {/* Council review Pha 3 (run bc2f9540) phát hiện: icon KHÔNG được vừa aria-hidden vừa
+          tabIndex — trình đọc màn hình bỏ qua hoàn toàn 1 điểm dừng Tab, không có tên. Chuyển
+          tabIndex + nhãn lên span bao ngoài, icon bên trong giữ aria-hidden vì đã có nhãn ở ngoài. */}
+      <Info size={16} className="cursor-help text-primary" aria-hidden="true" />
+      <span
+        ref={tipRef}
+        style={tipStyle}
+        className="pointer-events-none z-30 hidden w-72 max-w-[80vw] rounded-md border border-vien bg-surface px-3 py-2 text-xs leading-relaxed text-phu shadow-lg group-hover:block group-focus-within:block"
+      >
         {children}
       </span>
     </span>

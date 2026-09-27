@@ -13,9 +13,9 @@ function loiThanThien(e: unknown): string {
   return e instanceof Error ? e.message : 'Có lỗi xảy ra';
 }
 
-const btnPrimary = 'rounded-md bg-teal-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50';
-const btnSecondary = 'rounded-md border bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50';
-const btnDanger = 'rounded-md border border-rose-200 bg-white px-3 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50';
+const btnPrimary = 'rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-on-primary hover:bg-primary-hover disabled:opacity-50';
+const btnSecondary = 'rounded-md border border-vien bg-surface px-3 py-1.5 text-sm font-medium text-phu hover:bg-surface-2 disabled:opacity-50';
+const btnDanger = 'rounded-md border border-danger bg-surface px-3 py-1.5 text-sm font-medium text-danger hover:bg-danger-soft disabled:opacity-50';
 
 // Khớp nguyên văn tên cột trả về từ server (server/routes/teams.ts, audit.ts) — xem ghi chú tương tự ở
 // src/screens/admin.tsx.
@@ -29,14 +29,14 @@ export function ManHinhQuanLyTeam() {
   const { myTeams } = useAuth();
   const [muc, setMuc] = useState<Muc>('overview');
   const tabClass = (active: boolean) =>
-    `rounded-md px-3 py-1.5 text-sm font-medium ${active ? 'bg-teal-600 text-white' : 'border bg-white text-slate-600 hover:bg-slate-50'}`;
+    `rounded-md px-3 py-1.5 text-sm font-medium ${active ? 'bg-primary text-on-primary' : 'border border-vien bg-surface text-phu hover:bg-surface-2'}`;
 
   const teamHienTai = myTeams.find((t) => t.id === activeTeamId);
   const laLeader = teamHienTai?.role === 'leader';
 
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="rounded-lg border bg-white p-4">
+      <div className="rounded-lg border border-vien bg-surface p-4">
         <h2 className="text-lg font-bold">Quản lý team{teamHienTai ? ` — ${teamHienTai.name}` : ''}</h2>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -69,21 +69,21 @@ function TabTongQuan({ teamId, teamName, teamDesc, vaiTro }: { teamId: number | 
     return () => { aliveRef.current = false; };
   }, [teamId]);
 
-  if (teamId == null) return <div className="p-4 text-sm text-slate-400">Chưa chọn team.</div>;
+  if (teamId == null) return <div className="p-4 text-sm text-phu">Chưa chọn team.</div>;
   const leader = members?.find((m) => m.role === 'leader');
 
   return (
     <div className="flex max-w-xl flex-col gap-3">
-      {error && <div className="rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
-      <div className="rounded-lg border bg-white p-4">
+      {error && <div className="rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
+      <div className="rounded-lg border border-vien bg-surface p-4">
         <div className="text-base font-semibold">{teamName}</div>
-        {teamDesc && <div className="mt-1 text-sm text-slate-500">{teamDesc}</div>}
+        {teamDesc && <div className="mt-1 text-sm text-phu">{teamDesc}</div>}
         <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-          <div className="text-slate-500">Vai trò của bạn</div>
+          <div className="text-phu">Vai trò của bạn</div>
           <div className="font-medium">{vaiTro === 'leader' ? 'Leader' : 'Member'}</div>
-          <div className="text-slate-500">Leader hiện tại</div>
+          <div className="text-phu">Leader hiện tại</div>
           <div className="font-medium">{leader ? leader.display_name : members ? '(chưa có)' : '…'}</div>
-          <div className="text-slate-500">Số thành viên</div>
+          <div className="text-phu">Số thành viên</div>
           <div className="font-medium">{members ? members.length : '…'}</div>
         </div>
       </div>
@@ -148,11 +148,11 @@ function TabThanhVien({ teamId, laLeader }: { teamId: number | null; laLeader: b
     }
   }
 
-  if (loading) return <div className="p-4 text-sm text-slate-400">Đang tải…</div>;
+  if (loading) return <div className="p-4 text-sm text-phu">Đang tải…</div>;
 
   return (
     <div className="flex flex-col gap-3">
-      {error && <div className="rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
+      {error && <div className="rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
       {laLeader && (
         <div>
           <button type="button" className={`${btnPrimary} flex w-fit items-center gap-1`} onClick={() => setShowAdd(true)}>
@@ -160,16 +160,16 @@ function TabThanhVien({ teamId, laLeader }: { teamId: number | null; laLeader: b
           </button>
         </div>
       )}
-      <div className="rounded-lg border bg-white">
+      <div className="rounded-lg border border-vien bg-surface">
         {members.map((m) => (
-          <div key={m.id} className="flex items-center gap-2 border-b p-3 last:border-b-0">
+          <div key={m.id} className="flex items-center gap-2 border-b border-vien p-3 last:border-b-0">
             <div className="flex-1">
               <div className="text-sm font-medium">{m.display_name}</div>
-              <div className="text-xs text-slate-500">{m.email}</div>
+              <div className="text-xs text-phu">{m.email}</div>
             </div>
-            {m.role === 'leader' && <span className="rounded bg-teal-50 px-2 py-0.5 text-xs text-teal-700">Leader</span>}
+            {m.role === 'leader' && <span className="rounded bg-primary-soft px-2 py-0.5 text-xs text-primary">Leader</span>}
             {laLeader && (
-              <button type="button" className="rounded p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600" title="Bớt khỏi team" onClick={() => setRemoveTarget(m)}>
+              <button type="button" className="rounded p-1.5 text-phu hover:bg-danger-soft hover:text-danger" title="Bớt khỏi team" onClick={() => setRemoveTarget(m)}>
                 <UserMinus size={14} />
               </button>
             )}
@@ -237,7 +237,7 @@ function PopupThemThanhVien({ teamId, onClose, onDone }: { teamId: number; onClo
     <Modal onClose={onClose} dismissable={!busy}>
       <div className="popup w-full max-w-md">
         <h2 className="mb-3 text-lg font-bold">Thêm thành viên</h2>
-        <p className="mb-2 text-xs text-slate-500">Chỉ thêm được người ĐÃ TỪNG đăng nhập vào hệ thống ít nhất một lần.</p>
+        <p className="mb-2 text-xs text-phu">Chỉ thêm được người ĐÃ TỪNG đăng nhập vào hệ thống ít nhất một lần.</p>
         <div className="flex gap-2">
           <input
             className="flex-1 rounded border px-3 py-1.5 text-sm"
@@ -249,11 +249,11 @@ function PopupThemThanhVien({ teamId, onClose, onDone }: { teamId: number; onClo
           />
           <button type="button" className={btnSecondary} disabled={busy || !email.trim()} onClick={traCuu}>Tra cứu</button>
         </div>
-        {error && <div className="mt-2 rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
-        {found === null && <div className="mt-2 text-sm text-amber-700">Không tìm thấy — người này chưa từng đăng nhập vào hệ thống.</div>}
+        {error && <div className="mt-2 rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
+        {found === null && <div className="mt-2 text-sm text-warning">Không tìm thấy — người này chưa từng đăng nhập vào hệ thống.</div>}
         {found && (
-          <div className="mt-2 rounded border bg-slate-50 px-3 py-2 text-sm">
-            <span className="font-medium">{found.display_name}</span> <span className="text-slate-400">({found.email})</span>
+          <div className="mt-2 rounded border border-vien bg-surface-2 px-3 py-2 text-sm">
+            <span className="font-medium">{found.display_name}</span> <span className="text-phu">({found.email})</span>
           </div>
         )}
         <div className="mt-4 flex justify-end gap-2">
@@ -285,15 +285,15 @@ function PopupCanhBaoBotThanhVien({ teamId, member, busy, onClose, onConfirm }: 
     <Modal onClose={onClose} dismissable={!busy}>
       <div className="popup w-full max-w-md">
         <h2 className="mb-3 text-lg font-bold">Bớt {member.display_name} khỏi team?</h2>
-        {error && <div className="mb-2 rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
-        {count === null && !error && <div className="text-sm text-slate-400">Đang kiểm tra task đang phụ trách…</div>}
+        {error && <div className="mb-2 rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
+        {count === null && !error && <div className="text-sm text-phu">Đang kiểm tra task đang phụ trách…</div>}
         {count != null && count > 0 && (
-          <div className="rounded border bg-amber-50 p-3 text-sm text-amber-800">
+          <div className="rounded border border-warning bg-warning-soft p-3 text-sm text-warning">
             Người này còn <strong>{count}</strong> task project chưa hoàn thành. Bớt khỏi team không xoá
             các task đó, nhưng bạn cần tự phân công lại người phụ trách sau.
           </div>
         )}
-        {count === 0 && <div className="text-sm text-slate-500">Không có task project nào chưa hoàn thành.</div>}
+        {count === 0 && <div className="text-sm text-phu">Không có task project nào chưa hoàn thành.</div>}
         <div className="mt-4 flex justify-end gap-2">
           <button type="button" className={btnSecondary} disabled={busy} onClick={onClose}>Hủy</button>
           <button type="button" className={btnDanger} disabled={busy} onClick={onConfirm}>Xác nhận bớt</button>
@@ -330,16 +330,16 @@ function TabNhatKy({ teamId }: { teamId: number | null }) {
 
   function tenNguoi(id: number) { return members.find((m) => m.id === id)?.display_name || `user #${id}`; }
 
-  if (teamId == null) return <div className="p-4 text-sm text-slate-400">Chưa chọn team.</div>;
-  if (loading) return <div className="p-4 text-sm text-slate-400">Đang tải…</div>;
+  if (teamId == null) return <div className="p-4 text-sm text-phu">Chưa chọn team.</div>;
+  if (loading) return <div className="p-4 text-sm text-phu">Đang tải…</div>;
 
   return (
     <div className="flex flex-col gap-3">
-      {error && <div className="rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
-      <div className="overflow-x-auto rounded-lg border bg-white">
+      {error && <div className="rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
+      <div className="overflow-x-auto rounded-lg border border-vien bg-surface">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-slate-50">
+            <tr className="border-b border-vien bg-surface-2">
               <th className="p-2 text-left font-medium">Thời điểm</th>
               <th className="p-2 text-left font-medium">Ai</th>
               <th className="p-2 text-left font-medium">Hành động</th>
@@ -348,16 +348,16 @@ function TabNhatKy({ teamId }: { teamId: number | null }) {
           </thead>
           <tbody>
             {entries.map((e) => (
-              <tr key={e.id} className="border-b last:border-b-0">
-                <td className="p-2 text-xs text-slate-500">{new Date(e.createdAt).toLocaleString('vi-VN')}</td>
+              <tr key={e.id} className="border-b border-vien last:border-b-0">
+                <td className="p-2 text-xs text-phu">{new Date(e.createdAt).toLocaleString('vi-VN')}</td>
                 <td className="p-2">{tenNguoi(e.actorUserId)}</td>
                 <td className="p-2 font-mono text-xs">{e.action}</td>
-                <td className="p-2 text-xs text-slate-500">{e.target}</td>
+                <td className="p-2 text-xs text-phu">{e.target}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        {entries.length === 0 && <div className="p-4 text-center text-sm text-slate-400">Chưa có nhật ký nào.</div>}
+        {entries.length === 0 && <div className="p-4 text-center text-sm text-phu">Chưa có nhật ký nào.</div>}
       </div>
     </div>
   );

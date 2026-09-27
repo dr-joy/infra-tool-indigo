@@ -14,9 +14,9 @@ function loiThanThien(e: unknown): string {
   return e instanceof Error ? e.message : 'Có lỗi xảy ra';
 }
 
-const btnPrimary = 'rounded-md bg-teal-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50';
-const btnSecondary = 'rounded-md border bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50';
-const btnDanger = 'rounded-md border border-rose-200 bg-white px-3 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50';
+const btnPrimary = 'rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-on-primary hover:bg-primary-hover disabled:opacity-50';
+const btnSecondary = 'rounded-md border border-vien bg-surface px-3 py-1.5 text-sm font-medium text-phu hover:bg-surface-2 disabled:opacity-50';
+const btnDanger = 'rounded-md border border-danger bg-surface px-3 py-1.5 text-sm font-medium text-danger hover:bg-danger-soft disabled:opacity-50';
 
 const VALID_SYSTEMS = ['Dr.JOY', 'Pr.JOY'];
 const VALID_PLATFORMS = ['Web', 'Mobile'];
@@ -197,21 +197,21 @@ export function ManHinhLichReleaseChung() {
     }
   }
 
-  if (loading) return <div className="p-4 text-sm text-slate-400">Đang tải…</div>;
+  if (loading) return <div className="p-4 text-sm text-phu">Đang tải…</div>;
 
   return (
     <div className="flex flex-col gap-4">
-      {error && <div className="rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
+      {error && <div className="rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
 
       {laDieuPhoi && (
-        <div className="rounded-lg border bg-white p-4">
-          <h3 className="mb-2 text-sm font-semibold text-slate-700">Ấn định ngày release định kỳ (team điều phối)</h3>
+        <div className="rounded-lg border border-vien bg-surface p-4">
+          <h3 className="mb-2 text-sm font-semibold text-muc">Ấn định ngày release định kỳ (team điều phối)</h3>
           <div className="flex flex-wrap items-center gap-2">
             <input type="date" className="rounded border px-3 py-1.5 text-sm" value={regularDate} disabled={busy} onChange={(e) => setRegularDate(e.target.value)} />
             <button type="button" className={btnPrimary} disabled={busy || !regularDate} onClick={anDinhNgayDinhKy}>Ấn định</button>
           </div>
           {regularCycles.length > 0 && (
-            <div className="mt-2 text-xs text-slate-500">
+            <div className="mt-2 text-xs text-phu">
               Đợt định kỳ đang mở: {regularCycles.map((c) => c.regularReleaseDate).join(', ')}
             </div>
           )}
@@ -219,15 +219,15 @@ export function ManHinhLichReleaseChung() {
       )}
 
       {laDieuPhoi && pendingUnlockRequests.length > 0 && (
-        <div className="rounded-lg border bg-white p-4">
-          <h3 className="mb-2 text-sm font-semibold text-slate-700">Yêu cầu đang chờ duyệt</h3>
+        <div className="rounded-lg border border-vien bg-surface p-4">
+          <h3 className="mb-2 text-sm font-semibold text-muc">Yêu cầu đang chờ duyệt</h3>
           <div className="flex flex-col gap-2">
             {pendingUnlockRequests.map((r) => (
-              <div key={r.id} className="flex items-center justify-between gap-2 rounded border p-2 text-sm">
+              <div key={r.id} className="flex items-center justify-between gap-2 rounded border border-vien p-2 text-sm">
                 <div>
                   <span className="font-medium">{tenTeam(r.teamId)}</span>
                   {' — '}{r.kind === 'edit' ? 'xin mở khoá để sửa' : 'xin huỷ đợt'}
-                  <div className="text-xs text-slate-500">{r.reason}</div>
+                  <div className="text-xs text-phu">{r.reason}</div>
                 </div>
                 <button type="button" className={btnPrimary} disabled={busy} onClick={() => duyetMoKhoa(r.id)}>Duyệt</button>
               </div>
@@ -245,21 +245,21 @@ export function ManHinhLichReleaseChung() {
       )}
 
       {(board?.cycles.length ?? 0) === 0 && (
-        <div className="rounded-lg border bg-white p-4 text-center text-sm text-slate-400">Chưa có đợt release khẩn cấp nào.</div>
+        <div className="rounded-lg border border-vien bg-surface p-4 text-center text-sm text-phu">Chưa có đợt release khẩn cấp nào.</div>
       )}
 
       {board?.cycles.map((cycle) => (
-        <div key={cycle.id} className="rounded-lg border bg-white">
-          <div className="flex items-center justify-between border-b p-3">
+        <div key={cycle.id} className="rounded-lg border border-vien bg-surface">
+          <div className="flex items-center justify-between border-b border-vien p-3">
             <div className="text-sm font-semibold">Đợt release {releaseDateOf(cycle.releaseKey)}</div>
             <div className="flex items-center gap-2">
-              {cycle.lockedAt && <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600">Đã khoá</span>}
+              {cycle.lockedAt && <span className="rounded bg-surface-2 px-2 py-0.5 text-xs text-phu">Đã khoá</span>}
               {laDieuPhoi && !cycle.lockedAt && (
                 <button type="button" className={btnSecondary} disabled={busy} onClick={() => khoaCycle(cycle.id)}>Khoá lịch</button>
               )}
             </div>
           </div>
-          <div className="divide-y">
+          <div className="divide-y divide-vien">
             {cycle.registrations.map((reg) => {
               const laTeamMinh = reg.teamId === activeTeamId;
               const full = isFull(reg) ? reg : null;
@@ -268,9 +268,9 @@ export function ManHinhLichReleaseChung() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <span className="text-sm font-medium">{tenTeam(reg.teamId)}</span>
-                      {laTeamMinh && <span className="ml-1 rounded bg-teal-50 px-1.5 py-0.5 text-xs text-teal-700">Team bạn</span>}
-                      {reg.status === 'locked' && <span className="ml-1 rounded bg-amber-50 px-1.5 py-0.5 text-xs text-amber-700">Khoá</span>}
-                      {reg.status === 'cancelled' && <span className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">Đã huỷ</span>}
+                      {laTeamMinh && <span className="ml-1 rounded bg-primary-soft px-1.5 py-0.5 text-xs text-primary">Team bạn</span>}
+                      {reg.status === 'locked' && <span className="ml-1 rounded bg-warning-soft px-1.5 py-0.5 text-xs text-warning">Khoá</span>}
+                      {reg.status === 'cancelled' && <span className="ml-1 rounded bg-surface-2 px-1.5 py-0.5 text-xs text-phu">Đã huỷ</span>}
                     </div>
                     {laTeamMinh && full && reg.status !== 'cancelled' && (
                       <div className="flex gap-2">
@@ -286,14 +286,14 @@ export function ManHinhLichReleaseChung() {
                       </div>
                     )}
                   </div>
-                  <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-500 sm:grid-cols-4">
-                    <div>Deploy staging: <span className="text-slate-700">{splitWallClock(reg.deployStagingAt).date} {splitWallClock(reg.deployStagingAt).time}</span></div>
-                    <div>Release: <span className="text-slate-700">{splitWallClock(reg.releaseAt).date} {splitWallClock(reg.releaseAt).time}</span></div>
-                    <div>Deploy demo: <span className="text-slate-700">{splitWallClock(reg.deployDemoAt).time} (tự động)</span></div>
-                    <div>Hệ thống/nền tảng: <span className="text-slate-700">{reg.affectedSystems.join(', ')} · {reg.platforms.join(', ')}</span></div>
+                  <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-phu sm:grid-cols-4">
+                    <div>Deploy staging: <span className="text-muc">{splitWallClock(reg.deployStagingAt).date} {splitWallClock(reg.deployStagingAt).time}</span></div>
+                    <div>Release: <span className="text-muc">{splitWallClock(reg.releaseAt).date} {splitWallClock(reg.releaseAt).time}</span></div>
+                    <div>Deploy demo: <span className="text-muc">{splitWallClock(reg.deployDemoAt).time} (tự động)</span></div>
+                    <div>Hệ thống/nền tảng: <span className="text-muc">{reg.affectedSystems.join(', ')} · {reg.platforms.join(', ')}</span></div>
                   </div>
                   {full && (
-                    <div className="mt-1 text-xs text-slate-500">
+                    <div className="mt-1 text-xs text-phu">
                       Ticket: {full.ticketNumbers.length ? full.ticketNumbers.map((n) => `#${n}`).join(', ') : '—'}
                       {' · '}
                       {full.japanCoordinationLink ? <a className="underline" href={full.japanCoordinationLink} target="_blank" rel="noreferrer">Link Nhật</a> : `Không có link Nhật: ${full.noJapanCoordinationReason}`}
@@ -304,8 +304,8 @@ export function ManHinhLichReleaseChung() {
             })}
           </div>
           {cycle.conflicts.length > 0 && (
-            <div className="border-t bg-amber-50 p-3">
-              <div className="mb-1 text-xs font-semibold text-amber-800">Xung đột lịch</div>
+            <div className="border-t border-warning bg-warning-soft p-3">
+              <div className="mb-1 text-xs font-semibold text-warning">Xung đột lịch</div>
               {cycle.conflicts.map((c) => {
                 const a = cycle.registrations.find((r) => r.id === c.registration_a_id);
                 const b = cycle.registrations.find((r) => r.id === c.registration_b_id);
@@ -412,30 +412,30 @@ function PopupDangKyLich({ teamId, existing, onClose, onDone }: {
           <h2 className="text-lg font-bold">{existing ? 'Sửa đăng ký lịch release khẩn cấp' : 'Đăng ký lịch release khẩn cấp'}</h2>
           <button type="button" className="nut-icon" onClick={onClose}><X size={18} /></button>
         </div>
-        {error && <div className="mb-2 rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
+        {error && <div className="mb-2 rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-2">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-600">Ngày deploy staging</span>
+              <span className="text-phu">Ngày deploy staging</span>
               <input type="date" className="rounded border px-2 py-1" value={stagingDate} onChange={(e) => setStagingDate(e.target.value)} />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-600">Giờ deploy staging</span>
+              <span className="text-phu">Giờ deploy staging</span>
               <input type="time" className="rounded border px-2 py-1" value={stagingTime} onChange={(e) => setStagingTime(e.target.value)} />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-600">Ngày release</span>
+              <span className="text-phu">Ngày release</span>
               <input type="date" className="rounded border px-2 py-1" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-slate-600">Giờ release</span>
+              <span className="text-phu">Giờ release</span>
               <input type="time" className="rounded border px-2 py-1" value={releaseTime} onChange={(e) => setReleaseTime(e.target.value)} />
             </label>
           </div>
-          <div className="text-xs text-slate-500">Deploy demo tự tính 16:00 cùng ngày release — không nhập tay được.</div>
+          <div className="text-xs text-phu">Deploy demo tự tính 16:00 cùng ngày release — không nhập tay được.</div>
 
           <div>
-            <div className="mb-1 text-sm text-slate-600">Hệ thống bị ảnh hưởng</div>
+            <div className="mb-1 text-sm text-phu">Hệ thống bị ảnh hưởng</div>
             <div className="flex gap-2">
               {VALID_SYSTEMS.map((s) => (
                 <label key={s} className="flex items-center gap-1 text-sm"><input type="checkbox" checked={systems.includes(s)} onChange={() => toggle(systems, setSystems, s)} />{s}</label>
@@ -443,7 +443,7 @@ function PopupDangKyLich({ teamId, existing, onClose, onDone }: {
             </div>
           </div>
           <div>
-            <div className="mb-1 text-sm text-slate-600">Nền tảng bị ảnh hưởng</div>
+            <div className="mb-1 text-sm text-phu">Nền tảng bị ảnh hưởng</div>
             <div className="flex gap-2">
               {VALID_PLATFORMS.map((p) => (
                 <label key={p} className="flex items-center gap-1 text-sm"><input type="checkbox" checked={platforms.includes(p)} onChange={() => toggle(platforms, setPlatforms, p)} />{p}</label>
@@ -452,10 +452,10 @@ function PopupDangKyLich({ teamId, existing, onClose, onDone }: {
           </div>
 
           <div>
-            <div className="mb-1 text-sm text-slate-600">Mã ticket <span className="text-amber-700">(điền sai mã có thể làm bài thông báo sai)</span></div>
+            <div className="mb-1 text-sm text-phu">Mã ticket <span className="text-warning">(điền sai mã có thể làm bài thông báo sai)</span></div>
             <div className="flex flex-wrap items-center gap-1">
               {tickets.map((n) => (
-                <span key={n} className="flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-xs">
+                <span key={n} className="flex items-center gap-1 rounded bg-surface-2 px-2 py-0.5 text-xs">
                   #{n} <button type="button" onClick={() => setTickets(tickets.filter((t) => t !== n))}><X size={10} /></button>
                 </span>
               ))}
@@ -471,16 +471,16 @@ function PopupDangKyLich({ teamId, existing, onClose, onDone }: {
           </div>
 
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-600">Link trao đổi với Nhật (hoặc điền lý do không có bên dưới)</span>
+            <span className="text-phu">Link trao đổi với Nhật (hoặc điền lý do không có bên dưới)</span>
             <input className="rounded border px-2 py-1" value={japanLink} onChange={(e) => setJapanLink(e.target.value)} placeholder="https://…" disabled={Boolean(japanReason.trim())} />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-600">Lý do không có link (nếu không có link)</span>
+            <span className="text-phu">Lý do không có link (nếu không có link)</span>
             <input className="rounded border px-2 py-1" value={japanReason} onChange={(e) => setJapanReason(e.target.value)} disabled={Boolean(japanLink.trim())} />
           </label>
 
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-600">Ghi chú (tuỳ chọn)</span>
+            <span className="text-phu">Ghi chú (tuỳ chọn)</span>
             <textarea className="rounded border px-2 py-1" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </label>
         </div>
@@ -549,12 +549,12 @@ function PopupEpGioChung({ conflictId, onClose, onDone }: { conflictId: number; 
     <Modal onClose={onClose} dismissable={!busy}>
       <div className="popup w-full max-w-md">
         <h2 className="mb-3 text-lg font-bold">Ép giờ chung</h2>
-        <p className="mb-2 text-xs text-amber-700">Ghi đè trực tiếp giờ deploy staging/release của CẢ HAI team đang xung đột — không đụng ticket/nền tảng/ghi chú riêng của từng team.</p>
-        {error && <div className="mb-2 rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
+        <p className="mb-2 text-xs text-warning">Ghi đè trực tiếp giờ deploy staging/release của CẢ HAI team đang xung đột — không đụng ticket/nền tảng/ghi chú riêng của từng team.</p>
+        {error && <div className="mb-2 rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
         <div className="flex flex-col gap-2">
-          <label className="flex flex-col gap-1 text-sm"><span className="text-slate-600">Ngày (giữ nguyên ngày đợt hiện tại)</span><input type="date" className="rounded border px-2 py-1" value={date} onChange={(e) => setDate(e.target.value)} /></label>
-          <label className="flex flex-col gap-1 text-sm"><span className="text-slate-600">Giờ deploy staging</span><input type="time" className="rounded border px-2 py-1" value={stagingTime} onChange={(e) => setStagingTime(e.target.value)} /></label>
-          <label className="flex flex-col gap-1 text-sm"><span className="text-slate-600">Giờ release</span><input type="time" className="rounded border px-2 py-1" value={releaseTime} onChange={(e) => setReleaseTime(e.target.value)} /></label>
+          <label className="flex flex-col gap-1 text-sm"><span className="text-phu">Ngày (giữ nguyên ngày đợt hiện tại)</span><input type="date" className="rounded border px-2 py-1" value={date} onChange={(e) => setDate(e.target.value)} /></label>
+          <label className="flex flex-col gap-1 text-sm"><span className="text-phu">Giờ deploy staging</span><input type="time" className="rounded border px-2 py-1" value={stagingTime} onChange={(e) => setStagingTime(e.target.value)} /></label>
+          <label className="flex flex-col gap-1 text-sm"><span className="text-phu">Giờ release</span><input type="time" className="rounded border px-2 py-1" value={releaseTime} onChange={(e) => setReleaseTime(e.target.value)} /></label>
         </div>
         <div className="mt-4 flex justify-end gap-2">
           <button type="button" className={btnSecondary} onClick={onClose}>Hủy</button>

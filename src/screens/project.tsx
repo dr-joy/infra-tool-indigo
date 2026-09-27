@@ -177,7 +177,7 @@ function thuTrongTuanGantt(value: string) {
   return { label: taoNgayTuInput(value).toLocaleDateString('vi-VN', { weekday: 'short' }), className: '' };
 }
 
-export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?: boolean }) {
+export function ManHinhProject() {
   const { t } = useLang();
   // CR-20260913 FR-13 — mọi màn nghiệp vụ hiển thị theo đúng team đang chọn (server/routes/projects.ts
   // §6.2: GET /projects, GET /projects/closed, POST /projects, PATCH /projects/reorder bắt buộc teamId).
@@ -207,7 +207,6 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
   const [dangTaiGanttTong, setDangTaiGanttTong] = useState(false);
   const [ganttTongError, setGanttTongError] = useState('');
   const [ganttTongTaskDangSua, setGanttTongTaskDangSua] = useState<ProjectTaskItem | null>(null);
-  const autoOpenedGanttRef = useRef(false);
   const [closedProjects, setClosedProjects] = useState<ProjectItem[]>([]);
   const [dangTaiClosedProjects, setDangTaiClosedProjects] = useState(false);
   const [closedProjectsError, setClosedProjectsError] = useState('');
@@ -558,13 +557,6 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
     return () => window.removeEventListener(quickProjectTaskCreatedEvent, refreshAfterQuickAdd);
   }, [projectDangChon, moGanttTong, moRoadmapProject, projects]);
 
-  useEffect(() => {
-    if (!openGanttOnMount || autoOpenedGanttRef.current || dangTaiProject) return;
-    autoOpenedGanttRef.current = true;
-    setMoGanttTong(true);
-    void taiGanttTongTasks();
-  }, [openGanttOnMount, dangTaiProject, projects]);
-
   // Đổi ngày 1 task ở Gantt tổng (dùng projectId của task, không phụ thuộc project đang chọn)
   async function capNhatNgayTaskTong(task: ProjectTaskItem, start: string, end: string) {
     const payload = {
@@ -734,7 +726,6 @@ export function ManHinhProject({ openGanttOnMount = false }: { openGanttOnMount?
         {hienThiDanhSachProject && (
         <aside className="project-sidebar" aria-label={t('project.sidebar_label')}>
           <div className="project-sidebar-header">
-            <h2>{t('project.title')}</h2>
             <div className="project-sidebar-actions">
               <button
                 type="button"
@@ -1239,9 +1230,9 @@ function PopupLichSuProjectClose({
           <p className="project-list-state">{t('empty.closed_project')}</p>
         )}
         {!isLoading && !error && projects.length > 0 && (
-          <div className="min-h-0 flex-1 overflow-auto rounded-md border border-slate-300">
+          <div className="min-h-0 flex-1 overflow-auto rounded-md border border-vien">
             <table className="w-full min-w-[920px] text-left text-sm">
-              <thead className="bg-slate-100 text-xs uppercase text-phu">
+              <thead className="bg-surface-2 text-xs uppercase text-phu">
                 <tr>
                   <th className="px-4 py-3">{t('history.project.col_project')}</th>
                   <th className="px-4 py-3">{t('history.project.col_pic')}</th>
@@ -1252,7 +1243,7 @@ function PopupLichSuProjectClose({
                   <th className="px-4 py-3 text-right">{t('history.project.col_action')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 bg-white">
+              <tbody className="divide-y divide-vien bg-surface">
                 {projects.map((project) => (
                   <tr key={project.id}>
                     <td className="px-4 py-3 font-bold text-muc">{project.ten}</td>
@@ -1492,7 +1483,7 @@ function ProjectTaskRow({
             <div className="project-task-title-main">
               <h4>
                 {isGoal && (
-                  <span title="Mục tiêu tuần này" style={{ color: '#f59e0b', marginRight: 4, display: 'inline-flex', verticalAlign: 'middle' }}>
+                  <span title="Mục tiêu tuần này" style={{ color: 'var(--color-warning)', marginRight: 4, display: 'inline-flex', verticalAlign: 'middle' }}>
                     <Target size={14} />
                   </span>
                 )}
@@ -1511,7 +1502,7 @@ function ProjectTaskRow({
         <div className="project-task-fields">
           <div className="project-task-date-column">
             <span className="project-task-date-line" title={t('ptask.planned')}><strong>{t('ptask.planned')}:</strong><span>{dinhDangNgay(task.ngayBatDauDuKien)} - {dinhDangNgay(task.ngayKetThucDuKien)}</span></span>
-            <span className="project-task-date-line" title={t('ptask.pic')}><strong>{t('ptask.pic')}:</strong><span style={{ fontWeight: 600, color: '#2563eb' }}>{task.assignee || '--'}</span></span>
+            <span className="project-task-date-line" title={t('ptask.pic')}><strong>{t('ptask.pic')}:</strong><span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{task.assignee || '--'}</span></span>
           </div>
           <div className="project-task-status-column">
             <span className={isExecutableWithoutEstimate ? 'project-task-missing-estimate' : undefined}>
@@ -2041,7 +2032,7 @@ function PopupGanttTong({
       if (!byPic.has(a.pic)) { byPic.set(a.pic, []); order.push(a.pic); }
       byPic.get(a.pic)!.push({ start: a.startDate, end: a.endDate, index, estimateHours: a.estimateHours });
     });
-    return order.map((pic) => ({ pic, color: picColors[pic] || '#94a3b8', segs: byPic.get(pic)! }));
+    return order.map((pic) => ({ pic, color: picColors[pic] || 'var(--color-gantt-neutral)', segs: byPic.get(pic)! }));
   }
   function rowHeightOf(task: ProjectTaskItem) {
     const segs = (task.assignments || []).filter((a) => !activePic || a.pic === activePic);
@@ -2325,22 +2316,22 @@ function PopupGanttTong({
             {legendNames.length > 0 && (
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                 {legendNames.map((n) => (
-                  <span key={n} className="flex items-center gap-1 text-xs text-slate-600"><span className="h-3 w-3 rounded-sm" style={{ backgroundColor: picColors[n] }} />{n}</span>
+                  <span key={n} className="flex items-center gap-1 text-xs text-phu"><span className="h-3 w-3 rounded-sm" style={{ backgroundColor: picColors[n] }} />{n}</span>
                 ))}
               </div>
             )}
           </div>
           <div className="ml-auto mr-3 flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-600" title="Ẩn task đã xong 100% ở mọi dự án">
+            <label className="flex items-center gap-1 rounded border border-vien px-2 py-1 text-xs text-phu" title="Ẩn task đã xong 100% ở mọi dự án">
               <input type="checkbox" checked={hide100} onChange={(e) => setHide100(e.target.checked)} />
               Ẩn task 100%
             </label>
-            <select className="max-w-[13rem] truncate rounded border border-slate-300 py-1 pl-2 pr-7 text-xs" value={filterProject} onChange={(e) => setFilterProject(e.target.value)} title="Lọc theo dự án">
+            <select className="max-w-[13rem] truncate rounded border border-vien py-1 pl-2 pr-7 text-xs" value={filterProject} onChange={(e) => setFilterProject(e.target.value)} title="Lọc theo dự án">
               <option value="">— Lọc dự án —</option>
               <option value="all">Tất cả dự án</option>
               {projects.map((p) => <option key={p.id} value={p.id}>{p.ten}</option>)}
             </select>
-            <select className="max-w-[11rem] truncate rounded border border-slate-300 py-1 pl-2 pr-7 text-xs" value={filterPic} onChange={(e) => setFilterPic(e.target.value)} title="Lọc theo PIC">
+            <select className="max-w-[11rem] truncate rounded border border-vien py-1 pl-2 pr-7 text-xs" value={filterPic} onChange={(e) => setFilterPic(e.target.value)} title="Lọc theo PIC">
               <option value="">— Lọc PIC —</option>
               <option value="all">Tất cả PIC</option>
               {picList.map((n) => <option key={n} value={n}>{n}</option>)}

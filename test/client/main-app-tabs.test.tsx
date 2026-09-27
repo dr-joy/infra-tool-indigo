@@ -109,16 +109,17 @@ describe('App() — ẩn tab theo team_feature_visibility (CR-20260913 FR-7)', (
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Projects' })).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Projects' }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Projects' })).toHaveClass('menu-tab-active'));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Projects' })).toHaveClass('side-item-active'));
 
-    // Đổi team qua TeamSwitcher (góc trên) sang Team B — Projects biến mất khỏi thanh tab.
+    // Đổi team qua TeamSwitcher (chân sidebar, Pha 2 CR-20260926) sang Team B — Projects biến mất
+    // khỏi sidebar.
     fireEvent.click(screen.getByRole('button', { name: /Team A/ }));
     fireEvent.click(screen.getByRole('option', { name: /Team B/ }));
 
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Projects' })).toBeNull());
     // Tasks (personal_task) cũng tắt ở Team B -> Reports (weekly_report, đang bật) phải là tab được
     // tự chuyển tới, không phải màn trống không tab nào active.
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Reports' })).toHaveClass('menu-tab-active'));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Reports' })).toHaveClass('side-item-active'));
   });
 
   it('2026-09-25: Admin bật feature ở màn Hiển thị chức năng -> tab hiện ngay trên nav, không cần F5', async () => {
@@ -135,5 +136,29 @@ describe('App() — ẩn tab theo team_feature_visibility (CR-20260913 FR-7)', (
     fireEvent.click(screen.getByRole('switch', { name: 'Project — Dev13' }));
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Projects' })).toBeInTheDocument());
+  });
+
+  it('nút thu gọn sidebar -> ẩn nhãn chữ (còn icon bấm được), bấm lại -> hiện lại; nhớ qua localStorage', async () => {
+    mockApi([{ id: 1, name: 'Team A', role: 'leader', features: ['personal_task', 'project'] }]);
+    renderApp();
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Projects' })).toBeInTheDocument());
+    expect(screen.getByText('Indigo')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Thu gọn menu' }));
+    // Nhãn chữ biến mất khỏi DOM (không phải chỉ ẩn CSS) — nút vẫn còn, tự lấy tên accessible qua
+    // title vì không còn text con.
+    expect(screen.queryByText('Indigo')).toBeNull();
+    const projectButtonCollapsed = screen.getByRole('button', { name: 'Projects' });
+    expect(projectButtonCollapsed).toBeInTheDocument();
+    expect(window.localStorage.getItem('sidebar_collapsed')).toBe('1');
+
+    // Điều hướng vẫn hoạt động bình thường khi đang thu gọn — không phải chỉ còn icon trang trí.
+    fireEvent.click(projectButtonCollapsed);
+    await waitFor(() => expect(projectButtonCollapsed).toHaveClass('side-item-active'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mở rộng menu' }));
+    expect(screen.getByText('Indigo')).toBeInTheDocument();
+    expect(window.localStorage.getItem('sidebar_collapsed')).toBe('0');
   });
 });

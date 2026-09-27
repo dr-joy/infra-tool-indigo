@@ -1,0 +1,29 @@
+{
+  "agent": "codex",
+  "bodyMarkdown": "#### Reviewer\n\nTôi hiểu đây là vòng khám phá cho một prototype tĩnh: làm giao diện dễ quét và dễ hiểu hơn theo vai trò, nhưng tuyệt đối không thay đổi hay che mờ cấu trúc nghiệp vụ đã có. Tiêu chí ưu tiên của tôi là mỗi màn phải vẫn “nói thật” về cách chức năng vận hành: cây task, Gantt, Kanban kèm timeline, wizard bốn bước và lịch Release liên-team.\n\nGiả định đang dùng:\n\n- Prototype là desktop-first, minh hoạ một trạng thái dữ liệu thực tế vừa đủ phong phú.\n- Vai trò hiển thị theo team đang chọn; Admin là quyền hệ thống tách biệt, không phải một cấp Leader cao hơn.\n- Những khác biệt quyền mới chỉ là lớp chỉ dẫn và trạng thái UI; chúng không được ngụ ý rằng client tự cấp quyền hoặc thay thế kiểm tra 403 ở server.\n- Dashboard mới, nếu có, chỉ là điểm vào bổ sung chứ không được thay cho các tab và luồng hiện hữu.\n\nRủi ro cần chặn sớm:\n\n- Dễ biến Project thành bảng/card phẳng, làm mất quan hệ cha–con ba cấp và thao tác kéo-thả theo cùng cha.\n- Dễ minh hoạ Gantt như một ảnh trang trí, mất các lane theo người phụ trách, mốc hôm nay và sự khác nhau giữa Roadmap một project với Gantt tổng.\n- Dễ biến Task cá nhân thành Kanban ba cột đồng dạng; cột định kỳ phải còn là timeline theo giờ, có ngày đang xem và mốc hiện tại.\n- Dễ rút gọn Báo cáo tuần thành một form đơn; prototype phải giữ được bốn bước, bước hiện hành và Risk popup là thực thể riêng.\n- Dễ dùng cùng một bộ nút hành động cho Member và Leader, khiến người dùng chỉ biết mình không có quyền sau khi bấm. Trạng thái có thể làm được, cần được giải thích trước bằng nhãn quyền, tooltip hoặc nút bị vô hiệu hoá có lý do.\n- Cần xác định rõ kích thước khung hình và dữ liệu mẫu trước khi dựng; nếu không, prototype tĩnh có thể đẹp ở một trạng thái nhưng không chứng minh được mật độ thông tin và các trạng thái quyền quan trọng.\n\nKhông thấy rủi ro hạ tầng hay bảo mật cho riêng artifact HTML/CSS độc lập, miễn không nhúng dữ liệu production, secret, route hay lời gọi API thật.\n\n```yaml\nturn_result:\n  agent: \"codex\"\n  round: 1\n  blocking_objections: 0\n  new_decisions: 0\n  questions_for_user: 0\n  permission_requests: 0\n  converged: false\n  note: \"Đã xác định các cấu trúc nghiệp vụ và rủi ro cần giữ nguyên trong vòng khám phá độc lập.\"\n  rules_version_seen: \"RULES-2026-09-04-a\"\n  session_id: \"076676ab-719e-4014-a3cb-c6ebf79d95a9\"\n```\n",
+  "createdAt": "2026-09-26T08:25:20.047Z",
+  "questionCards": [],
+  "recordId": "076676ab-719e-4014-a3cb-c6ebf79d95a9-agent_turn-0",
+  "recordType": "agent_turn",
+  "roles": [
+    "Reviewer",
+    "QA",
+    "Infra"
+  ],
+  "round": 1,
+  "rulesVersion": "RULES-2026-09-04-a",
+  "schemaVersion": 1,
+  "sessionId": "076676ab-719e-4014-a3cb-c6ebf79d95a9",
+  "turnResult": {
+    "agent": "codex",
+    "blocking_objections": 0,
+    "converged": false,
+    "new_decisions": 0,
+    "note": "Đã xác định các cấu trúc nghiệp vụ và rủi ro cần giữ nguyên trong vòng khám phá độc lập.",
+    "permission_requests": 0,
+    "questions_for_user": 0,
+    "round": 1,
+    "rules_version_seen": "RULES-2026-09-04-a",
+    "session_id": "076676ab-719e-4014-a3cb-c6ebf79d95a9"
+  }
+}

@@ -1,4 +1,4 @@
-﻿import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+﻿import { lazy, Suspense, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useRef } from 'react';
 import { useLayoutEffect } from 'react';
@@ -28,14 +28,24 @@ import {
   CalendarDays,
   CalendarRange,
   ChartGantt,
+  ClipboardList,
   Copy,
   FileSpreadsheet,
+  FolderKanban,
+  Gem,
   Github,
   GripVertical,
   Info,
+  ListChecks,
   Paperclip,
+  PanelLeftClose,
+  PanelLeftOpen,
   Rocket,
+  Settings,
+  ShieldCheck,
   Target,
+  Users,
+  Workflow,
   X
 } from 'lucide-react';
 import './styles.css';
@@ -98,6 +108,25 @@ const TAB_FEATURE: Partial<Record<TabChinh, string>> = {
   so_do: 'mind_map'
 };
 
+// Pha 2 CR-20260926 — sidebar dọc thay menu-tab ngang: nhóm hiển thị + icon riêng cho từng tab.
+// Nhóm KHÔNG ảnh hưởng logic hiện/ẩn (vẫn do tabsHienThi ở dưới quyết định) — chỉ quyết định tab đó
+// vẽ dưới nhãn nhóm nào trên sidebar.
+const SIDEBAR_GROUPS: { label: string; keys: TabChinh[] }[] = [
+  { label: 'Làm việc', keys: ['task_ca_nhan', 'project', 'bao_cao_tuan', 'len_lich', 'so_do'] },
+  { label: 'Hệ thống', keys: ['quan_ly_pic', 'quan_ly_team', 'admin'] }
+];
+
+const TAB_ICON: Record<TabChinh, ReactNode> = {
+  task_ca_nhan: <ListChecks size={17} />,
+  project: <FolderKanban size={17} />,
+  bao_cao_tuan: <ClipboardList size={17} />,
+  len_lich: <CalendarRange size={17} />,
+  so_do: <Workflow size={17} />,
+  quan_ly_pic: <Settings size={17} />,
+  quan_ly_team: <Users size={17} />,
+  admin: <ShieldCheck size={17} />
+};
+
 
 
 // Bản sao nhỏ, cố ý trùng với hàm cùng tên trong screens/personal-task.tsx: shell cần hàm này cho
@@ -145,6 +174,14 @@ export function App() {
   const toast = useToast();
   const mmGuard = useRef<{ dirty: boolean; luu: () => Promise<void> } | null>(null);
   const [pendingTab, setPendingTab] = useState<TabChinh | null>(null);
+  // Thu gọn sidebar (chỉ còn icon) — nhớ theo máy qua localStorage, mỗi máy tự chọn trạng thái riêng,
+  // không đồng bộ qua server vì đây là sở thích hiển thị cá nhân, không phải dữ liệu nghiệp vụ.
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    try { return localStorage.getItem('sidebar_collapsed') === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('sidebar_collapsed', sidebarCollapsed ? '1' : '0'); } catch { /* bỏ qua, chỉ là sở thích hiển thị */ }
+  }, [sidebarCollapsed]);
   const chuyenTab = useCallback((next: TabChinh) => {
     if (next === tabDangMo) return;
     if (tabDangMo === 'so_do' && mmGuard.current?.dirty) { setPendingTab(next); return; }
@@ -176,24 +213,61 @@ export function App() {
     setNotificationPermission(permission);
   }
 
+  const activeTabMeta = tabsChinh.find((tab) => tab.key === tabDangMo);
+
   return (
-    <main className="h-screen overflow-hidden bg-hoa-van text-muc">
-      <div className="mx-auto flex h-full w-full max-w-[calc(100vw-128px)] flex-col px-4 py-3 2xl:max-w-[calc(100vw-160px)]">
-        <div className="app-brand">Personal Tool</div>
-        <nav className="menu-tabs" aria-label="Chức năng chính">
-          <div className="menu-tab-list">
-            {tabsHienThi.map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                className={`menu-tab ${tabDangMo === tab.key ? 'menu-tab-active' : ''}`}
-                onClick={() => chuyenTab(tab.key)}
-              >
-                {t(tab.i18nKey)}
-              </button>
-            ))}
+    <main className="flex h-screen overflow-hidden bg-nen text-muc">
+      <aside className={`sidebar ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        <div className="sidebar-brand-row">
+          <div className="sidebar-brand" title="Indigo">
+            <Gem size={18} className="shrink-0 text-brand" />
+            {!sidebarCollapsed && <span className="truncate">Indigo</span>}
           </div>
-          <div className="menu-tab-actions">
+          <button
+            type="button"
+            className="sidebar-collapse-btn"
+            onClick={() => setSidebarCollapsed((v) => !v)}
+            title={sidebarCollapsed ? 'Mở rộng menu' : 'Thu gọn menu'}
+            aria-label={sidebarCollapsed ? 'Mở rộng menu' : 'Thu gọn menu'}
+          >
+            {sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
+        </div>
+        <nav className="sidebar-nav" aria-label="Chức năng chính">
+          {SIDEBAR_GROUPS.map((group) => {
+            const items = tabsHienThi.filter((tab) => group.keys.includes(tab.key));
+            if (items.length === 0) return null;
+            return (
+              <div key={group.label}>
+                {!sidebarCollapsed && <div className="side-group-label">{group.label}</div>}
+                {items.map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    className={`side-item ${tabDangMo === tab.key ? 'side-item-active' : ''}`}
+                    onClick={() => chuyenTab(tab.key)}
+                    title={sidebarCollapsed ? t(tab.i18nKey) : undefined}
+                  >
+                    {TAB_ICON[tab.key]}
+                    {!sidebarCollapsed && <span className="side-item-label">{t(tab.i18nKey)}</span>}
+                  </button>
+                ))}
+              </div>
+            );
+          })}
+        </nav>
+        <div className="sidebar-foot">
+          {/* CR-20260913 FR-13 — bộ chọn team (kiểu chuyển workspace Slack/Notion), chuyển ngay không
+              tải lại trang. Đặt NGOÀI .sidebar-nav (không bị overflow-y-auto cắt popup) — xem ghi chú
+              tại định nghĩa .sidebar-nav trong styles.css. */}
+          <TeamSwitcher collapsed={sidebarCollapsed} />
+        </div>
+      </aside>
+
+      <div className="flex min-w-0 flex-1 flex-col px-4 py-3">
+        <header className="topbar">
+          <h1 className="topbar-title">{activeTabMeta ? t(activeTabMeta.i18nKey) : ''}</h1>
+          <div className="topbar-right">
             {tabDangMo === 'task_ca_nhan' && supportsBrowserNotifications() && notificationPermission !== 'granted' && (
               <button
                 className="nut-phu"
@@ -205,11 +279,8 @@ export function App() {
                 {notificationPermission === 'denied' ? t('header.notify_blocked') : t('header.notify_enable')}
               </button>
             )}
-            {/* CR-20260913 FR-13 — bộ chọn team, góc trên cạnh tên người dùng (kiểu chuyển workspace
-                Slack/Notion), chuyển ngay không tải lại trang. */}
-            <TeamSwitcher />
           </div>
-        </nav>
+        </header>
 
         <ManHinhTaskCaNhan
           ref={personalTaskRef}
@@ -221,7 +292,7 @@ export function App() {
             bên dưới: phòng trường hợp tabDangMo còn sót lại đúng 1 tick trước khi effect đổi team tự
             chuyển tab (xem tabsHienThiKeys ở trên), không để lọt 1 tick render nội dung tab đã tắt. */}
         {tabDangMo === 'project' && enabledFeatures.has('project') && (
-          <ManHinhProject openGanttOnMount />
+          <ManHinhProject />
         )}
 
         {tabDangMo === 'len_lich' && enabledFeatures.has('release') && (

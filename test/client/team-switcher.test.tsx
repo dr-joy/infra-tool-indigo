@@ -50,4 +50,15 @@ describe('TeamSwitcher', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: /QA/ })).toBeInTheDocument());
     expect(window.localStorage.getItem('tm.activeTeamId')).toBe('2');
   });
+
+  it('collapsed=true -> ẩn tên team + chevron (chỉ còn icon), vẫn mở được dropdown chọn team', async () => {
+    render(<AuthProvider><TeamSwitcher collapsed /></AuthProvider>);
+    const trigger = await screen.findByRole('button', { name: 'Dev13' });
+    // Tên team chỉ còn ở thuộc tính `title` (accessible name) — không còn render thành chữ nhìn
+    // thấy được trong nút (khác chế độ mặc định, nơi "Dev13" là text con thật).
+    expect(trigger.textContent).toBe('');
+
+    fireEvent.click(trigger);
+    expect(screen.getByRole('option', { name: /QA/ })).toBeInTheDocument();
+  });
 });

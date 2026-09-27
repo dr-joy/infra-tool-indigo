@@ -2287,7 +2287,7 @@ export function PopupChonNgayReleaseKhanCap({
           </div>
         </div>
         {batchValidationError && (
-          <p role="alert" className="text-sm text-red-600">{batchValidationError}</p>
+          <p role="alert" className="text-sm text-danger">{batchValidationError}</p>
         )}
         <div className="flex justify-end gap-3">
           <button type="button" className="nut-phu" onClick={onClose}>{t('btn.cancel')}</button>

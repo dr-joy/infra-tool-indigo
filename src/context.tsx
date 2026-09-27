@@ -101,10 +101,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         <div className="pointer-events-none fixed inset-0 z-[90] flex items-center justify-center" role="status" aria-live="polite">
           <div className="flex flex-col items-center gap-2">
             {toasts.map((toast) => (
-              <div key={toast.id} className="flex items-center gap-2 rounded-xl bg-slate-900/90 px-6 py-4 text-base font-semibold text-white shadow-2xl">
+              <div key={toast.id} className="flex items-center gap-2 rounded-xl border border-vien bg-surface-2 px-6 py-4 text-base font-semibold text-muc shadow-token-md">
                 {toast.kind === 'error'
-                  ? <X size={18} className="text-rose-400" />
-                  : <Check size={18} className="text-emerald-400" />}
+                  ? <X size={18} className="text-danger" />
+                  : <Check size={18} className="text-success" />}
                 {toast.message}
               </div>
             ))}

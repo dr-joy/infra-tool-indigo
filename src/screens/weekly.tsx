@@ -517,16 +517,16 @@ export function ManHinhBaoCaoTuan() {
     // dữ liệu team cũ trong lúc team mới đang tải. Nếu fetch team mới lỗi, weekStart không được phục
     // hồi (dữ liệu team cũ không còn đáng tin) -> hiện lỗi ở đây thay vì kẹt mãi ở "Đang tải dữ liệu"
     // (error state vẫn giữ nguyên message từ effect đó).
-    return <section className="flex-1 p-4 text-sm text-slate-500">{error || t('loading.data')}</section>;
+    return <section className="flex-1 p-4 text-sm text-phu">{error || t('loading.data')}</section>;
   }
 
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-3">
       {/* Thanh chọn tuần + nút tạo báo cáo */}
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-300 bg-white px-3 py-2 shadow-sm">
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-vien bg-surface px-3 py-2 shadow-sm">
         {/* Bộ chọn tuần dạng segmented: ‹ | tuần (bấm để mở box chọn) | › */}
         <div className="relative" ref={weekPickerRef}>
-          <div className="flex items-center overflow-hidden rounded-lg border border-slate-300 shadow-sm">
+          <div className="flex items-center overflow-hidden rounded-lg border border-vien shadow-sm">
             <button
               type="button"
               className="nav-step-button"
@@ -537,14 +537,14 @@ export function ManHinhBaoCaoTuan() {
             </button>
             <button
               type="button"
-              className="flex h-9 min-w-[180px] flex-col items-center justify-center border-x border-slate-300 bg-slate-50 px-3 leading-tight text-slate-700 transition hover:bg-slate-100"
+              className="flex h-9 min-w-[180px] flex-col items-center justify-center border-x border-vien bg-surface-2 px-3 leading-tight text-muc transition hover:bg-surface"
               onClick={() => setMoChonTuan((v) => !v)}
               title="Bấm để chọn tuần"
             >
               <span className="flex items-center gap-1 text-sm font-semibold">
-                <CalendarDays size={14} className="text-slate-400" /> Tuần {isoWeek(weekStart).week}, {isoWeek(weekStart).year}
+                <CalendarDays size={14} className="text-muted-2" /> Tuần {isoWeek(weekStart).week}, {isoWeek(weekStart).year}
               </span>
-              <span className="text-[11px] text-slate-400">{ddmmLabel(weekStart)} – {ddmmLabel(isoAddDays(weekStart, 4))}</span>
+              <span className="text-[11px] text-muted-2">{ddmmLabel(weekStart)} – {ddmmLabel(isoAddDays(weekStart, 4))}</span>
             </button>
             <button
               type="button"
@@ -556,7 +556,7 @@ export function ManHinhBaoCaoTuan() {
             </button>
           </div>
           {moChonTuan && (
-            <div className="absolute left-0 top-full z-50 mt-1 w-[260px] overflow-hidden rounded-lg border border-slate-300 bg-white shadow-lg">
+            <div className="absolute left-0 top-full z-50 mt-1 w-[260px] overflow-hidden rounded-lg border border-vien bg-surface shadow-lg">
               <div className="max-h-[352px] overflow-y-auto py-1">
                 {weekOptions.map((opt) => {
                   const isCurrent = opt.ws === currentWeek;
@@ -566,14 +566,14 @@ export function ManHinhBaoCaoTuan() {
                       key={opt.ws}
                       ref={isCurrent ? currentWeekRowRef : undefined}
                       type="button"
-                      className={`flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm transition hover:bg-teal-50 ${isSelected ? 'bg-teal-100 font-semibold text-teal-600' : 'text-slate-700'}`}
+                      className={`flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm transition hover:bg-primary-soft ${isSelected ? 'bg-primary-soft font-semibold text-primary' : 'text-muc'}`}
                       onClick={() => { changeWeek(opt.ws); setMoChonTuan(false); }}
                     >
                       <span className="flex items-center gap-1.5">
                         <span>Tuần {opt.week}, {opt.year}</span>
-                        {isCurrent && <span className="rounded bg-teal-100 px-1 text-[10px] font-medium text-teal-600">Tuần này</span>}
+                        {isCurrent && <span className="rounded bg-primary-soft px-1 text-[10px] font-medium text-primary">Tuần này</span>}
                       </span>
-                      <span className="text-[11px] text-slate-400">{ddmmLabel(opt.ws)} – {ddmmLabel(isoAddDays(opt.ws, 4))}</span>
+                      <span className="text-[11px] text-muted-2">{ddmmLabel(opt.ws)} – {ddmmLabel(isoAddDays(opt.ws, 4))}</span>
                     </button>
                   );
                 })}
@@ -587,8 +587,8 @@ export function ManHinhBaoCaoTuan() {
           onClick={() => changeWeek(currentWeek)}
           className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
             weekStart === currentWeek
-              ? 'cursor-default border border-slate-200 bg-slate-50 text-slate-400'
-              : 'bg-teal-600 text-white shadow-sm hover:bg-teal-700'
+              ? 'cursor-default border border-vien bg-surface-2 text-muted-2'
+              : 'bg-primary text-on-primary shadow-sm hover:bg-primary-hover'
           }`}
           title={weekStart === currentWeek ? 'Bạn đang ở tuần hiện tại' : 'Về tuần hiện tại'}
         >
@@ -596,12 +596,12 @@ export function ManHinhBaoCaoTuan() {
         </button>
         <div className="flex items-center gap-2">
           {!viewingHistory && (
-            <select className="rounded border border-slate-300 py-1.5 pl-2 pr-8 text-xs" value={kind} onChange={(e) => changeKind(e.target.value)} title="Loại báo cáo">
+            <select className="rounded border border-vien py-1.5 pl-2 pr-8 text-xs" value={kind} onChange={(e) => changeKind(e.target.value)} title="Loại báo cáo">
               {kinds.map((k) => <option key={k.id} value={k.id}>{k.label}</option>)}
             </select>
           )}
           <button
-            className="flex items-center gap-1 rounded bg-teal-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            className="flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-xs font-medium text-on-primary hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-surface-2"
             onClick={() => (isDM ? setMoRisk(true) : setMoWizard(true))}
             disabled={daCoBaoCao || (isDM ? weekGoals.length === 0 : reportLocked)}
             title={daCoBaoCao
@@ -619,7 +619,7 @@ export function ManHinhBaoCaoTuan() {
           {isDM && !viewingHistory && (
             <button
               type="button"
-              className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex items-center gap-1 rounded border border-vien px-3 py-1.5 text-xs font-medium text-phu hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
               onClick={xuatExcelDM}
               disabled={dangXuatExcel}
               title="Xuất file Excel (Project → PIC → Task) cho báo cáo DM tuần này"
@@ -630,32 +630,32 @@ export function ManHinhBaoCaoTuan() {
         </div>
       </div>
 
-      {error && <div className="rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
-      {savedMsg && <div className="rounded bg-teal-50 px-3 py-2 text-sm text-teal-600">{savedMsg}</div>}
+      {error && <div className="rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
+      {savedMsg && <div className="rounded bg-primary-soft px-3 py-2 text-sm text-primary">{savedMsg}</div>}
 
       <div className="flex min-h-0 flex-1 gap-3">
         {/* Khu nội dung báo cáo — rộng hơn (cột phải đã thu hẹp ~30%) */}
-        <div className="flex min-h-0 flex-[3] min-w-0 flex-col rounded-lg border border-slate-400 bg-white p-3 shadow-md">
-          <div className="mb-2 flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2">
-            <h3 className="text-sm font-bold text-teal-600">{viewingHistory ? `History tuần ${ddmmLabel(viewingHistory.weekStart)}` : 'Nội dung báo cáo'}</h3>
+        <div className="flex min-h-0 flex-[3] min-w-0 flex-col rounded-lg border border-vien bg-surface p-3 shadow-md">
+          <div className="mb-2 flex flex-wrap items-center gap-2 border-b border-vien pb-2">
+            <h3 className="text-sm font-bold text-primary">{viewingHistory ? `History tuần ${ddmmLabel(viewingHistory.weekStart)}` : 'Nội dung báo cáo'}</h3>
             {viewingHistory && (
-              <span className="text-xs text-slate-500">{kindLabel(viewingHistory.kind)}</span>
+              <span className="text-xs text-phu">{kindLabel(viewingHistory.kind)}</span>
             )}
             <div className="ml-auto flex items-center gap-2">
               {(viewingHistory || draft != null) && (
-                <button className="flex items-center gap-1 rounded border px-2 py-1.5 text-xs hover:bg-slate-50" onClick={copyText}>
+                <button className="flex items-center gap-1 rounded border border-vien px-2 py-1.5 text-xs hover:bg-surface-2" onClick={copyText}>
                   {copied ? <Check size={14} /> : <Copy size={14} />}{copied ? 'Đã copy' : 'Copy'}
                 </button>
               )}
               {viewingHistory ? (
-                <button className="rounded border px-3 py-1.5 text-xs hover:bg-slate-50" onClick={() => setViewingHistory(null)}>Đóng</button>
+                <button className="rounded border border-vien px-3 py-1.5 text-xs hover:bg-surface-2" onClick={() => setViewingHistory(null)}>Đóng</button>
               ) : draft != null && !daLuu && (
                 <>
-                  <button className="rounded border px-2 py-1.5 text-xs text-red-600 hover:bg-red-50" onClick={() => { setDraft(null); setNeedOverwrite(false); setSavedMsg(''); }}>Xóa nháp</button>
+                  <button className="rounded border border-vien px-2 py-1.5 text-xs text-danger hover:bg-danger-soft" onClick={() => { setDraft(null); setNeedOverwrite(false); setSavedMsg(''); }}>Xóa nháp</button>
                   {needOverwrite ? (
-                    <button className="rounded bg-teal-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-700 disabled:opacity-50" disabled={busy} onClick={() => approve(true)}>Ghi đè</button>
+                    <button className="rounded bg-primary px-3 py-1.5 text-xs font-medium text-on-primary hover:bg-primary-hover disabled:opacity-50" disabled={busy} onClick={() => approve(true)}>Ghi đè</button>
                   ) : (
-                    <button className="rounded bg-teal-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-700 disabled:opacity-50" disabled={busy} onClick={() => approve(false)}>Lưu báo cáo</button>
+                    <button className="rounded bg-primary px-3 py-1.5 text-xs font-medium text-on-primary hover:bg-primary-hover disabled:opacity-50" disabled={busy} onClick={() => approve(false)}>Lưu báo cáo</button>
                   )}
                 </>
               )}
@@ -663,19 +663,19 @@ export function ManHinhBaoCaoTuan() {
           </div>
           {viewingHistory ? (
             <textarea
-              className="min-h-0 flex-1 resize-none rounded border bg-slate-50 p-2 font-mono text-xs leading-relaxed"
+              className="min-h-0 flex-1 resize-none rounded border bg-surface-2 p-2 font-mono text-xs leading-relaxed"
               value={viewingHistory.content}
               readOnly
               spellCheck={false}
             />
           ) : draft == null ? (
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 rounded border border-dashed bg-slate-50 text-sm text-slate-500">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 rounded border border-vien border-dashed bg-surface-2 text-sm text-phu">
               <p>Chưa có nội dung báo cáo cho tuần này.</p>
               <p>Bấm <b>Tạo báo cáo</b> và hoàn thành các bước để sinh nội dung.</p>
             </div>
           ) : (
             <textarea
-              className={`min-h-0 flex-1 resize-none rounded border p-2 font-mono text-xs leading-relaxed ${daLuu ? 'bg-slate-50' : 'bg-white'}`}
+              className={`min-h-0 flex-1 resize-none rounded border p-2 font-mono text-xs leading-relaxed ${daLuu ? 'bg-surface-2' : 'bg-surface'}`}
               value={draft}
               onChange={(e) => { setDraft(e.target.value); setSavedMsg(''); }}
               readOnly={daLuu}
@@ -686,13 +686,13 @@ export function ManHinhBaoCaoTuan() {
 
         {/* Cột phải: mục tiêu tuần này + history (thu hẹp ~30% nhường chỗ cho nội dung) */}
         <div className="flex flex-[2] min-w-0 flex-col gap-3">
-        <div className="flex min-h-0 flex-1 flex-col rounded-lg border border-slate-400 bg-white p-3 shadow-sm">
-          <div className="mb-2 flex items-center gap-2 border-b border-slate-300 pb-2">
-            <h3 className="flex items-center gap-1 text-sm font-bold text-teal-600"><Target size={14} className="text-teal-600" /> Mục tiêu tuần này ({weekGoals.length})</h3>
+        <div className="flex min-h-0 flex-1 flex-col rounded-lg border border-vien bg-surface p-3 shadow-sm">
+          <div className="mb-2 flex items-center gap-2 border-b border-vien pb-2">
+            <h3 className="flex items-center gap-1 text-sm font-bold text-primary"><Target size={14} className="text-primary" /> Mục tiêu tuần này ({weekGoals.length})</h3>
             {weekGoals.length > 0 && (
               <button
                 type="button"
-                className="ml-auto flex items-center gap-1 rounded border border-red-200 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                className="ml-auto flex items-center gap-1 rounded border border-danger px-2 py-1 text-xs font-medium text-danger hover:bg-danger-soft"
                 title="Xóa toàn bộ mục tiêu của tuần này"
                 onClick={() => setMoXoaAllGoals(true)}
               >
@@ -701,16 +701,16 @@ export function ManHinhBaoCaoTuan() {
             )}
           </div>
           <div className="min-h-0 flex-1 overflow-auto">
-            {weekGoals.length === 0 && <div className="text-xs text-slate-400">Chưa có mục tiêu nào. Chạy &quot;Tạo báo cáo&quot; để duyệt mục tiêu.</div>}
+            {weekGoals.length === 0 && <div className="text-xs text-muted-2">Chưa có mục tiêu nào. Chạy &quot;Tạo báo cáo&quot; để duyệt mục tiêu.</div>}
             {weekGoalGroups.map((grp) => (
               <div key={grp.key} className="mb-2">
-                <div className="mb-1 rounded border border-slate-300 bg-slate-50 px-2 py-1 text-sm font-bold text-teal-600">{grp.name}</div>
+                <div className="mb-1 rounded border border-vien bg-surface-2 px-2 py-1 text-sm font-bold text-primary">{grp.name}</div>
                 {grp.items.map((g) => (
-                  <div key={g.id} className="mb-1 flex items-center gap-1.5 rounded border border-slate-300 bg-slate-50 px-2 py-1.5 text-sm last:mb-0">
-                    <span className="w-10 shrink-0 font-semibold text-slate-500">{g.isManual ? '—' : g.taskNumber}</span>
+                  <div key={g.id} className="mb-1 flex items-center gap-1.5 rounded border border-vien bg-surface-2 px-2 py-1.5 text-sm last:mb-0">
+                    <span className="w-10 shrink-0 font-semibold text-phu">{g.isManual ? '—' : g.taskNumber}</span>
                     <div className="min-w-0 flex-1">
                       <div className="font-medium">{g.text}</div>
-                      <div className="text-xs text-slate-400">
+                      <div className="text-xs text-muted-2">
                         {g.assignee ? g.assignee : '(chưa gán)'}{g.targetProgress != null ? ` · mục tiêu ${g.targetProgress}%` : ''}{g.isManual ? ' · gõ tay' : ''}
                       </div>
                     </div>
@@ -730,27 +730,27 @@ export function ManHinhBaoCaoTuan() {
         </div>
 
         {/* History báo cáo của tuần đang chọn — cao vừa khít nội dung */}
-        <div className="flex shrink-0 flex-col rounded-lg border border-slate-400 bg-white p-3 shadow-sm">
-          <h3 className="mb-2 border-b border-slate-300 pb-2 text-sm font-bold text-teal-600">History báo cáo</h3>
+        <div className="flex shrink-0 flex-col rounded-lg border border-vien bg-surface p-3 shadow-sm">
+          <h3 className="mb-2 border-b border-vien pb-2 text-sm font-bold text-primary">History báo cáo</h3>
           <div>
             {historyThisWeek.length === 0 ? (
-              <div className="text-xs text-slate-400">Chưa có báo cáo nào cho tuần này.</div>
+              <div className="text-xs text-muted-2">Chưa có báo cáo nào cho tuần này.</div>
             ) : (
-              <div className="rounded border border-slate-300 bg-slate-50 p-2 shadow-sm">
-                <div className="mb-1.5 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
-                  <CalendarDays size={15} className="shrink-0 text-slate-400" />
-                  <span className="text-sm font-bold text-slate-700">Tuần {isoWeek(weekStart).week}, {isoWeek(weekStart).year}</span>
-                  <span className="text-xs text-slate-400">({ddmmLabel(weekStart)} – {ddmmLabel(isoAddDays(weekStart, 4))})</span>
+              <div className="rounded border border-vien bg-surface-2 p-2 shadow-sm">
+                <div className="mb-1.5 flex items-center gap-1.5 border-b border-vien pb-1.5">
+                  <CalendarDays size={15} className="shrink-0 text-muted-2" />
+                  <span className="text-sm font-bold text-muc">Tuần {isoWeek(weekStart).week}, {isoWeek(weekStart).year}</span>
+                  <span className="text-xs text-muted-2">({ddmmLabel(weekStart)} – {ddmmLabel(isoAddDays(weekStart, 4))})</span>
                 </div>
                 <div className="flex flex-col gap-1">
                   {historyThisWeek.map((item) => (
                     <div
                       key={item.id}
-                      className={`flex cursor-pointer items-center gap-1.5 rounded border border-slate-300 bg-slate-50 px-2 py-1 text-sm hover:border-teal-200 hover:bg-teal-50 ${viewingHistory?.id === item.id ? 'border-teal-300 bg-teal-50 ring-1 ring-teal-300' : ''}`}
+                      className={`flex cursor-pointer items-center gap-1.5 rounded border border-vien bg-surface-2 px-2 py-1 text-sm hover:border-primary hover:bg-primary-soft ${viewingHistory?.id === item.id ? 'border-primary bg-primary-soft ring-1 ring-primary' : ''}`}
                       onClick={() => { setViewingHistory(item); setSavedMsg(''); setError(''); }}
                     >
-                      <span className="font-medium text-slate-700">{kindLabel(item.kind)}</span>
-                      <span className="text-xs text-slate-400">· {new Date(item.updatedAt).toLocaleDateString('vi-VN')}</span>
+                      <span className="font-medium text-muc">{kindLabel(item.kind)}</span>
+                      <span className="text-xs text-muted-2">· {new Date(item.updatedAt).toLocaleDateString('vi-VN')}</span>
                       <button
                         type="button"
                         className="nut-icon nut-trash-icon ml-auto shrink-0"
@@ -884,8 +884,8 @@ function MultiPicSelect({ value, options, onChange }: { value: string; options: 
   return (
     <div className="multi-pic" ref={ref}>
       <button ref={btnRef} type="button" className="multi-pic-trigger" onClick={() => setOpen((v) => !v)}>
-        <span className={`truncate ${selected.length > 0 ? '' : 'text-slate-400'}`}>{selected.length > 0 ? selected.join(', ') : 'PIC'}</span>
-        <ChevronDown size={14} className="shrink-0 text-slate-500" />
+        <span className={`truncate ${selected.length > 0 ? '' : 'text-muted-2'}`}>{selected.length > 0 ? selected.join(', ') : 'PIC'}</span>
+        <ChevronDown size={14} className="shrink-0 text-phu" />
       </button>
       {open && (
         <div className="multi-pic-menu" style={menuStyle}>
@@ -1171,26 +1171,26 @@ function PopupTaoBaoCao({ weekStart, onClose, onDone }: { weekStart: string; onC
         {/* thanh bước */}
         <div className="mb-3 flex gap-2 text-xs">
           {['1. Xem tiến độ tuần trước', '2. Đánh giá & lý do', '3. Tổng kết', '4. Mục tiêu tuần này'].map((label, i) => (
-            <div key={label} className={`rounded px-2 py-1 ${step === i + 1 ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-500'}`}>{label}</div>
+            <div key={label} className={`rounded px-2 py-1 ${step === i + 1 ? 'bg-primary text-on-primary' : 'bg-surface-2 text-phu'}`}>{label}</div>
           ))}
         </div>
 
-        {error && <div className="mb-2 rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
-        {loading ? <div className="py-10 text-center text-sm text-slate-500">Đang tải…</div> : (
+        {error && <div className="mb-2 rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
+        {loading ? <div className="py-10 text-center text-sm text-phu">Đang tải…</div> : (
           <div className="h-[72vh] overflow-auto">
             {/* BƯỚC 1: xem tiến độ thực tế các task mục tiêu TUẦN TRƯỚC */}
             {step === 1 && (
               <div>
-                <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-gray-700">
+                <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-muc">
                   Tiến độ task mục tiêu tuần trước
                   <InfoTip>
                     Tiến độ task mục tiêu <b>tuần trước</b> ({ddmmLabel(prevWeekStart)}–{ddmmLabel(isoAddDays(prevWeekStart, 4))}) được lấy từ Gantt chart.
                   </InfoTip>
                 </p>
-                {progressGroups.length === 0 && <div className="rounded border border-dashed bg-slate-50 p-3 text-sm text-slate-400">Tuần trước chưa có mục tiêu nào. Bấm &quot;Tiếp tục&quot; để sang bước đặt mục tiêu tuần này.</div>}
+                {progressGroups.length === 0 && <div className="rounded border border-vien border-dashed bg-surface-2 p-3 text-sm text-muted-2">Tuần trước chưa có mục tiêu nào. Bấm &quot;Tiếp tục&quot; để sang bước đặt mục tiêu tuần này.</div>}
                 {progressGroups.map((group) => (
-                  <div key={group.projectId} className="mb-3 overflow-hidden rounded border">
-                    <div className="border-b bg-slate-100 px-2 py-1.5 text-sm font-bold">{group.name}</div>
+                  <div key={group.projectId} className="mb-3 overflow-hidden rounded border border-vien">
+                    <div className="border-b border-vien bg-surface-2 px-2 py-1.5 text-sm font-bold">{group.name}</div>
                     <table className="w-full table-fixed text-sm">
                       <colgroup>
                         <col className="w-14" />
@@ -1198,7 +1198,7 @@ function PopupTaoBaoCao({ weekStart, onClose, onDone }: { weekStart: string; onC
                         <col className="w-56" />
                         <col className="w-36" />
                       </colgroup>
-                      <thead className="bg-slate-50 text-xs font-semibold text-slate-500">
+                      <thead className="bg-surface-2 text-xs font-semibold text-phu">
                         <tr>
                           <th className="px-2 py-1.5 text-left">ID</th>
                           <th className="px-2 py-1.5 text-left">Task</th>
@@ -1213,23 +1213,23 @@ function PopupTaoBaoCao({ weekStart, onClose, onDone }: { weekStart: string; onC
                             ? 'Ngoài kế hoạch'
                             : `${row.startProgress == null ? '?' : `${row.startProgress}%`} -> ${row.targetProgress}%`;
                           return (
-                          <tr key={row.taskId} className="border-b last:border-b-0 hover:bg-slate-50">
-                            <td className="px-2 py-2 align-top text-xs font-semibold text-slate-500">{row.num}</td>
+                          <tr key={row.taskId} className="border-b border-vien last:border-b-0 hover:bg-surface-2">
+                            <td className="px-2 py-2 align-top text-xs font-semibold text-phu">{row.num}</td>
                             <td className="px-2 py-2 align-top">
-                              <div className="font-medium text-slate-700">{row.title}</div>
+                              <div className="font-medium text-muc">{row.title}</div>
                             </td>
                             <td className="px-2 py-2 align-top">
-                              <div className="text-sm font-semibold text-slate-700">{targetLabel}</div>
+                              <div className="text-sm font-semibold text-muc">{targetLabel}</div>
                               {row.startProgress == null && row.targetProgress != null && (
-                                <div className="mt-0.5 text-xs text-slate-400">Mục tiêu cũ chưa có mốc đầu</div>
+                                <div className="mt-0.5 text-xs text-muted-2">Mục tiêu cũ chưa có mốc đầu</div>
                               )}
                             </td>
                             <td className="px-2 py-2 text-right align-top">
-                              <span className={`inline-flex min-w-16 justify-center rounded px-2 py-1 text-sm font-semibold ${isReached ? 'bg-teal-50 text-teal-700' : 'bg-slate-100 text-slate-700'}`}>
+                              <span className={`inline-flex min-w-16 justify-center rounded px-2 py-1 text-sm font-semibold ${isReached ? 'bg-primary-soft text-primary' : 'bg-surface-2 text-muc'}`}>
                                 {row.currentProgress}%
                               </span>
                               {row.targetProgress != null && (
-                                <div className={`mt-1 text-xs ${isReached ? 'text-teal-600' : 'text-slate-400'}`}>{isReached ? 'Đạt mục tiêu' : 'Chưa đạt'}</div>
+                                <div className={`mt-1 text-xs ${isReached ? 'text-primary' : 'text-muted-2'}`}>{isReached ? 'Đạt mục tiêu' : 'Chưa đạt'}</div>
                               )}
                             </td>
                           </tr>
@@ -1245,16 +1245,16 @@ function PopupTaoBaoCao({ weekStart, onClose, onDone }: { weekStart: string; onC
             {/* BƯỚC 2: lý do & ghi chú từng task */}
             {step === 2 && plan && (
               <div>
-                <p className="mb-2 text-sm text-gray-600">
+                <p className="mb-2 text-sm text-phu">
                   Đánh giá từng task tuần trước: <b>đạt / không đạt / vượt</b>. Task <b>không đạt bắt buộc nhập lý do</b> trước khi qua bước sau.
                 </p>
                 {plan.evaluation.length === 0 && unplannedTasks.length === 0 && (
-                  <div className="text-sm text-slate-400">Tuần trước không có mục tiêu nào để đánh giá.</div>
+                  <div className="text-sm text-muted-2">Tuần trước không có mục tiêu nào để đánh giá.</div>
                 )}
                 {plan.evaluation.map((ep) => (
-                  <div key={ep.projectId} className="mb-3 overflow-hidden rounded-lg border border-slate-400 shadow-sm">
-                    <div className="border-b border-slate-400 bg-slate-200 px-3 py-1.5 text-sm font-bold text-slate-800">{ep.name}</div>
-                    <div className="divide-y divide-slate-200 bg-white px-2">
+                  <div key={ep.projectId} className="mb-3 overflow-hidden rounded-lg border border-vien shadow-sm">
+                    <div className="border-b border-vien bg-surface-2 px-3 py-1.5 text-sm font-bold text-muc">{ep.name}</div>
+                    <div className="divide-y divide-vien bg-surface px-2">
                     {ep.goals.map((g) => {
                       const draft = evalDraft[g.taskId] || { status: g.autoStatus, note: g.note };
                       const thieuLyDo = draft.status === 'khong_dat' && !draft.note.trim();
@@ -1262,11 +1262,11 @@ function PopupTaoBaoCao({ weekStart, onClose, onDone }: { weekStart: string; onC
                       return (
                         <div key={g.taskId} className="py-1.5">
                           <div className="flex items-center gap-2 text-sm">
-                            <span className="w-12 text-xs font-semibold text-slate-500">{g.taskNumber}</span>
+                            <span className="w-12 text-xs font-semibold text-phu">{g.taskNumber}</span>
                             <span className="flex-1 truncate">{g.title}</span>
-                            {g.assignee && <span className="shrink-0 text-xs text-slate-400">[{g.assignee}]</span>}
-                            <span className={`shrink-0 text-xs ${draft.status === 'khong_dat' ? 'text-red-500' : 'text-teal-600'}`}>{curProg}% / {g.targetProgress}%</span>
-                            <select className="w-40 shrink-0 rounded border border-slate-300 py-0.5 pl-2 pr-6 text-xs"
+                            {g.assignee && <span className="shrink-0 text-xs text-muted-2">[{g.assignee}]</span>}
+                            <span className={`shrink-0 text-xs ${draft.status === 'khong_dat' ? 'text-danger' : 'text-primary'}`}>{curProg}% / {g.targetProgress}%</span>
+                            <select className="w-40 shrink-0 rounded border border-vien py-0.5 pl-2 pr-6 text-xs"
                               value={draft.status}
                               onChange={(e) => setEvalDraft((c) => ({ ...c, [g.taskId]: { ...draft, status: e.target.value as EvalStatusUI } }))}>
                               {(Object.keys(evalStatusLabels) as EvalStatusUI[]).map((s) => (
@@ -1275,7 +1275,7 @@ function PopupTaoBaoCao({ weekStart, onClose, onDone }: { weekStart: string; onC
                             </select>
                           </div>
                           {draft.status !== 'dat' && (
-                            <input className={`mt-1 w-full rounded border px-2 py-1 text-sm ${thieuLyDo ? 'border-red-400 bg-red-50 placeholder:text-red-400' : 'border-slate-300'}`}
+                            <input className={`mt-1 w-full rounded border px-2 py-1 text-sm ${thieuLyDo ? 'border-danger bg-danger-soft placeholder:text-danger' : 'border-vien'}`}
                               placeholder={draft.status === 'khong_dat' ? 'Lý do không hoàn thành (bắt buộc)…' : 'Lý do vượt chỉ tiêu (nếu cần)…'}
                               value={draft.note}
                               onChange={(e) => setEvalDraft((c) => ({ ...c, [g.taskId]: { ...draft, note: e.target.value } }))} />
@@ -1287,15 +1287,15 @@ function PopupTaoBaoCao({ weekStart, onClose, onDone }: { weekStart: string; onC
                   </div>
                 ))}
                 {unplannedTasks.length > 0 && (
-                  <div className="mb-3 rounded-lg border border-teal-300 bg-teal-50 p-2 shadow-sm">
-                    <div className="mb-1 font-semibold text-teal-600">Task ngoài kế hoạch tuần trước</div>
+                  <div className="mb-3 rounded-lg border border-primary bg-primary-soft p-2 shadow-sm">
+                    <div className="mb-1 font-semibold text-primary">Task ngoài kế hoạch tuần trước</div>
                     {unplannedTasks.map((u) => (
-                      <div key={u.taskId} className="border-b border-slate-300 py-1.5 last:border-b-0">
+                      <div key={u.taskId} className="border-b border-vien py-1.5 last:border-b-0">
                         <div className="flex items-center gap-2 text-sm">
-                          <span className="w-12 text-xs font-semibold text-slate-500">{u.num}</span>
-                          <span className="text-xs text-slate-400">{u.projectName}</span>
+                          <span className="w-12 text-xs font-semibold text-phu">{u.num}</span>
+                          <span className="text-xs text-muted-2">{u.projectName}</span>
                           <span className="flex-1 truncate">{u.title}</span>
-                          <span className="text-xs text-slate-500">{u.currentProgress}%</span>
+                          <span className="text-xs text-phu">{u.currentProgress}%</span>
                         </div>
                         <input className="mt-1 w-full rounded border px-2 py-1 text-sm"
                           placeholder="Ghi chú (vì sao làm task này, phát sinh từ đâu)…"
@@ -1306,21 +1306,21 @@ function PopupTaoBaoCao({ weekStart, onClose, onDone }: { weekStart: string; onC
                   </div>
                 )}
                 {plan.manualGoals.length > 0 && (
-                  <div className="mb-3 rounded-lg border border-slate-400 p-2 shadow-sm">
+                  <div className="mb-3 rounded-lg border border-vien p-2 shadow-sm">
                     <div className="mb-1 font-semibold">Mục tiêu gõ tay tuần trước (việc lẻ)</div>
                     {plan.manualGoals.map((m) => {
                       const draft = manualGoalDraft[m.goalId] || { done: m.done, note: m.note };
                       return (
-                        <div key={m.goalId} className="border-b py-1.5 last:border-b-0">
+                        <div key={m.goalId} className="border-b border-vien py-1.5 last:border-b-0">
                           <div className="flex items-center gap-2 text-sm">
                             <label className="flex items-center gap-1.5">
                               <input type="checkbox" checked={draft.done}
                                 onChange={(e) => setManualGoalDraft((c) => ({ ...c, [m.goalId]: { ...draft, done: e.target.checked } }))} />
                               <span>{draft.done ? '✅' : '❌'}</span>
                             </label>
-                            <span className="text-xs text-slate-400">{m.projectName}</span>
+                            <span className="text-xs text-muted-2">{m.projectName}</span>
                             <span className="flex-1 truncate">{m.text}</span>
-                            {m.assignee && <span className="text-xs text-slate-400">[{m.assignee}]</span>}
+                            {m.assignee && <span className="text-xs text-muted-2">[{m.assignee}]</span>}
                           </div>
                           {!draft.done && (
                             <input className="mt-1 w-full rounded border px-2 py-1 text-sm"
@@ -1339,23 +1339,23 @@ function PopupTaoBaoCao({ weekStart, onClose, onDone }: { weekStart: string; onC
             {/* BƯỚC 3: đánh giá chung theo project (project tuần trước ∪ tuần này) + số task ✅/🔼/❌ nếu có */}
             {step === 3 && plan && (
               <div>
-                {plan.summaryProjects.length === 0 && <div className="text-sm text-slate-400">Chưa có project nào để tổng kết.</div>}
+                {plan.summaryProjects.length === 0 && <div className="text-sm text-muted-2">Chưa có project nào để tổng kết.</div>}
                 {plan.summaryProjects.map((sp) => {
                   const ep = plan.evaluation.find((e) => e.projectId === sp.projectId);
                   const counts = { dat: 0, vuot: 0, khong_dat: 0 };
                   ep?.goals.forEach((g) => { counts[evalDraft[g.taskId]?.status || g.autoStatus] += 1; });
                   return (
-                    <div key={sp.projectId} className="mb-3 rounded border p-3">
+                    <div key={sp.projectId} className="mb-3 rounded border border-vien p-3">
                       <div className="mb-2 flex flex-wrap items-center gap-3">
                         <span className="text-base font-bold">{sp.name}</span>
                         {ep ? (
                           <div className="ml-auto flex flex-wrap items-center gap-3">
-                            <span className="rounded bg-teal-50 px-2 py-0.5 text-sm font-semibold text-teal-600">✅ {counts.dat} hoàn thành</span>
-                            <span className="rounded bg-teal-50 px-2 py-0.5 text-sm font-semibold text-teal-600">🔼 {counts.vuot} vượt chỉ tiêu</span>
-                            <span className="rounded bg-red-50 px-2 py-0.5 text-sm font-semibold text-red-600">❌ {counts.khong_dat} không hoàn thành</span>
+                            <span className="rounded bg-primary-soft px-2 py-0.5 text-sm font-semibold text-primary">✅ {counts.dat} hoàn thành</span>
+                            <span className="rounded bg-primary-soft px-2 py-0.5 text-sm font-semibold text-primary">🔼 {counts.vuot} vượt chỉ tiêu</span>
+                            <span className="rounded bg-danger-soft px-2 py-0.5 text-sm font-semibold text-danger">❌ {counts.khong_dat} không hoàn thành</span>
                           </div>
                         ) : (
-                          <span className="ml-auto text-xs text-slate-400">(Tuần trước không có mục tiêu)</span>
+                          <span className="ml-auto text-xs text-muted-2">(Tuần trước không có mục tiêu)</span>
                         )}
                       </div>
                       <textarea
@@ -1374,33 +1374,33 @@ function PopupTaoBaoCao({ weekStart, onClose, onDone }: { weekStart: string; onC
             {/* BƯỚC 4: duyệt mục tiêu tuần */}
             {step === 4 && plan && (
               <div>
-                <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-gray-700">
+                <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-muc">
                   Mục tiêu tuần này ({ddmmLabel(weekStart)}–{ddmmLabel(isoAddDays(weekStart, 4))})
                   <InfoTip>
                     Mục tiêu <b>tuần này</b> ({ddmmLabel(weekStart)}–{ddmmLabel(isoAddDays(weekStart, 4))}): gồm <b>carry-over</b> (mục tiêu tuần trước chưa xong — mặc định tích để tiếp tục, bỏ tích nếu không muốn) và task có hạn rơi vào tuần. Chỉnh % mục tiêu &amp; PIC nếu cần.
                   </InfoTip>
                 </p>
-                {plan.proposals.length === 0 && <div className="text-sm text-slate-400">Không có task nào trùng tuần này.</div>}
+                {plan.proposals.length === 0 && <div className="text-sm text-muted-2">Không có task nào trùng tuần này.</div>}
                 {proposalGroups.map((group) => (
-                  <div key={group.projectId} className="mb-3 overflow-hidden rounded border">
-                    <div className="border-b bg-slate-100 px-2 py-1.5 text-sm font-bold">{group.name}</div>
+                  <div key={group.projectId} className="mb-3 overflow-hidden rounded border border-vien">
+                    <div className="border-b border-vien bg-surface-2 px-2 py-1.5 text-sm font-bold">{group.name}</div>
                     <table className="w-full text-sm">
                       <tbody>
                         {group.items.map((pr) => {
                           const a = approvals[pr.taskId] || { approved: true, target: null, assignee: pr.assignee };
                           const targetVal = a.target ?? pr.computedTarget;
                           return (
-                            <tr key={pr.taskId} className={`border-b last:border-b-0 hover:bg-slate-50 ${a.approved ? '' : 'opacity-50'}`}>
+                            <tr key={pr.taskId} className={`border-b last:border-b-0 hover:bg-surface-2 ${a.approved ? '' : 'opacity-50'}`}>
                               <td className="w-8 px-2 py-1.5 text-center">
                                 <input type="checkbox" checked={a.approved} onChange={(e) => setApprovals((c) => ({ ...c, [pr.taskId]: { ...a, approved: e.target.checked } }))} />
                               </td>
-                              <td className="w-14 px-2 py-1.5 text-xs font-semibold text-slate-500">{pr.taskNumber}</td>
+                              <td className="w-14 px-2 py-1.5 text-xs font-semibold text-phu">{pr.taskNumber}</td>
                               <td className="px-2 py-1.5">
                                 <span className="font-medium" title={pr.explanation}>{pr.title}</span>
-                                {pr.isCarryOver && <span className="ml-1.5 rounded bg-teal-100 px-1 text-xs text-teal-600">carry-over</span>}
+                                {pr.isCarryOver && <span className="ml-1.5 rounded bg-primary-soft px-1 text-xs text-primary">carry-over</span>}
                               </td>
                               <td className="w-36 whitespace-nowrap px-2 py-1 text-right">
-                                <span className="mr-1 text-xs text-slate-400">{pr.currentProgress}% →</span>
+                                <span className="mr-1 text-xs text-muted-2">{pr.currentProgress}% →</span>
                                 <select className="w-24 rounded border px-2 py-1"
                                   value={targetVal}
                                   onChange={(e) => setApprovals((c) => ({ ...c, [pr.taskId]: { ...a, target: Number(e.target.value) } }))}>
@@ -1423,14 +1423,14 @@ function PopupTaoBaoCao({ weekStart, onClose, onDone }: { weekStart: string; onC
                 ))}
 
                 {/* Các Task Khác — việc lẻ, tạo task thật trong project hệ thống "Khác" */}
-                <div className="mb-3 rounded border p-2">
+                <div className="mb-3 rounded border border-vien p-2">
                   <div className="mb-1 font-semibold">Các Task Khác</div>
                   {newManualGoals.map((g, index) => (
-                    <div key={`${g.text}-${index}`} className="flex items-center gap-2 border-b py-1 text-sm last:border-b-0">
+                    <div key={`${g.text}-${index}`} className="flex items-center gap-2 border-b border-vien py-1 text-sm last:border-b-0">
                       <span className="flex-1 truncate">{g.text}</span>
-                      <span className="shrink-0 text-xs text-slate-400">mục tiêu {g.target}%</span>
-                      {g.assignee && <span className="shrink-0 text-xs text-slate-400">[{g.assignee}]</span>}
-                      <button type="button" className="shrink-0 rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600" title="Bỏ mục tiêu này"
+                      <span className="shrink-0 text-xs text-muted-2">mục tiêu {g.target}%</span>
+                      {g.assignee && <span className="shrink-0 text-xs text-muted-2">[{g.assignee}]</span>}
+                      <button type="button" className="shrink-0 rounded p-1 text-muted-2 hover:bg-danger-soft hover:text-danger" title="Bỏ mục tiêu này"
                         onClick={() => setNewManualGoals((c) => c.filter((_item, i) => i !== index))}>
                         <X size={14} />
                       </button>
@@ -1454,7 +1454,7 @@ function PopupTaoBaoCao({ weekStart, onClose, onDone }: { weekStart: string; onC
                     <div className="w-36 shrink-0">
                       <MultiPicSelect value={newManualAssignee} options={picOptions} onChange={setNewManualAssignee} />
                     </div>
-                    <button type="button" className="shrink-0 rounded border px-3 py-1 text-sm hover:bg-slate-50 disabled:opacity-50"
+                    <button type="button" className="shrink-0 rounded border border-vien px-3 py-1 text-sm hover:bg-surface-2 disabled:opacity-50"
                       disabled={!newManualText.trim()}
                       onClick={() => {
                         setNewManualGoals((c) => [...c, { text: newManualText.trim(), assignee: newManualAssignee, target: newManualTarget }]);
@@ -1471,13 +1471,13 @@ function PopupTaoBaoCao({ weekStart, onClose, onDone }: { weekStart: string; onC
 
         {/* nút điều hướng */}
         <div className="mt-3 flex items-center justify-between">
-          <button type="button" className="rounded border px-3 py-1.5 text-sm hover:bg-slate-50" onClick={onClose} disabled={busy}>Hủy</button>
+          <button type="button" className="rounded border border-vien px-3 py-1.5 text-sm hover:bg-surface-2" onClick={onClose} disabled={busy}>Hủy</button>
           <div className="flex gap-2">
-            {step > 1 && <button type="button" className="rounded border px-3 py-1.5 text-sm hover:bg-slate-50" onClick={() => setStep(step - 1)} disabled={busy}>← Quay lại</button>}
-            {step === 1 && <button type="button" className="rounded bg-teal-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50" onClick={goToStep2} disabled={busy || loading}>Tiếp tục →</button>}
-            {step === 2 && <button type="button" className="rounded bg-teal-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-teal-700" onClick={goToStep3} disabled={busy}>Tiếp tục →</button>}
-            {step === 3 && <button type="button" className="rounded bg-teal-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-teal-700" onClick={goToStep4} disabled={busy}>Tiếp tục →</button>}
-            {step === 4 && <button type="button" className="rounded bg-teal-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50" onClick={() => { setError(''); setShowFinalConfirm(true); }} disabled={busy}>Duyệt tiến độ tuần trước &amp; mục tiêu tuần này</button>}
+            {step > 1 && <button type="button" className="rounded border border-vien px-3 py-1.5 text-sm hover:bg-surface-2" onClick={() => setStep(step - 1)} disabled={busy}>← Quay lại</button>}
+            {step === 1 && <button type="button" className="rounded bg-primary px-4 py-1.5 text-sm font-medium text-on-primary hover:bg-primary-hover disabled:opacity-50" onClick={goToStep2} disabled={busy || loading}>Tiếp tục →</button>}
+            {step === 2 && <button type="button" className="rounded bg-primary px-4 py-1.5 text-sm font-medium text-on-primary hover:bg-primary-hover" onClick={goToStep3} disabled={busy}>Tiếp tục →</button>}
+            {step === 3 && <button type="button" className="rounded bg-primary px-4 py-1.5 text-sm font-medium text-on-primary hover:bg-primary-hover" onClick={goToStep4} disabled={busy}>Tiếp tục →</button>}
+            {step === 4 && <button type="button" className="rounded bg-primary px-4 py-1.5 text-sm font-medium text-on-primary hover:bg-primary-hover disabled:opacity-50" onClick={() => { setError(''); setShowFinalConfirm(true); }} disabled={busy}>Duyệt tiến độ tuần trước &amp; mục tiêu tuần này</button>}
           </div>
         </div>
 
@@ -1485,25 +1485,25 @@ function PopupTaoBaoCao({ weekStart, onClose, onDone }: { weekStart: string; onC
         {showFinalConfirm && (
           <Modal onClose={() => setShowFinalConfirm(false)}>
             <div className="popup w-full max-w-lg">
-              <h3 className="mb-4 text-2xl font-bold text-slate-800">Xác nhận lưu báo cáo</h3>
+              <h3 className="mb-4 text-2xl font-bold text-muc">Xác nhận lưu báo cáo</h3>
               <div className="space-y-3 text-base">
-                <div className="rounded-lg border bg-slate-50 p-3">
-                  <div className="mb-2 text-base font-bold text-slate-800">Đánh giá tuần trước ({ddmmLabel(prevWeekStart)}–{ddmmLabel(isoAddDays(prevWeekStart, 4))})</div>
+                <div className="rounded-lg border border-vien bg-surface-2 p-3">
+                  <div className="mb-2 text-base font-bold text-muc">Đánh giá tuần trước ({ddmmLabel(prevWeekStart)}–{ddmmLabel(isoAddDays(prevWeekStart, 4))})</div>
                   <div className="flex flex-wrap gap-4 text-base font-bold">
-                    <span className="text-teal-600">✅ {finalCounts.dat} hoàn thành</span>
-                    <span className="text-sky-600">🔼 {finalCounts.vuot} vượt</span>
-                    <span className="text-red-600">❌ {finalCounts.khong_dat} không đạt</span>
+                    <span className="text-primary">✅ {finalCounts.dat} hoàn thành</span>
+                    <span className="text-primary">🔼 {finalCounts.vuot} vượt</span>
+                    <span className="text-danger">❌ {finalCounts.khong_dat} không đạt</span>
                   </div>
                 </div>
-                <div className="rounded-lg border bg-slate-50 p-3">
-                  <div className="text-base font-bold text-slate-800">Mục tiêu tuần này ({ddmmLabel(weekStart)}–{ddmmLabel(isoAddDays(weekStart, 4))})</div>
-                  <div className="mt-1 text-base text-slate-700">Sẽ tạo <b className="text-teal-700">{approvedCount}</b> mục tiêu (đã tick duyệt + việc lẻ &quot;Khác&quot;).</div>
+                <div className="rounded-lg border border-vien bg-surface-2 p-3">
+                  <div className="text-base font-bold text-muc">Mục tiêu tuần này ({ddmmLabel(weekStart)}–{ddmmLabel(isoAddDays(weekStart, 4))})</div>
+                  <div className="mt-1 text-base text-muc">Sẽ tạo <b className="text-primary">{approvedCount}</b> mục tiêu (đã tick duyệt + việc lẻ &quot;Khác&quot;).</div>
                 </div>
-                <p className="text-sm text-slate-500">Tiến độ task, đánh giá và mục tiêu sẽ được ghi vào hệ thống.</p>
+                <p className="text-sm text-phu">Tiến độ task, đánh giá và mục tiêu sẽ được ghi vào hệ thống.</p>
               </div>
               <div className="mt-5 flex justify-end gap-2">
-                <button type="button" className="rounded border px-4 py-2 text-base hover:bg-slate-50" disabled={busy} onClick={() => setShowFinalConfirm(false)}>Quay lại</button>
-                <button type="button" className="rounded bg-teal-600 px-5 py-2 text-base font-semibold text-white hover:bg-teal-700 disabled:opacity-50" disabled={busy} onClick={() => { setShowFinalConfirm(false); void finish(); }}>Xác nhận &amp; lưu</button>
+                <button type="button" className="rounded border border-vien px-4 py-2 text-base hover:bg-surface-2" disabled={busy} onClick={() => setShowFinalConfirm(false)}>Quay lại</button>
+                <button type="button" className="rounded bg-primary px-5 py-2 text-base font-semibold text-on-primary hover:bg-primary-hover disabled:opacity-50" disabled={busy} onClick={() => { setShowFinalConfirm(false); void finish(); }}>Xác nhận &amp; lưu</button>
               </div>
             </div>
           </Modal>

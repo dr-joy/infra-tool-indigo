@@ -39,7 +39,7 @@ export function PermissionLostModal({ error, onClose }: { error: ApiError; onClo
     <Modal onClose={onClose}>
       <div className="popup w-full max-w-md">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-xl font-bold text-rose-700">
+          <h2 className="flex items-center gap-2 text-xl font-bold text-danger">
             <AlertTriangle size={20} /> {title}
           </h2>
           <button type="button" className="nut-icon" onClick={onClose}><X size={18} /></button>
@@ -70,9 +70,9 @@ export function Conflict409Notice({
   onReload: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+    <div className="flex items-center justify-between gap-3 rounded-md border border-warning bg-warning-soft px-3 py-2 text-sm text-warning">
       <span className="flex items-center gap-2"><AlertTriangle size={16} /> {message}</span>
-      <button type="button" className="flex items-center gap-1 rounded-md border border-amber-400 bg-white px-2 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100" onClick={onReload}>
+      <button type="button" className="flex items-center gap-1 rounded-md border border-warning bg-surface px-2 py-1 text-xs font-medium text-warning hover:bg-warning-soft" onClick={onReload}>
         <RefreshCw size={13} /> Tải lại dữ liệu mới
       </button>
     </div>

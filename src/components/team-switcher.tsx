@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, LogOut, Users } from 'lucide-react';
 import { useAuth } from '../auth-context';
 
-export function TeamSwitcher() {
+export function TeamSwitcher({ collapsed = false }: { collapsed?: boolean }) {
   const { actor, myTeams, activeTeamId, setActiveTeamId, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -21,27 +21,44 @@ export function TeamSwitcher() {
 
   if (!actor) return null;
   const activeTeam = myTeams.find((t) => t.id === activeTeamId) || null;
+  const teamLabel = activeTeam ? activeTeam.name : 'Chưa chọn team';
 
   return (
     <div ref={ref} className="relative">
       <button
         type="button"
-        className="flex items-center gap-2 rounded-md border border-vien bg-white px-3 py-1.5 text-sm font-medium text-muc hover:bg-slate-50"
+        className={collapsed
+          ? 'flex h-10 w-10 items-center justify-center rounded-md border border-vien bg-surface text-muc hover:bg-surface-2'
+          : 'flex items-center gap-2 rounded-md border border-vien bg-surface px-3 py-1.5 text-sm font-medium text-muc hover:bg-surface-2'}
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
+        title={collapsed ? teamLabel : undefined}
       >
-        <Users size={16} className="text-teal-600" />
-        <span className="max-w-[12rem] truncate">{activeTeam ? activeTeam.name : 'Chưa chọn team'}</span>
-        <ChevronDown size={14} />
+        <Users size={16} className="text-primary" />
+        {!collapsed && (
+          <>
+            <span className="max-w-[12rem] truncate">{teamLabel}</span>
+            <ChevronDown size={14} />
+          </>
+        )}
       </button>
 
       {open && (
         <div
-          className="absolute right-0 top-full z-40 mt-1 w-72 rounded-md border border-vien bg-white py-1 shadow-mem"
+          // Pha 2 CR-20260926: TeamSwitcher dời xuống chân sidebar (.sidebar-foot, sát đáy cột
+          // h-screen) — mở xuống dưới (top-full cũ) sẽ tràn khỏi viewport và bị `overflow-hidden`
+          // của <main> cắt mất (Council review run 759c9024 phát hiện). Mở LÊN TRÊN thay vì xuống
+          // dưới vì luôn còn đủ chỗ trống phía trên (toàn bộ chiều cao sidebar).
+          // 2026-09-27: neo `right-0` khiến popup (w-72=288px) tràn NGANG khỏi sidebar hẹp — div bọc
+          // ngoài (`relative`) rộng bằng cả `.sidebar-foot` (~200-224px, hẹp hơn cả bình thường khi
+          // sidebar thu gọn), neo theo cạnh phải của nó đẩy popup lấn sang trái ra ngoài viewport, bị
+          // cắt mất phần đầu (Leader phát hiện qua ảnh chụp thật). Đổi sang `left-0` để popup mở về
+          // phía nội dung chính (bên phải, luôn đủ chỗ) thay vì lấn ra mép trái màn hình.
+          className="absolute bottom-full left-0 z-40 mb-1 w-72 rounded-md border border-vien bg-surface py-1 shadow-token-md"
           role="listbox"
         >
-          <div className="border-b px-3 py-2 text-xs text-phu">
+          <div className="border-b border-vien px-3 py-2 text-xs text-phu">
             <div className="font-semibold text-muc">{actor.displayName}</div>
             <div className="truncate">{actor.email}</div>
           </div>
@@ -55,7 +72,7 @@ export function TeamSwitcher() {
                 type="button"
                 role="option"
                 aria-selected={team.id === activeTeamId}
-                className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-slate-50 ${team.id === activeTeamId ? 'bg-teal-50 font-semibold text-teal-700' : 'text-muc'}`}
+                className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-surface-2 ${team.id === activeTeamId ? 'bg-primary-soft font-semibold text-primary' : 'text-muc'}`}
                 onClick={() => { setActiveTeamId(team.id); setOpen(false); }}
               >
                 <span className="truncate">{team.name}</span>
@@ -63,10 +80,10 @@ export function TeamSwitcher() {
               </button>
             ))}
           </div>
-          <div className="border-t pt-1">
+          <div className="border-t border-vien pt-1">
             <button
               type="button"
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-danger hover:bg-surface-2"
               onClick={() => { setOpen(false); void logout(); }}
             >
               <LogOut size={14} /> Đăng xuất

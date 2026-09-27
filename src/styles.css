@@ -3,30 +3,94 @@
 @tailwind utilities;
 
 /* Design token — nguồn canonical duy nhất cho màu/typography/spacing/control (BL-20260913-005,
-   CR-20260913-c). tailwind.config.js CHỈ ánh xạ var(--...) từ đây, không định nghĩa hex riêng.
-   Mở rộng từ pattern đã có `--project-task-frame-height` (dòng ~322 khi CR này viết) thành lớp
-   token toàn cục. Radius/shadow KHÔNG có token riêng: kiểm kê thực tế (2026-09-13) cho thấy
-   rounded-md/rounded-lg và shadow-sm đã nhất quán, không có drift đáng kể — Council quyết định
-   chỉ thêm token khi có drift thật, không thêm cho đủ bộ. Đổi giá trị ở đây thì phải chạy
-   `node scripts/check-design-tokens.mjs` để cập nhật baseline nếu cần. */
+   CR-20260913-c; bảng màu đổi sang "Chàm Nửa Đêm" theo CR-20260926-giao-dien-cham-nua-dem — Pha 1).
+   tailwind.config.js CHỈ ánh xạ var(--...) từ đây, không định nghĩa hex riêng.
+   Mở rộng từ pattern đã có `--project-task-frame-height` (dòng ~322 khi CR-20260913-c viết) thành
+   lớp token toàn cục. Đổi giá trị ở đây thì phải chạy `node scripts/gen-design-tokens-baseline.mjs`
+   để cập nhật baseline, rồi `node scripts/check-design-tokens.mjs` để xác nhận xanh. */
 @layer base {
   :root {
+    /* Bảng tối DUY NHẤT (không fallback sáng) — an toàn thêm lại từ đây vì Pha 3 đã hoàn tất di trú
+       toàn bộ 9 màn + MindMap (không còn `bg-white`/nền sáng hardcode nào che khuất chữ sáng do
+       control gốc tự đổi màu theo color-scheme). Bị BỎ ở Pha 1 vì thêm quá sớm: lúc đó nhiều màn còn
+       hardcode `bg-white` trong khi input/select đã đổi màu chữ theo dark -> chữ trắng trên nền
+       trắng (Council review run 59bf8aee phát hiện, xem log "Tiến độ" Pha 1). */
+    color-scheme: dark;
+
     /* Màu ngữ nghĩa — border/text/muted tái dùng đúng hex vien/muc/phu đã có trong
        tailwind.config.js (không tạo hệ đặt tên song song); primary/surface/record/danger/warning/
-       success là khái niệm mới, giá trị chọn theo màu ĐANG dùng nhiều nhất thật trong code (không
-       phải chọn tuỳ ý — xem inventory trong CR-20260913-c). */
-    --color-bg: #f6f8f7;
-    --color-surface: #ffffff;
-    --color-border: #9ca3af;
-    --color-text: #1f2a2e;
-    --color-muted: #647174;
-    --color-primary: #0d9488;
-    --color-primary-hover: #0f766e;
-    --color-primary-soft: #f0fdfa;
-    --color-record: #f43f5e;
-    --color-danger: #dc2626;
-    --color-warning: #b45309;
-    --color-success: #059669;
+       success là khái niệm mới. Giá trị dưới đây là bảng "Chàm Nửa Đêm" đã chốt qua Council +
+       prototype (link: https://claude.ai/code/artifact/7e12a424-42bd-4e40-ae47-2eb4b9b95685) —
+       đây là giao diện tối DUY NHẤT, Leader xác nhận 26/09 không cần fallback sáng. */
+    --color-bg: #12131f;
+    --color-surface: #1b1d2e;
+    --color-surface-2: #20223a;
+    --color-border: #33364d;
+    --color-text: #e7e8f2;
+    --color-muted: #9498b3;
+    --color-muted-2: #6b7093;
+    --color-primary: #5ad1c9;
+    --color-primary-hover: #78ded5;
+    --color-primary-soft: #153331;
+    --color-on-primary: #062421;
+    --color-secondary: #d68bd0;
+    --color-secondary-soft: #301f33;
+    --color-on-secondary: #2c1730;
+    --color-record: #e08bab;
+    /* Màu THƯƠNG HIỆU riêng của app "Indigo" (2026-09-27, Leader đặt tên + yêu cầu icon đồng nhất
+       logo sidebar/tab trình duyệt) — cố ý TÁCH khỏi primary/secondary: đây là màu định danh app
+       (logo, favicon, tiêu đề tab trình duyệt), không phải màu accent UI dùng lặp lại khắp nơi như
+       primary/secondary. Đổi giá trị này thì cũng phải đổi `public/favicon.svg` (hardcode hex riêng,
+       không đọc được biến CSS từ file SVG tĩnh) để 2 nơi khớp nhau. */
+    --color-brand: #6366f1;
+    --color-danger: #e08b8b;
+    --color-warning: #e3b96e;
+    --color-success: #7fd08f;
+    /* Màu RIÊNG cho biểu đồ Gantt tổng (2026-09-27, Leader phản hồi qua ảnh chụp thật: màu Gantt khó
+       nhìn hơn bản sáng cũ) — CỐ Ý tách khỏi primary/secondary. Lý do: primary còn phải điềm tĩnh,
+       nhất quán cho MỌI nút bấm/accent UI trong app; còn Gantt là biểu đồ dữ liệu, cần màu RỰC hơn để
+       mắt phân biệt nhanh nhiều thanh cùng lúc trên nền tối — 2 nhu cầu khác nhau, dùng chung 1 token
+       (như bản cũ: bar mặc định = primary) sẽ kéo cả 2 về giữa, không bên nào đủ tốt. */
+    --color-gantt-default: #22d3ee;
+    --color-gantt-default-light: #67e8f9;
+    /* Bar "đã xong 100%" — cố ý TỐI/nhạt hơn hẳn màu mặc định để mắt thấy ngay "việc này lùi lại",
+       tương phản rõ với bar đang làm (khác PIC_COLOR_PALETTE trong task-utils.ts — đó là màu NGƯỜI
+       DÙNG CHỌN cho từng PIC, giữ nguyên không đổi). */
+    --color-gantt-done: #454a5e;
+    /* Bar của 1 giai đoạn có PIC nhưng PIC đó CHƯA được gán màu riêng (Cài đặt > PIC) — trung tính,
+       KHÔNG tối như gantt-done (chưa gán màu không có nghĩa là đã xong/kém quan trọng). */
+    --color-gantt-neutral: #94a3b8;
+    /* *-soft thêm ở Pha 3 (CR-20260926) — PHÁT HIỆN THẬT: `bg-danger/15` (hậu tố opacity Tailwind)
+       không sinh ra rule CSS nào khi màu là custom token dạng chuỗi `var(--color-...)` (xác nhận
+       bằng build thật + soi CSS đã biên dịch — class tồn tại trong JSX nhưng KHÔNG có định nghĩa
+       CSS tương ứng, nền trong suốt hoàn toàn, không phải lỗi hiển thị nhẹ). Token *-soft giải
+       quyết đúng nhu cầu "nền mờ cùng tông" mà không cần opacity runtime, theo đúng khuôn
+       primary-soft/secondary-soft đã có từ Pha 1. */
+    --color-danger-soft: #331d1d;
+    --color-warning-soft: #332711;
+    --color-success-soft: #173323;
+
+    /* Quy ước hover cho danger/secondary (Council review CR-20260926, run c45edac5, đợt 3-15 —
+       không có phản đối chặn, chỉ nêu "chưa có quy tắc thành văn"): không có token `*-hover` riêng
+       cho danger/secondary/warning/success như `--color-primary-hover`, vì 2 vai trò dùng đủ:
+       (1) nút nền đặc (background = chính màu đó, vd `.nut-nguy-hiem-text`,
+       `.release-manager-list > .nut-phu`) -> `hover:opacity-90`, không đổi màu nền;
+       (2) icon/toggle nền mờ theo tông (vd `.mm-fbtn-danger:hover`, `.mm-fbtn-on`) -> dùng
+       `color-mix(in srgb, var(--color-X) NN%, transparent)` giống hệt cách dựng token `*-soft`,
+       không phải mỗi nơi tự nghĩ ra cách riêng. `--color-primary-hover` là ngoại lệ có lý do: primary
+       là màu nền đặc dùng NHIỀU nhất trong app (mọi nút chính), nên xứng đáng 1 token riêng thay vì
+       lặp `hover:opacity-90` ở hàng chục chỗ. */
+
+    /* Bo góc — MỚI (CR-20260926), thay `rounded-md`/`rounded-lg` hardcode bằng token để khớp
+       thang "Chàm Nửa Đêm" (nhỏ hơn thang Tailwind mặc định: 6/8px). */
+    --radius-sm: 5px;
+    --radius-md: 8px;
+    --radius-lg: 10px;
+
+    /* Shadow — MỚI (CR-20260926), đậm hơn hẳn bản sáng cũ (`shadow-mem`) vì nền tối cần shadow
+       tối/đậm hơn mới thấy được độ nổi. */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.5);
 
     /* Typography theo VAI TRÒ (label/body/heading), không phải theo số — mỗi vai trò khớp đúng
        cỡ Tailwind đang dùng nhiều nhất thật (text-xs/text-sm/text-xl), kèm line-height cùng cặp. */
@@ -48,6 +112,11 @@
        dùng nhiều nhất thật trong code. */
     --control-height: 2rem;
     --control-icon-size: 16px;
+
+    /* KHÔNG khai báo color-scheme:dark ở đây — Council review Pha 1 (run 59bf8aee) tìm ra: control
+       gốc (input/select/checkbox) sẽ đổi màu chữ theo dark NGAY LẬP TỨC trong khi CSS hiện tại vẫn
+       ép nền trắng (bg-white) chưa migrate ở Pha 3 -> chữ trắng trên nền trắng, không đọc được.
+       Thêm lại đúng dòng này ở bước cuối Pha 3 khi toàn bộ input/select đã đổi nền tối thật. */
   }
 
   * {
@@ -69,19 +138,21 @@
   input,
   textarea,
   select {
-    @apply rounded-md border border-vien bg-white px-3 py-2 text-sm outline-none transition;
+    @apply rounded-md border border-vien bg-surface px-3 py-2 text-sm text-muc outline-none transition;
   }
 
   input:focus,
   textarea:focus,
   select:focus {
-    border-color: #0d9488;
-    box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.14);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-primary-soft);
   }
 
   select {
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23111827' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    /* Mũi tên SVG không dùng var() được trong data-URI — hardcode đúng hex hiện tại của
+       --color-muted (#9498b3, "Chàm Nửa Đêm"). Đổi token muted thì phải tự sửa lại hex ở đây. */
+    background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239498b3' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 14px center;
     background-size: 16px 16px;
@@ -94,18 +165,18 @@
 }
 
 @layer components {
+  /* data URI không dùng được var() -> stroke hardcode #4a4e6b (xấp xỉ --color-border sáng hơn 1 chút
+     để hoạ tiết còn thấy trên nền tối), gradient hardcode theo --color-surface-2/--color-bg. */
   .bg-hoa-van {
-    background-color: #edf1f0;
+    background-color: var(--color-bg);
     background-image:
-      url("data:image/svg+xml,%3Csvg width='104' height='90' viewBox='0 0 104 90' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23515b5e' stroke-opacity='0.12' stroke-width='1.4'%3E%3Cpath d='M26 2 50 16v28L26 58 2 44V16L26 2Z'/%3E%3Cpath d='M78 2 102 16v28L78 58 54 44V16L78 2Z'/%3E%3Cpath d='M52 32 76 46v28L52 88 28 74V46l24-14Z'/%3E%3C/g%3E%3C/svg%3E"),
-      linear-gradient(135deg, rgba(208, 216, 214, 0.65), rgba(241, 245, 244, 0.84));
+      url("data:image/svg+xml,%3Csvg width='104' height='90' viewBox='0 0 104 90' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%234a4e6b' stroke-opacity='0.35' stroke-width='1.4'%3E%3Cpath d='M26 2 50 16v28L26 58 2 44V16L26 2Z'/%3E%3Cpath d='M78 2 102 16v28L78 58 54 44V16L78 2Z'/%3E%3Cpath d='M52 32 76 46v28L52 88 28 74V46l24-14Z'/%3E%3C/g%3E%3C/svg%3E"),
+      linear-gradient(135deg, rgba(32, 34, 58, 0.55), rgba(18, 19, 31, 0.85));
     background-size: 104px 90px, 100% 100%;
   }
 
   .cot-kanban {
-    @apply flex h-full min-h-0 flex-col rounded-lg border border-slate-400 p-4 backdrop-blur;
-    background: #fff;
-    color: #1f2a2e;
+    @apply flex h-full min-h-0 flex-col rounded-lg border border-vien bg-surface p-4 text-muc backdrop-blur;
   }
 
   .cot-kanban > div:first-child h2,
@@ -117,48 +188,91 @@
     @apply grid min-h-0 flex-1 content-start gap-3 overflow-y-auto pr-1;
   }
 
-  .app-brand {
-    @apply mb-1 px-1 text-sm font-black uppercase tracking-wide text-slate-600;
+  /* Pha 2 CR-20260926 — sidebar dọc + topbar thay menu-tab ngang cũ. Sidebar tách riêng phần
+     điều hướng CÓ CUỘN (.sidebar-nav, overflow-y-auto) khỏi phần chân KHÔNG cuộn (.sidebar-foot,
+     chứa TeamSwitcher) — cố ý, vì TeamSwitcher xổ popup bằng position:absolute; nếu nằm trong vùng
+     có overflow-y-auto thì popup bị cắt cụt (đúng lỗi CSS thật đã từng xảy ra 25/09 với menu-tabs
+     backdrop-blur, xem lịch sử file này trước khi sửa). */
+  .sidebar {
+    @apply flex w-56 shrink-0 flex-col border-r border-vien px-3 py-4 transition-[width] duration-150;
   }
 
-  /* 2026-09-25: bỏ `backdrop-blur` — thuộc tính này (giống `filter`) bắt trình duyệt vẽ riêng cả
-     .menu-tabs vào 1 buffer đúng bằng kích thước khung của nó, khiến popup TeamSwitcher (position:
-     absolute, tràn xuống dưới khung nav) bị cắt cụt chỉ còn thấy viền trên cùng — không phải bug ở
-     TeamSwitcher, mà do chính CSS của nav cha. */
-  .menu-tabs {
-    @apply mb-2 flex min-h-10 items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white/75 p-1;
+  /* Thu gọn sidebar (nút ở .sidebar-brand-row) — chỉ đổi bề rộng + ẩn nhãn chữ, icon vẫn đủ để bấm,
+     giữ nguyên mọi hành vi điều hướng (không ẩn hẳn màn nào). */
+  .sidebar-collapsed {
+    @apply w-16 px-2;
   }
 
-  .menu-tab-list {
-    @apply flex min-w-0 flex-wrap items-center gap-1;
+  .sidebar-brand-row {
+    @apply mb-3 flex items-center justify-between gap-2 px-1;
   }
 
-  .menu-tab-actions {
+  /* Thu gọn: logo (icon Indigo) và nút mở-rộng-lại không đủ chỗ nằm ngang -> xếp dọc, vẫn đủ 2 nút
+     bấm được (không mất nút mở rộng lại như thiết kế đầu, chỉ ẩn chữ). */
+  .sidebar-collapsed .sidebar-brand-row {
+    @apply flex-col gap-1 px-0;
+  }
+
+  .sidebar-brand {
+    @apply flex min-w-0 items-center gap-2 truncate text-sm font-black uppercase tracking-wide text-brand;
+  }
+
+  .sidebar-collapse-btn {
+    @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-phu transition hover:bg-surface-2 hover:text-muc;
+  }
+
+  .sidebar-nav {
+    @apply min-h-0 flex-1 overflow-y-auto;
+  }
+
+  .side-group-label {
+    @apply mb-1 mt-4 px-2 text-xs font-bold uppercase tracking-wide text-phu first:mt-0;
+  }
+
+  .side-item {
+    @apply mb-0.5 flex h-9 w-full items-center gap-2 rounded-md border border-transparent px-2 text-left text-sm font-semibold text-phu transition;
+  }
+
+  .sidebar-collapsed .side-item {
+    @apply justify-center px-0;
+  }
+
+  .side-item-label {
+    @apply truncate;
+  }
+
+  .side-item:hover {
+    @apply border-vien bg-surface-2 text-muc;
+  }
+
+  .side-item-active,
+  .side-item-active:hover {
+    @apply border-transparent bg-primary-soft text-primary;
+  }
+
+  .sidebar-foot {
+    @apply mt-3 border-t border-vien pt-3;
+  }
+
+  .sidebar-collapsed .sidebar-foot {
+    @apply flex justify-center;
+  }
+
+  .topbar {
+    @apply mb-2 flex min-h-10 items-center justify-between gap-3 border-b border-vien px-1 pb-3;
+  }
+
+  .topbar-title {
+    @apply text-lg font-bold text-muc;
+  }
+
+  .topbar-right {
     @apply ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2;
   }
 
-  .menu-tab {
-    @apply flex h-8 items-center justify-center rounded px-4 text-sm font-bold text-slate-700 transition;
-  }
-
-  .menu-tab:hover {
-    background: #f0fdfa;
-    color: #0d9488;
-  }
-
-  .menu-tab-active {
-    background: #0d9488;
-    color: #fff;
-  }
-
-  .menu-tab-active:hover {
-    background: #0f766e;
-    color: #fff;
-  }
-
   .man-hinh-project {
-    @apply grid min-h-0 flex-1 overflow-hidden rounded-lg border border-slate-400 backdrop-blur lg:grid-cols-[300px_1fr];
-    background: #fff;
+    @apply grid min-h-0 flex-1 overflow-hidden rounded-lg border border-vien backdrop-blur lg:grid-cols-[300px_1fr];
+    background: var(--color-surface);
   }
 
   .man-hinh-project.project-sidebar-hidden {
@@ -166,16 +280,12 @@
   }
 
   .project-sidebar {
-    @apply flex min-h-0 flex-col border-b border-slate-400 p-4 lg:border-b-0 lg:border-r;
-    background: #fff;
+    @apply flex min-h-0 flex-col border-b border-vien p-4 lg:border-b-0 lg:border-r;
+    background: var(--color-surface);
   }
 
   .project-sidebar-header {
-    @apply mb-4 flex items-center justify-between gap-3;
-  }
-
-  .project-sidebar-header h2 {
-    @apply text-xl font-bold text-muc;
+    @apply mb-4 flex items-center gap-3;
   }
 
   .project-sidebar-actions {
@@ -183,18 +293,18 @@
   }
 
   .project-add-button {
-    @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-md border text-white transition;
-    background: #0d9488;
-    border-color: #0d9488;
+    @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-md border text-on-primary transition;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
   }
 
   .project-add-button:hover {
-    background: #0f766e;
-    border-color: #0f766e;
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
   }
 
   .project-roadmap-button {
-    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-slate-400 bg-white p-0 text-muc transition hover:bg-slate-100;
+    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-vien bg-surface p-0 text-muc transition hover:bg-surface-2;
   }
 
   .project-list {
@@ -202,21 +312,21 @@
   }
 
   .project-item {
-    @apply min-w-0 rounded-md border border-vien bg-slate-50 px-3 py-3 text-left text-sm font-bold text-muc transition;
+    @apply min-w-0 rounded-md border border-vien bg-surface-2 px-3 py-3 text-left text-sm font-bold text-muc transition;
   }
 
   .project-item:hover {
-    border-color: #5eead4;
-    background: #f0fdfa;
-    box-shadow: 0 2px 8px rgba(13, 148, 136, 0.14);
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 14%, transparent);
   }
 
   .project-list-state {
-    @apply rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-sm font-semibold leading-6 text-phu;
+    @apply rounded-md border border-dashed border-vien bg-surface-2 px-3 py-3 text-sm font-semibold leading-6 text-phu;
   }
 
   .project-list-error {
-    @apply border-rose-200 bg-rose-50 text-rose-700;
+    @apply border-danger bg-danger-soft text-danger;
   }
 
   .project-item span,
@@ -229,7 +339,7 @@
   }
 
   .project-item-active {
-    @apply border-teal-600 bg-teal-600 text-white hover:border-teal-700 hover:bg-teal-700;
+    @apply border-primary bg-primary text-on-primary hover:bg-primary-hover hover:border-primary-hover;
   }
 
   .project-item-dragging {
@@ -238,11 +348,11 @@
 
   .project-detail {
     @apply min-h-0 overflow-auto px-5 pb-5 pt-0 lg:px-6 lg:pb-6;
-    background: #fff;
+    background: var(--color-surface);
   }
 
   .project-detail-header {
-    @apply sticky top-0 z-20 -mx-5 flex min-h-12 flex-wrap items-center justify-between gap-3 border-b border-vien bg-white/95 px-5 py-2 backdrop-blur lg:-mx-6 lg:px-6;
+    @apply sticky top-0 z-20 -mx-5 flex min-h-12 flex-wrap items-center justify-between gap-3 border-b border-vien bg-surface px-5 py-2 backdrop-blur lg:-mx-6 lg:px-6;
   }
 
   .project-detail-actions {
@@ -339,7 +449,7 @@
   }
 
   .project-task-summary span {
-    @apply rounded bg-slate-100 px-2 py-1 text-xs font-bold text-phu;
+    @apply rounded bg-surface-2 px-2 py-1 text-xs font-bold text-phu;
   }
 
   .project-task-summary .project-summary-progress-item {
@@ -349,13 +459,14 @@
   .project-task-summary .project-summary-progress-circle {
     --progress: 0%;
     @apply grid h-10 w-10 place-items-center rounded-full p-0 text-[10px] font-black text-muc;
-    background: conic-gradient(#0d9488 var(--progress), #e2e8f0 0);
+    background: conic-gradient(var(--color-primary) var(--progress), var(--color-border) 0); /* design-token-ok: chỉ ghép 2 token có sẵn qua conic-gradient, không phải hardcode raw */
     position: relative;
   }
 
   .project-task-summary .project-summary-progress-circle::before {
     content: '';
-    @apply absolute rounded-full bg-white;
+    @apply absolute rounded-full;
+    background: var(--color-surface);
     inset: 5px;
   }
 
@@ -364,7 +475,7 @@
   }
 
   .project-task-summary .project-summary-warning {
-    @apply bg-amber-100 text-amber-800;
+    @apply bg-warning-soft text-warning;
   }
 
   .project-task-tree {
@@ -420,12 +531,12 @@
   }
 
   .project-task-dragging > .project-task-card {
-    @apply opacity-60 ring-2 ring-sky-500;
+    @apply opacity-60 ring-2 ring-primary;
   }
 
   .project-task-card {
     --project-task-frame-height: 2.5rem;
-    @apply relative z-10 grid items-stretch gap-y-1 rounded-md border bg-slate-50 p-1 shadow-sm;
+    @apply relative z-10 grid items-stretch gap-y-1 rounded-md border border-vien bg-surface-2 p-1 shadow-token-sm;
     margin-left: var(--project-task-indent);
     transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   }
@@ -435,9 +546,9 @@
   }
 
   .project-task-card.project-task-card-clickable:hover {
-    border-color: #5eead4;
-    background: #f0fdfa;
-    box-shadow: 0 2px 8px rgba(13, 148, 136, 0.14) !important;
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 14%, transparent) !important;
   }
 
   @media (min-width: 1024px) {
@@ -454,15 +565,15 @@
   }
 
   .project-task-level-1 > .project-task-card {
-    @apply border-slate-300 bg-slate-50 shadow-md shadow-slate-200;
+    @apply border-vien bg-surface-2 shadow-token-md;
   }
 
   .project-task-level-2 > .project-task-card {
-    @apply border-slate-300 bg-slate-50 shadow-md shadow-slate-200;
+    @apply border-vien bg-surface-2 shadow-token-md;
   }
 
   .project-task-level-3 > .project-task-card {
-    @apply border-slate-300 bg-slate-50 shadow-md shadow-slate-200;
+    @apply border-vien bg-surface-2 shadow-token-md;
   }
 
   .project-task-main {
@@ -495,7 +606,7 @@
   }
 
   .project-task-note-area {
-    @apply relative min-w-0 justify-self-stretch self-stretch overflow-hidden rounded border border-slate-200 bg-slate-50 text-xs font-semibold leading-5 text-slate-500;
+    @apply relative min-w-0 justify-self-stretch self-stretch overflow-hidden rounded border border-vien bg-surface-2 text-xs font-semibold leading-5 text-phu;
     min-height: var(--project-task-frame-height);
   }
 
@@ -504,23 +615,23 @@
   }
 
   .project-detail p.project-task-note {
-    @apply m-0 max-w-none whitespace-pre-wrap break-words text-xs font-semibold leading-4 text-slate-600;
+    @apply m-0 max-w-none whitespace-pre-wrap break-words text-xs font-semibold leading-4 text-phu;
   }
 
   .project-task-number {
-    @apply inline-flex h-6 w-[1.8rem] shrink-0 items-center justify-center rounded-md bg-teal-600 p-0 text-[11px] font-bold text-white;
+    @apply inline-flex h-6 w-[1.8rem] shrink-0 items-center justify-center rounded-md bg-primary p-0 text-[11px] font-bold text-on-primary;
   }
 
   .project-task-child-count {
-    @apply whitespace-nowrap rounded bg-sky-50 px-2 py-1 text-[11px] font-bold text-sky-700;
+    @apply whitespace-nowrap rounded bg-secondary-soft px-2 py-1 text-[11px] font-bold text-secondary;
   }
 
   .project-task-collapse-button {
-    @apply mt-0.5 flex h-4 w-6 shrink-0 items-center justify-center border-0 bg-transparent p-0 text-slate-700 transition;
+    @apply mt-0.5 flex h-4 w-6 shrink-0 items-center justify-center border-0 bg-transparent p-0 text-phu transition;
   }
 
   .project-task-collapse-button:hover {
-    @apply text-slate-950;
+    @apply text-muc;
   }
 
   .project-task-fields {
@@ -532,9 +643,15 @@
     @apply inline-block w-[5.75rem] text-muc;
   }
 
-  /* Droplist % phủ trong suốt lên thanh tiến độ — bấm vào thanh để chọn, không chiếm thêm chỗ */
+  /* Droplist % phủ trong suốt lên thanh tiến độ — bấm vào thanh để chọn, không chiếm thêm chỗ.
+     2026-09-27: nền dùng `bg-surface` (KHÔNG phải `transparent`) dù widget lúc đóng vẫn vô hình nhờ
+     `opacity-0` (áp cho cả khối, nền màu gì cũng không thấy) — lý do đổi: khi mở, trình duyệt render
+     danh sách option bằng popup native RIÊNG (không bị opacity-0 của widget đóng ảnh hưởng), và có vẻ
+     dùng chính nền `background` đã tính của select để quyết theme sáng/tối cho popup đó; `transparent`
+     khiến trình duyệt suy ra popup SÁNG trong khi chữ vẫn `text-muc` (màu sáng) -> chữ mờ gần như
+     không đọc được trên nền sáng (Leader phát hiện qua ảnh chụp thật). */
   .project-task-progress-overlay {
-    @apply absolute inset-0 z-20 w-full cursor-pointer appearance-none border-0 bg-transparent p-0 opacity-0;
+    @apply absolute inset-0 z-20 w-full cursor-pointer appearance-none border-0 bg-surface p-0 opacity-0;
   }
 
   .project-task-pic-options {
@@ -576,7 +693,7 @@
 
   .project-task-fields .project-task-missing-estimate,
   .project-task-fields .project-task-missing-estimate strong {
-    @apply text-amber-600;
+    @apply text-warning;
   }
 
   .project-task-progress-field {
@@ -589,20 +706,20 @@
 
   .project-task-progress-bar {
     --progress: 0%;
-    @apply relative flex h-3 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-300 bg-slate-100 text-[10px] font-black text-muc;
+    @apply relative flex h-3 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-vien bg-surface-2 text-[10px] font-black text-muc;
     transform: translateX(-25px);
   }
 
   .project-task-progress-fill {
     content: '';
     @apply absolute bottom-0 left-0 top-0;
-    background-color: #0d9488;
+    background-color: var(--color-primary);
     width: var(--progress);
   }
 
   /* Chữ % luôn một màu xám đậm, không đổi theo mức tiến độ */
   .project-task-progress-bar > span:not(.project-task-progress-fill) {
-    @apply relative z-10 text-slate-700;
+    @apply relative z-10 text-muc;
   }
 
   .project-task-child-button {
@@ -611,12 +728,12 @@
 
   /* Task carry-over chưa xử lý (không được duyệt mục tiêu, chưa reschedule) — báo đỏ */
   .project-task-at-risk > .project-task-card {
-    @apply border-red-400 bg-red-50;
-    box-shadow: 0 1px 4px rgba(239, 68, 68, 0.25);
+    @apply border-danger bg-danger-soft;
+    box-shadow: 0 1px 4px color-mix(in srgb, var(--color-danger) 25%, transparent);
   }
 
   .project-task-atrisk-chip {
-    @apply ml-2 inline-flex shrink-0 items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-600 align-middle;
+    @apply ml-2 inline-flex shrink-0 items-center gap-1 rounded bg-danger-soft px-1.5 py-0.5 text-[10px] font-bold text-danger align-middle;
   }
 
   .project-task-actions {
@@ -644,16 +761,12 @@
     width: calc(100vw - 24px);
     height: calc(100vh - 24px);
     overflow: hidden;
-    background-color: #edf1f0;
-    background-image:
-      repeating-linear-gradient(30deg, rgba(165, 178, 174, 0.38) 0 1px, transparent 1px 26px, rgba(165, 178, 174, 0.38) 26px 27px, transparent 27px 52px),
-      linear-gradient(135deg, rgba(208, 216, 214, 0.65), rgba(241, 245, 244, 0.84));
-    background-size: 104px 90px, 100% 100%;
+    /* Chàm Nửa Đêm: bỏ hoạ tiết trang trí sáng cũ (không hợp nền tối), dùng nền phẳng như shell. */
+    background-color: var(--color-bg);
   }
 
   .project-gantt-header {
-    @apply mx-3 mt-3 flex min-h-16 items-center justify-between gap-4 rounded-md border border-slate-500 px-5 py-3;
-    background: rgba(237, 241, 240, 0.92);
+    @apply mx-3 mt-3 flex min-h-16 items-center justify-between gap-4 rounded-md border border-vien bg-surface px-5 py-3;
   }
 
   .project-gantt-header h2 {
@@ -669,37 +782,37 @@
   }
 
   .project-gantt-empty {
-    @apply m-5 rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm font-semibold text-phu;
+    @apply m-5 rounded-md border border-dashed border-vien bg-surface-2 px-4 py-5 text-sm font-semibold text-phu;
   }
 
   .project-gantt-shell {
-    @apply grid min-h-0 overflow-hidden rounded-md border border-slate-500;
+    @apply grid min-h-0 overflow-hidden rounded-md border border-vien;
     height: calc(100% - 4rem - 36px);
     grid-template-columns: 260px minmax(0, 1fr);
     margin: 12px;
   }
 
   .project-gantt-task-column {
-    @apply min-h-0 overflow-hidden border-r border-slate-500;
-    background: rgba(241, 245, 244, 0.9);
+    @apply min-h-0 overflow-hidden border-r border-vien;
+    background: color-mix(in srgb, var(--color-surface) 90%, transparent); /* design-token-ok: token --color-surface pha trong suốt, không phải hardcode raw */
   }
 
   .project-roadmap-task-column {
-    background: rgba(241, 245, 244, 0.9);
+    background: color-mix(in srgb, var(--color-surface) 90%, transparent); /* design-token-ok: token --color-surface pha trong suốt, không phải hardcode raw */
   }
 
   .project-gantt-task-column-spacer {
-    @apply sticky top-0 z-10 border-b border-slate-500 bg-white;
+    @apply sticky top-0 z-10 border-b border-vien bg-surface;
     height: 60px;
   }
 
   .project-roadmap-task-column-spacer {
-    @apply sticky top-0 z-10 bg-white;
+    @apply sticky top-0 z-10 bg-surface;
     height: 66px;
   }
 
   .project-gantt-task-label {
-    @apply flex h-14 min-w-0 flex-col justify-center overflow-hidden border-b border-slate-400 px-3 text-sm;
+    @apply flex h-14 min-w-0 flex-col justify-center overflow-hidden border-b border-vien px-3 text-sm;
   }
 
   .project-gantt-task-label-titleonly {
@@ -711,7 +824,7 @@
   }
 
   .project-gantt-task-grip {
-    @apply absolute left-2 top-1/2 -translate-y-1/2 text-slate-400;
+    @apply absolute left-2 top-1/2 -translate-y-1/2 text-phu;
   }
 
   .project-gantt-task-label-dragging {
@@ -719,11 +832,11 @@
   }
 
   .project-gantt-task-label-drop {
-    @apply bg-teal-50 ring-2 ring-inset ring-teal-500;
+    @apply bg-primary-soft ring-2 ring-inset ring-primary;
   }
 
   .project-roadmap-project-label {
-    @apply flex min-w-0 flex-col justify-center overflow-hidden border-b border-slate-500 bg-slate-200 px-3 text-sm;
+    @apply flex min-w-0 flex-col justify-center overflow-hidden border-b border-vien bg-surface-2 px-3 text-sm;
     height: 42px;
   }
 
@@ -732,7 +845,7 @@
   }
 
   .project-roadmap-toggle {
-    @apply grid h-7 w-7 shrink-0 place-items-center rounded-md border border-slate-300 bg-white p-0 text-muc transition hover:border-slate-500 hover:bg-slate-100;
+    @apply grid h-7 w-7 shrink-0 place-items-center rounded-md border border-vien bg-surface p-0 text-muc transition hover:border-muted-2 hover:bg-surface-2;
   }
 
   .project-roadmap-project-label-text {
@@ -740,7 +853,7 @@
   }
 
   .project-roadmap-task-label {
-    @apply bg-white pl-6;
+    @apply bg-surface pl-6;
   }
 
   .project-gantt-task-title {
@@ -752,7 +865,7 @@
   }
 
   .project-gantt-task-id {
-    @apply mb-0.5 block text-[10px] font-black leading-none text-slate-400;
+    @apply mb-0.5 block text-[10px] font-black leading-none text-phu;
   }
 
   .project-gantt-task-title-wrap {
@@ -767,7 +880,7 @@
 
   .project-gantt-scroll {
     @apply min-h-0 overflow-auto;
-    background: rgba(255, 255, 255, 0.7);
+    background: color-mix(in srgb, var(--color-bg) 70%, transparent); /* design-token-ok: token --color-bg pha trong suốt, không phải hardcode raw */
     overscroll-behavior: contain;
   }
 
@@ -783,7 +896,7 @@
   }
 
   .project-gantt-calendar {
-    @apply sticky top-0 z-40 bg-white;
+    @apply sticky top-0 z-40 bg-surface;
   }
 
   .project-gantt-months {
@@ -791,15 +904,15 @@
   }
 
   .project-gantt-month {
-    @apply flex h-[22px] shrink-0 items-center justify-center overflow-hidden whitespace-nowrap border-b border-r border-slate-500 bg-slate-100 px-1 text-xs font-black text-muc;
+    @apply flex h-[22px] shrink-0 items-center justify-center overflow-hidden whitespace-nowrap border-b border-r border-vien bg-surface-2 px-1 text-xs font-black text-muc;
   }
 
   .project-gantt-days {
-    @apply flex h-[38px] border-b border-slate-500 bg-white;
+    @apply flex h-[38px] border-b border-vien bg-surface;
   }
 
   .project-roadmap-calendar {
-    @apply sticky top-0 z-20 bg-white;
+    @apply sticky top-0 z-20 bg-surface;
     height: 66px;
   }
 
@@ -809,11 +922,11 @@
   }
 
   .project-roadmap-month {
-    @apply flex h-7 shrink-0 items-center justify-center border-b border-r border-slate-500 bg-slate-100 text-xs font-black text-muc;
+    @apply flex h-7 shrink-0 items-center justify-center border-b border-r border-vien bg-surface-2 text-xs font-black text-muc;
   }
 
   .project-roadmap-week {
-    @apply flex h-[38px] shrink-0 flex-col items-center justify-center border-b border-r border-slate-500 text-[10px] leading-4 text-slate-600;
+    @apply flex h-[38px] shrink-0 flex-col items-center justify-center border-b border-r border-vien text-[10px] leading-4 text-phu;
   }
 
   .project-roadmap-week strong {
@@ -825,7 +938,7 @@
   }
 
   .project-gantt-day {
-    @apply flex shrink-0 flex-col items-center justify-center border-r border-slate-500 text-[11px] leading-4 text-slate-600;
+    @apply flex shrink-0 flex-col items-center justify-center border-r border-vien text-[11px] leading-4 text-phu;
   }
 
   .project-gantt-day strong {
@@ -834,7 +947,7 @@
 
   .project-gantt-day-saturday,
   .project-gantt-day-sunday {
-    background-color: rgba(100, 116, 139, 0.16);
+    background-color: color-mix(in srgb, var(--color-border) 40%, transparent); /* design-token-ok: token --color-border pha trong suốt, không phải hardcode raw */
   }
 
   .project-gantt-day-saturday span,
@@ -853,51 +966,51 @@
 
   .project-gantt-weekend {
     @apply pointer-events-none absolute z-0;
-    background-color: rgba(100, 116, 139, 0.16);
+    background-color: color-mix(in srgb, var(--color-border) 40%, transparent); /* design-token-ok: token --color-border pha trong suốt, không phải hardcode raw */
   }
 
   .project-gantt-row {
-    @apply relative h-14 border-b border-slate-500;
-    background-image: linear-gradient(to right, rgba(71, 85, 105, 0.58) 1px, transparent 1px);
+    @apply relative h-14 border-b border-vien;
+    background-image: linear-gradient(to right, color-mix(in srgb, var(--color-border) 60%, transparent) 1px, transparent 1px);
     background-size: 42px 100%;
   }
 
   .project-gantt-row-drop {
-    @apply ring-2 ring-inset ring-teal-500;
-    background-color: rgba(20, 184, 166, 0.08);
+    @apply ring-2 ring-inset ring-primary;
+    background-color: color-mix(in srgb, var(--color-primary) 8%, transparent); /* design-token-ok: token --color-primary pha trong suốt, không phải hardcode raw */
   }
 
   /* Hàng tiêu đề nhóm project trong Gantt tổng (cả cột nhãn lẫn vùng timeline) */
   .project-gantt-group-row,
   .project-gantt-group-label {
-    @apply flex items-center border-b border-slate-500 bg-slate-200 px-3 text-sm font-bold text-slate-800;
+    @apply flex items-center border-b border-vien bg-surface-2 px-3 text-sm font-bold text-muc;
     height: 32px;
   }
 
   .project-gantt-group-toggle {
-    @apply mr-2 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-slate-400 bg-white text-slate-700 transition hover:border-teal-500 hover:bg-teal-50 hover:text-teal-700;
+    @apply mr-2 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-vien bg-surface text-phu transition hover:border-primary hover:bg-primary-soft hover:text-primary;
   }
 
   .project-roadmap-project-row {
-    @apply relative border-b border-slate-500 bg-slate-200;
+    @apply relative border-b border-vien bg-surface-2;
     height: 42px;
   }
 
   .project-roadmap-task-row {
-    background-image: linear-gradient(to right, rgba(71, 85, 105, 0.58) 1px, transparent 1px);
+    background-image: linear-gradient(to right, color-mix(in srgb, var(--color-border) 60%, transparent) 1px, transparent 1px);
     background-size: 118px 100%;
   }
 
   .project-gantt-today-line {
-    @apply pointer-events-none absolute z-30 w-0.5 bg-red-600;
+    @apply pointer-events-none absolute z-30 w-0.5 bg-danger;
   }
 
   .project-gantt-today-line span {
-    @apply absolute left-1 top-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-black text-white;
+    @apply absolute left-1 top-1 rounded bg-danger px-1.5 py-0.5 text-[10px] font-black text-on-primary;
   }
 
   .project-gantt-bar {
-    @apply absolute flex h-4 cursor-grab select-none items-center overflow-hidden rounded-md border-0 bg-teal-600 text-xs font-black text-white shadow-sm;
+    @apply absolute flex h-4 cursor-grab select-none items-center overflow-hidden rounded-md border-0 bg-gantt-default text-xs font-black text-on-primary shadow-token-sm;
     touch-action: none;
   }
 
@@ -945,15 +1058,15 @@
   }
 
   .project-gantt-bar-level-2 {
-    @apply bg-teal-600;
+    @apply bg-gantt-default;
   }
 
   .project-gantt-bar-level-3 {
-    @apply bg-teal-500;
+    @apply bg-gantt-default-light;
   }
 
   .project-gantt-bar-done {
-    background-color: #64748b;
+    background-color: var(--color-gantt-done);
   }
 
   .project-gantt-resize {
@@ -967,7 +1080,8 @@
   }
 
   .man-hinh-len-lich {
-    @apply min-h-0 flex-1 overflow-y-auto rounded-lg border border-slate-400 bg-white/75 p-5 backdrop-blur;
+    @apply min-h-0 flex-1 overflow-y-auto rounded-lg border border-vien p-5 backdrop-blur;
+    background: color-mix(in srgb, var(--color-surface) 75%, transparent); /* design-token-ok: token --color-surface pha trong suốt, không phải hardcode raw */
     animation: releaseFadeIn 220ms ease-out both;
   }
 
@@ -992,15 +1106,15 @@
   }
 
   .release-type-options {
-    @apply flex flex-wrap gap-1 rounded-md border border-slate-300 bg-slate-50 p-1;
+    @apply flex flex-wrap gap-1 rounded-md border border-vien bg-surface-2 p-1;
   }
 
   .release-type-button {
-    @apply inline-flex min-w-[150px] items-center justify-center rounded px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-teal-50 hover:text-teal-700;
+    @apply inline-flex min-w-[150px] items-center justify-center rounded px-3 py-2 text-sm font-bold text-phu transition hover:bg-primary-soft hover:text-primary;
   }
 
   .release-type-button-active {
-    @apply bg-teal-600 text-white hover:bg-teal-700 hover:text-white;
+    @apply bg-primary text-on-primary hover:bg-primary-hover hover:text-on-primary;
   }
 
   .release-layout {
@@ -1009,12 +1123,12 @@
 
   .release-form-panel,
   .release-note {
-    @apply rounded-md border border-vien bg-white p-4 transition duration-200 ease-out;
+    @apply rounded-md border border-vien bg-surface p-4 transition duration-200 ease-out;
   }
 
   .release-form-panel:hover,
   .release-note:hover {
-    @apply border-sky-200 bg-sky-50/20;
+    @apply border-secondary bg-secondary-soft;
   }
 
   .release-form-panel h3 {
@@ -1043,7 +1157,7 @@
   }
 
   .release-date-picker-button {
-    @apply absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-slate-600 transition hover:bg-sky-50 hover:text-sky-700;
+    @apply absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-phu transition hover:bg-secondary-soft hover:text-secondary;
   }
 
   .release-emergency-grid {
@@ -1063,7 +1177,7 @@
   }
 
   .release-master-date {
-    @apply flex min-h-10 items-center rounded-md border border-vien bg-slate-50 px-3 text-sm font-semibold text-muc;
+    @apply flex min-h-10 items-center rounded-md border border-vien bg-surface-2 px-3 text-sm font-semibold text-muc;
   }
 
   .release-management-actions {
@@ -1088,7 +1202,7 @@
   }
 
   .release-emergency-batch-row {
-    @apply flex flex-wrap items-center gap-3 rounded-md border border-vien bg-slate-50 px-3 py-2 text-sm;
+    @apply flex flex-wrap items-center gap-3 rounded-md border border-vien bg-surface-2 px-3 py-2 text-sm;
   }
 
   .release-emergency-batch-key {
@@ -1101,15 +1215,15 @@
   }
 
   .release-emergency-batch-badge {
-    @apply ml-auto rounded-full border border-vien bg-white px-2.5 py-1 text-xs font-semibold text-phu;
+    @apply ml-auto rounded-full border border-vien bg-surface px-2.5 py-1 text-xs font-semibold text-phu;
   }
 
   .release-emergency-batch-badge.is-posted {
-    @apply border-teal-300 bg-teal-50 text-teal-700;
+    @apply border-primary bg-primary-soft text-primary;
   }
 
   .release-emergency-already-posted-warning {
-    @apply mt-2 flex flex-col gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800;
+    @apply mt-2 flex flex-col gap-2 rounded-md border border-warning bg-warning-soft p-3 text-sm text-warning;
   }
 
   .release-sync-action {
@@ -1138,7 +1252,7 @@
   }
 
   .release-error {
-    @apply text-sm font-bold text-rose-600;
+    @apply text-sm font-bold text-danger;
   }
 
   .release-manager-layout {
@@ -1159,19 +1273,19 @@
 
   .popup-release-task-manager .release-manager-detail {
     @apply border-l pl-4;
-    border-color: #9ca3af;
+    border-color: var(--color-border);
   }
 
   .popup-release-task-manager .field input,
   .popup-release-task-manager .field textarea,
   .popup-release-task-manager .field select {
-    border-color: #9ca3af;
+    border-color: var(--color-border);
   }
 
   .popup-release-task-manager .field input:focus,
   .popup-release-task-manager .field textarea:focus,
   .popup-release-task-manager .field select:focus {
-    border-color: #0d9488;
+    border-color: var(--color-primary);
   }
 
   .popup-release-template-manager .release-manager-layout {
@@ -1184,64 +1298,62 @@
 
   .popup-release-template-manager .release-manager-detail {
     @apply border-l pl-4;
-    border-color: #9ca3af;
+    border-color: var(--color-border);
   }
 
   .popup-release-template-manager .field input,
   .popup-release-template-manager .field textarea,
   .popup-release-template-manager .field select {
-    border-color: #9ca3af;
+    border-color: var(--color-border);
   }
 
   .popup-release-template-manager .field input:focus,
   .popup-release-template-manager .field textarea:focus,
   .popup-release-template-manager .field select:focus {
-    border-color: #0d9488;
+    border-color: var(--color-primary);
   }
 
   .popup-release-emergency-manager {
-    background: #e5e7eb;
+    background: var(--color-surface);
   }
 
   .popup-release-emergency-manager .release-manager-header {
-    border-color: #9ca3af;
+    border-color: var(--color-border);
   }
 
   .popup-release-emergency-manager .release-manager-list {
-    background: #f3f4f6;
-    border-color: #9ca3af;
+    background: var(--color-surface-2);
+    border-color: var(--color-border);
   }
 
   .popup-release-emergency-manager .release-manager-list > .nut-phu {
-    border-color: #0284c7;
-    background: #0284c7;
-    color: white;
+    border-color: var(--color-secondary);
+    background: var(--color-secondary);
+    color: var(--color-on-secondary);
   }
 
   .popup-release-emergency-manager .release-manager-list > .nut-phu:hover {
-    border-color: #0369a1;
-    background: #0369a1;
-    color: white;
+    opacity: 0.9;
   }
 
   .popup-release-emergency-manager .release-manager-detail {
-    border-color: #9ca3af;
-    background: #f3f4f6;
+    border-color: var(--color-border);
+    background: var(--color-surface-2);
   }
 
   .popup-release-emergency-manager .release-manager-item {
-    @apply bg-gray-100 text-gray-800 hover:bg-white hover:text-gray-950;
+    @apply bg-surface-2 text-phu hover:bg-surface hover:text-muc;
   }
 
   .popup-release-emergency-manager .release-manager-item-active {
-    @apply bg-gray-800 text-white;
+    @apply bg-primary text-on-primary;
   }
 
   .popup-release-emergency-manager .field input,
   .popup-release-emergency-manager .field textarea,
   .popup-release-emergency-manager .field select {
-    @apply bg-white;
-    border-color: #9ca3af;
+    @apply bg-surface;
+    border-color: var(--color-border);
   }
 
   .popup-release-emergency-task-manager .release-task-manager-layout {
@@ -1250,48 +1362,46 @@
 
   .popup-release-emergency-task-manager .release-manager-list {
     @apply overflow-x-hidden rounded-r-none border-r-0;
-    background: #f3f4f6;
+    background: var(--color-surface-2);
   }
 
   .popup-release-emergency-task-manager .release-manager-detail {
     @apply border-l pl-4;
-    border-color: #9ca3af;
+    border-color: var(--color-border);
   }
 
   .popup-release-emergency-task-manager .release-manager-list > .nut-phu {
-    border-color: #0284c7;
+    border-color: var(--color-secondary);
   }
 
   .release-emergency-task-item {
-    --release-week-accent: #4b5563;
-    --release-week-soft: #f3f4f6;
-    --release-week-text: #374151;
-    border-left-color: #4b5563;
+    --release-week-accent: var(--color-muted-2);
+    --release-week-soft: var(--color-surface-2);
+    --release-week-text: var(--color-text);
+    border-left-color: var(--color-muted-2);
   }
 
   .release-emergency-stage-group {
-    --release-week-accent: #4b5563;
-    --release-week-soft: #f3f4f6;
-    --release-week-text: #374151;
+    --release-week-accent: var(--color-muted-2);
+    --release-week-soft: var(--color-surface-2);
+    --release-week-text: var(--color-text);
   }
 
   .release-manager-list {
     @apply flex min-h-0 flex-col gap-2 overflow-auto rounded-md border p-3;
-    background: #f3f4f6;
-    border-color: #9ca3af;
+    background: var(--color-surface-2);
+    border-color: var(--color-border);
     border-width: 1px;
   }
 
   .release-manager-list > .nut-phu {
-    border-color: #0284c7;
-    background: #0284c7;
-    color: white;
+    border-color: var(--color-secondary);
+    background: var(--color-secondary);
+    color: var(--color-on-secondary);
   }
 
   .release-manager-list > .nut-phu:hover {
-    border-color: #0369a1;
-    background: #0369a1;
-    color: white;
+    opacity: 0.9;
   }
 
   .release-manager-item,
@@ -1305,22 +1415,22 @@
   }
 
   .release-manager-item {
-    @apply bg-gray-100 text-gray-800 hover:bg-white hover:text-gray-950;
+    @apply bg-surface-2 text-phu hover:bg-surface hover:text-muc;
   }
 
   .release-manager-item-active {
-    @apply bg-gray-800 text-white;
+    @apply bg-primary text-on-primary;
   }
 
   .release-manager-detail {
-    @apply min-h-0 space-y-4 overflow-auto rounded-md border bg-white p-4;
-    background: #f3f4f6;
-    border-color: #9ca3af;
+    @apply min-h-0 space-y-4 overflow-auto rounded-md border p-4;
+    background: var(--color-surface-2);
+    border-color: var(--color-border);
     border-width: 1px;
   }
 
   .release-manager-empty {
-    @apply grid h-full min-h-72 place-items-center rounded-md border border-dashed border-slate-300 bg-slate-50 text-sm font-bold text-slate-400;
+    @apply grid h-full min-h-72 place-items-center rounded-md border border-dashed border-vien bg-surface-2 text-sm font-bold text-phu;
   }
 
   .release-note-preview-grid {
@@ -1337,8 +1447,8 @@
   }
 
   .release-template-preview {
-    @apply overflow-auto whitespace-pre-wrap rounded-md border bg-white px-3 py-2 text-xs font-normal leading-5 text-muc;
-    border-color: #9ca3af;
+    @apply overflow-auto whitespace-pre-wrap rounded-md border bg-surface px-3 py-2 text-xs font-normal leading-5 text-muc;
+    border-color: var(--color-border);
     margin: 0;
   }
 
@@ -1351,22 +1461,22 @@
   }
 
   .release-manager-header {
-    @apply mb-4 flex shrink-0 items-center justify-between rounded-md border bg-white px-4 py-3;
-    background: #1f2937;
-    border-color: #9ca3af;
+    @apply mb-4 flex shrink-0 items-center justify-between rounded-md border px-4 py-3;
+    background: var(--color-surface-2);
+    border-color: var(--color-border);
     border-width: 1px;
   }
 
   .release-manager-header h2 {
-    @apply text-white;
+    @apply text-muc;
   }
 
   .release-task-week-group {
-    --release-week-accent: #4b5563;
-    --release-week-soft: #f3f4f6;
-    --release-week-text: #374151;
+    --release-week-accent: var(--color-text);
+    --release-week-soft: var(--color-surface-2);
+    --release-week-text: var(--color-text);
     @apply relative grid gap-2 border-t py-3 pl-5 first:border-t-0 first:pt-0 last:pb-0;
-    border-color: #9ca3af;
+    border-color: var(--color-border);
   }
 
   .release-task-week-group::before {
@@ -1383,7 +1493,8 @@
 
   .release-task-week-title::before {
     content: '';
-    @apply absolute -left-5 h-4 w-4 rounded-full border-4 border-white;
+    @apply absolute -left-5 h-4 w-4 rounded-full border-4;
+    border-color: var(--color-surface-2);
     background: var(--release-week-accent);
   }
 
@@ -1397,15 +1508,15 @@
   }
 
   .release-task-item.release-manager-item-active {
-    background: #1f2937;
-    border-color: #1f2937;
-    border-left-color: #1f2937;
-    color: white;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    border-left-color: var(--color-primary);
+    color: var(--color-on-primary);
   }
 
   .release-task-item.release-manager-item-active small,
   .release-task-item.release-manager-item-active .release-task-item-title {
-    color: white;
+    color: var(--color-on-primary);
   }
 
   .release-task-item-title {
@@ -1417,55 +1528,57 @@
   }
 
   .release-task-priority-badge {
-    @apply ml-auto inline-flex h-5 shrink-0 items-center justify-center rounded-full bg-slate-900 px-2 text-[10px] font-black text-white;
+    @apply ml-auto inline-flex h-5 shrink-0 items-center justify-center rounded-full bg-muc px-2 text-[10px] font-black text-nen;
   }
 
   .release-task-week-badge {
     @apply shrink-0 rounded px-1.5 py-0.5 text-[10px] font-black uppercase leading-none;
     background: var(--release-week-accent);
-    color: white;
+    color: var(--color-bg);
   }
 
   .release-task-template-icon {
-    @apply absolute right-2 top-2 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border bg-white;
+    @apply absolute right-2 top-2 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border bg-surface;
     border-color: var(--release-week-accent);
     color: var(--release-week-text);
   }
 
+  /* 4 giai đoạn (jack/develop/staging/demo) — giữ đúng ý gốc: 1 thang xám đậm->nhạt để phân biệt,
+     đổi sang thang token đậm->nhạt tương ứng cho nền tối (text đậm nhất -> border nhạt nhất). */
   .release-week-jack {
-    --release-week-accent: #374151;
-    --release-week-soft: #f3f4f6;
-    --release-week-text: #374151;
+    --release-week-accent: var(--color-text);
+    --release-week-soft: var(--color-surface-2);
+    --release-week-text: var(--color-text);
   }
 
   .release-week-develop {
-    --release-week-accent: #4b5563;
-    --release-week-soft: #f3f4f6;
-    --release-week-text: #374151;
+    --release-week-accent: var(--color-muted-2);
+    --release-week-soft: var(--color-surface-2);
+    --release-week-text: var(--color-text);
   }
 
   .release-week-staging {
-    --release-week-accent: #6b7280;
-    --release-week-soft: #f9fafb;
-    --release-week-text: #4b5563;
+    --release-week-accent: var(--color-muted);
+    --release-week-soft: var(--color-surface-2);
+    --release-week-text: var(--color-muted);
   }
 
   .release-week-demo {
-    --release-week-accent: #9ca3af;
-    --release-week-soft: #f9fafb;
-    --release-week-text: #4b5563;
+    --release-week-accent: var(--color-border);
+    --release-week-soft: var(--color-surface-2);
+    --release-week-text: var(--color-muted);
   }
 
   .release-week-afterDemo {
-    --release-week-accent: #111827;
-    --release-week-soft: #f3f4f6;
-    --release-week-text: #111827;
+    --release-week-accent: var(--color-border);
+    --release-week-soft: var(--color-surface-2);
+    --release-week-text: var(--color-muted-2);
   }
 
   .release-token-guide {
     @apply grid max-h-40 gap-2 overflow-auto rounded-md border border-dashed p-3 sm:grid-cols-2 lg:grid-cols-3;
-    background: #e5e7eb;
-    border-color: #6b7280;
+    background: var(--color-surface-2);
+    border-color: var(--color-border);
   }
 
   .release-token-guide-item {
@@ -1477,11 +1590,11 @@
   }
 
   .release-token-guide-group {
-    @apply grid gap-2 border-b border-dashed border-slate-200 pb-3 last:border-b-0 last:pb-0;
+    @apply grid gap-2 border-b border-dashed border-vien pb-3 last:border-b-0 last:pb-0;
   }
 
   .release-token-guide-title {
-    @apply text-xs font-bold text-slate-700;
+    @apply text-xs font-bold text-muc;
   }
 
   .release-token-guide-row {
@@ -1489,12 +1602,12 @@
   }
 
   .release-token-guide code {
-    @apply rounded bg-white px-2 py-1 font-bold;
-    color: #374151;
+    @apply rounded bg-surface-2 px-2 py-1 font-bold;
+    color: var(--color-text);
   }
 
   .release-token-copy {
-    @apply flex items-center gap-2 rounded-md border border-sky-100 bg-white px-2 py-1 text-sky-800 transition hover:border-sky-300 hover:bg-sky-50;
+    @apply flex items-center gap-2 rounded-md border border-secondary bg-surface px-2 py-1 text-secondary transition hover:bg-secondary-soft;
   }
 
   .release-token-copy code {
@@ -1502,21 +1615,21 @@
   }
 
   .release-copy-status {
-    @apply mt-3 text-sm font-bold text-emerald-700;
+    @apply mt-3 text-sm font-bold text-success;
   }
 
   .release-save-success {
-    @apply fixed left-1/2 top-1/2 z-[70] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3 rounded-lg border border-emerald-100 bg-white px-8 py-7 text-center text-sm font-bold text-emerald-700;
+    @apply fixed left-1/2 top-1/2 z-[70] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3 rounded-lg border border-success bg-surface px-8 py-7 text-center text-sm font-bold text-success;
   }
 
   .release-save-success-icon {
-    @apply grid h-20 w-20 place-items-center rounded-full border-4 border-emerald-500 bg-emerald-50 text-emerald-600;
+    @apply grid h-20 w-20 place-items-center rounded-full border-4 border-success bg-success-soft text-success;
   }
 
   .release-date-summary {
     @apply mt-2 grid gap-1 rounded-md border p-3 text-xs leading-5 text-phu;
-    background: #e5e7eb;
-    border-color: #6b7280;
+    background: var(--color-surface-2);
+    border-color: var(--color-muted-2);
     animation: releaseSoftRise 180ms ease-out both;
   }
 
@@ -1533,11 +1646,8 @@
   }
 
   .release-timeline-decoration {
-    @apply relative overflow-hidden rounded-md border border-sky-100 bg-white p-4 lg:col-span-1;
+    @apply relative overflow-hidden rounded-md border border-vien bg-surface p-4 lg:col-span-1;
     min-height: 118px;
-    background:
-      linear-gradient(90deg, rgba(255, 247, 237, 0.92), rgba(254, 226, 226, 0.72), rgba(255, 237, 213, 0.84)),
-      white;
     animation: releaseSoftRise 220ms ease-out both;
   }
 
@@ -1567,11 +1677,11 @@
   }
 
   .release-timeline-copy span {
-    @apply font-bold uppercase tracking-wide text-slate-500;
+    @apply font-bold uppercase tracking-wide text-phu;
   }
 
   .release-timeline-copy strong {
-    @apply text-base text-slate-800;
+    @apply text-base text-muc;
   }
 
   .release-timeline-track {
@@ -1580,7 +1690,7 @@
 
   .release-timeline-track::before {
     content: '';
-    @apply absolute left-[6%] right-[6%] top-5 h-0.5 rounded-full bg-slate-300;
+    @apply absolute left-[6%] right-[6%] top-5 h-0.5 rounded-full bg-vien;
   }
 
   .release-timeline-progress {
@@ -1592,7 +1702,7 @@
   }
 
   .release-rocket-runner {
-    @apply absolute top-0 z-10 flex h-12 w-12 items-center justify-center rounded-full border border-violet-300 bg-white text-violet-700;
+    @apply absolute top-0 z-10 flex h-12 w-12 items-center justify-center rounded-full border border-secondary bg-surface text-secondary;
     left: 6%;
     animation: releaseRocketRoll 22s ease-in-out infinite;
   }
@@ -1602,7 +1712,7 @@
   }
 
   .release-timeline-label {
-    @apply absolute top-10 text-xs font-black uppercase tracking-wide text-slate-600;
+    @apply absolute top-10 text-xs font-black uppercase tracking-wide text-phu;
   }
 
   .release-timeline-label-start {
@@ -1618,19 +1728,16 @@
   }
 
   .emergency-shape-playground {
-    @apply relative h-40 overflow-hidden rounded-md border border-slate-400 bg-slate-100;
-    background:
-      linear-gradient(180deg, rgba(248, 250, 252, 0.95), rgba(226, 232, 240, 0.95)),
-      white;
+    @apply relative h-40 overflow-hidden rounded-md border border-vien bg-surface-2;
   }
 
   .emergency-shape-playground::before {
     content: '';
-    @apply absolute bottom-8 left-5 right-5 h-0.5 bg-slate-700;
+    @apply absolute bottom-8 left-5 right-5 h-0.5 bg-muted-2;
   }
 
   .emergency-shape {
-    @apply absolute bottom-8 block border border-slate-900;
+    @apply absolute bottom-8 block border border-muted-2;
   }
 
   .emergency-shape-circle {
@@ -1654,7 +1761,7 @@
   }
 
   .emergency-impact {
-    @apply absolute bottom-[58px] hidden h-8 w-8 rounded-full border border-dashed border-slate-400;
+    @apply absolute bottom-[58px] hidden h-8 w-8 rounded-full border border-dashed border-vien;
     animation: emergencyImpactPop 8.4s ease-in-out infinite;
   }
 
@@ -1672,46 +1779,17 @@
   }
 
   .task-row {
-    @apply flex min-h-[5.6rem] cursor-grab items-center gap-2.5 overflow-hidden rounded-md border border-slate-300 bg-slate-50 p-2.5 transition active:cursor-grabbing;
-    background: #f8fafc;
-    border-color: #cbd5e1;
+    @apply flex min-h-[5.6rem] cursor-grab items-center gap-2.5 overflow-hidden rounded-md border border-vien bg-surface-2 p-2.5 transition active:cursor-grabbing;
     transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
   }
 
-  .task-row:hover {
-    background: #f0fdfa;
-    border-color: #5eead4;
-    box-shadow: 0 2px 8px rgba(13, 148, 136, 0.14);
-  }
-
-  .task-row.task-source-manual {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-  }
-
-  .task-row.task-source-manual:hover {
-    background: #f0fdfa;
-    border-color: #5eead4;
-  }
-
-  .task-row.task-source-regular-release {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-  }
-
-  .task-row.task-source-regular-release:hover {
-    background: #f0fdfa;
-    border-color: #5eead4;
-  }
-
-  .task-row.task-source-emergency-release {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-  }
-
+  .task-row:hover,
+  .task-row.task-source-manual:hover,
+  .task-row.task-source-regular-release:hover,
   .task-row.task-source-emergency-release:hover {
-    background: #f0fdfa;
-    border-color: #5eead4;
+    background: var(--color-primary-soft);
+    border-color: var(--color-primary);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 14%, transparent);
   }
 
   .task-actions {
@@ -1722,7 +1800,7 @@
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
-    @apply min-w-0 overflow-hidden leading-[1.15rem] text-slate-950;
+    @apply min-w-0 overflow-hidden leading-[1.15rem] text-muc;
     font-family: "Times New Roman", Times, serif;
   }
 
@@ -1748,7 +1826,7 @@
   }
 
   .task-link-badge {
-    @apply inline-flex h-5 min-w-5 shrink-0 items-center justify-center gap-0.5 rounded border bg-white px-1 text-[9px] font-black leading-none transition;
+    @apply inline-flex h-5 min-w-5 shrink-0 items-center justify-center gap-0.5 rounded border bg-surface px-1 text-[9px] font-black leading-none transition;
   }
 
   .task-link-badge:hover,
@@ -1761,11 +1839,11 @@
   }
 
   .task-link-badge.task-link-file {
-    @apply border-emerald-200 bg-white text-emerald-600 hover:bg-emerald-50;
+    @apply border-success bg-surface text-success hover:bg-success-soft;
   }
 
   .task-link-badge.task-link-git {
-    @apply border-black bg-black text-white hover:bg-slate-800;
+    @apply border-muc bg-muc text-nen hover:opacity-90;
   }
 
   .task-link-badge.task-link-git svg {
@@ -1773,7 +1851,7 @@
   }
 
   .task-link-badge.task-link-release {
-    @apply border-red-200 bg-white text-red-600 hover:bg-red-50;
+    @apply border-danger bg-surface text-danger hover:bg-danger-soft;
   }
 
   .task-link-badge.task-link-zoom {
@@ -1793,7 +1871,7 @@
   }
 
   .task-link-editor {
-    @apply grid gap-2 rounded-md border border-dashed border-slate-300 bg-slate-50 p-3;
+    @apply grid gap-2 rounded-md border border-dashed border-vien bg-surface-2 p-3;
   }
 
   .task-link-editor-actions {
@@ -1813,7 +1891,7 @@
   }
 
   .note-copy-btn {
-    @apply inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-vien bg-white text-slate-600 transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-300;
+    @apply inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-vien bg-surface text-phu transition hover:border-secondary hover:bg-secondary-soft hover:text-secondary disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-muted-2;
   }
 
   .note-inline-preview {
@@ -2081,19 +2159,21 @@
 
   .task-dinh-ky {
     @apply absolute flex min-h-[26px] w-full cursor-move items-center gap-1.5 overflow-hidden rounded-md border border-l-2 px-2 py-1 text-muc transition;
-    @apply border-sky-300 border-l-sky-500 bg-sky-50;
+    @apply border-primary border-l-primary bg-primary-soft;
   }
 
+  /* 3 nguồn task định kỳ đổi sang mượn đúng token ngữ nghĩa thay vì màu tuỳ ý — vẫn phân biệt được
+     rõ 3 nguồn, đồng thời "khẩn cấp" tự nhiên đọc là "nguy hiểm/gấp" (đúng ý đồ hơn màu rose cũ). */
   .task-dinh-ky.task-source-manual:not(.task-dinh-ky-done) {
-    @apply border-sky-300 border-l-sky-500 bg-sky-50;
+    @apply border-primary border-l-primary bg-primary-soft;
   }
 
   .task-dinh-ky.task-source-regular-release:not(.task-dinh-ky-done) {
-    @apply border-violet-300 border-l-violet-500 bg-violet-50;
+    @apply border-secondary border-l-secondary bg-secondary-soft;
   }
 
   .task-dinh-ky.task-source-emergency-release:not(.task-dinh-ky-done) {
-    @apply border-rose-300 border-l-rose-500 bg-rose-50;
+    @apply border-danger border-l-danger bg-danger-soft;
   }
 
   .task-dinh-ky-content {
@@ -2113,40 +2193,40 @@
   .task-dinh-ky-content span.ai-badge {
     @apply shrink-0 whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] font-bold leading-none;
   }
-  .ai-badge-pending { @apply bg-amber-100 text-amber-700; }
-  .ai-badge-approved { @apply bg-sky-100 text-sky-700; }
-  .ai-badge-running { @apply bg-indigo-100 text-indigo-700; }
-  .ai-badge-done { @apply bg-emerald-100 text-emerald-700; }
-  .ai-badge-failed { @apply bg-rose-100 text-rose-700; }
-  .ai-badge-canceled { @apply bg-slate-200 text-slate-600; }
-  .ai-badge-missed { @apply bg-orange-100 text-orange-700; }
+  .ai-badge-pending { @apply bg-warning-soft text-warning; }
+  .ai-badge-approved { @apply bg-secondary-soft text-secondary; }
+  .ai-badge-running { @apply bg-primary-soft text-primary; }
+  .ai-badge-done { @apply bg-success-soft text-success; }
+  .ai-badge-failed { @apply bg-danger-soft text-danger; }
+  .ai-badge-canceled { @apply bg-surface-2 text-phu; }
+  .ai-badge-missed { @apply bg-warning-soft text-warning; }
 
   /* FR-5 (CR-20260814-hop-nhat): dấu lệch definition trên dòng task định kỳ dashboard */
   .drift-flag {
-    @apply flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700;
+    @apply flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-warning-soft text-warning;
   }
 
   .nut-hoan-thanh-timeline {
-    @apply flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-white transition disabled:cursor-not-allowed;
-    background: #0d9488;
-    border-color: #0d9488;
+    @apply flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-on-primary transition disabled:cursor-not-allowed;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
   }
 
   .nut-hoan-thanh-timeline-done {
-    @apply text-white;
-    background: #0d9488;
-    border-color: #0d9488;
+    @apply text-on-primary;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
   }
 
   .task-dinh-ky-done {
     @apply cursor-pointer text-muc opacity-90;
-    border-color: #99f6e4;
-    border-left-color: #0d9488;
-    background: #ccfbf1;
+    border-color: var(--color-success);
+    border-left-color: var(--color-primary);
+    background: var(--color-success-soft);
   }
 
   .task-dinh-ky-done:hover {
-    background: #ccfbf1;
+    background: var(--color-success-soft);
   }
 
   .task-dinh-ky-done .task-dinh-ky-content h3,
@@ -2160,7 +2240,7 @@
 
   .resize-thoi-gian::after {
     content: '';
-    @apply absolute bottom-0 left-1/2 h-0.5 w-10 -translate-x-1/2 rounded-full bg-slate-300 opacity-0 transition;
+    @apply absolute bottom-0 left-1/2 h-0.5 w-10 -translate-x-1/2 rounded-full bg-vien opacity-0 transition;
   }
 
   .task-dinh-ky:hover .resize-thoi-gian::after {
@@ -2168,7 +2248,7 @@
   }
 
   .timeline {
-    @apply min-h-0 flex-1 overflow-y-auto rounded-md border border-slate-300 bg-slate-50 p-3;
+    @apply min-h-0 flex-1 overflow-y-auto rounded-md border border-vien bg-surface-2 p-3;
   }
 
   .timeline-canvas {
@@ -2176,7 +2256,7 @@
   }
 
   .stt {
-    @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 text-xs font-bold text-phu;
+    @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-surface-2 text-xs font-bold text-phu;
   }
 
   .badge {
@@ -2184,22 +2264,22 @@
   }
 
   .neutral {
-    @apply bg-slate-100 text-slate-600;
+    @apply bg-surface-2 text-phu;
   }
 
   .dem-task {
-    @apply rounded bg-slate-50 px-2 py-1 text-xs font-bold text-phu;
+    @apply rounded bg-surface-2 px-2 py-1 text-xs font-bold text-phu;
   }
 
   .nut-them {
-    @apply flex h-12 w-12 items-center justify-center rounded-md border text-white transition;
-    background: #0d9488;
-    border-color: #0d9488;
+    @apply flex h-12 w-12 items-center justify-center rounded-md border text-on-primary transition;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
   }
 
   .nut-them:hover {
-    background: #0f766e;
-    border-color: #0f766e;
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
   }
 
   .nut-them,
@@ -2293,49 +2373,49 @@
   }
 
   .nut-chinh {
-    @apply px-4 py-2 text-white disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400;
-    background: #0d9488;
-    border-color: #0d9488;
+    @apply px-4 py-2 text-on-primary disabled:cursor-not-allowed disabled:border-vien disabled:bg-surface-2 disabled:text-muted-2;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
   }
 
   .nut-chinh:not(:disabled):hover {
-    background: #0f766e;
-    border-color: #0f766e;
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
   }
 
   .nut-them {
-    background: #0d9488;
-    border-color: #0d9488;
-    color: white;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-on-primary);
   }
 
   .nut-them:not(:disabled):hover {
-    background: #0f766e;
-    border-color: #0f766e;
-    color: white;
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+    color: var(--color-on-primary);
   }
 
   .nav-step-button {
-    @apply inline-flex h-9 w-9 shrink-0 items-center justify-center border-0 text-white transition disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-300;
-    background: #0d9488;
+    @apply inline-flex h-9 w-9 shrink-0 items-center justify-center border-0 text-on-primary transition disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-muted-2;
+    background: var(--color-primary);
   }
 
   .nav-step-button:not(:disabled):hover {
-    background: #0f766e;
-    color: white;
+    background: var(--color-primary-hover);
+    color: var(--color-on-primary);
   }
 
   .nut-phu {
-    @apply border-slate-300 bg-white px-4 py-2 text-slate-700 hover:border-slate-500 hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400;
+    @apply border-vien bg-surface px-4 py-2 text-phu hover:border-muted-2 hover:bg-surface-2 disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-muted-2;
   }
 
   .nut-lich-su {
-    @apply hover:text-white;
+    @apply hover:text-on-primary;
   }
 
   .nut-lich-su:hover {
-    background: #0f766e;
-    border-color: #0f766e;
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
   }
 
   .quick-add-popup {
@@ -2355,19 +2435,19 @@
   }
 
   .quick-add-type-bar {
-    @apply flex shrink-0 items-center justify-center gap-2 rounded-md border border-slate-300 bg-slate-50 p-1;
+    @apply flex shrink-0 items-center justify-center gap-2 rounded-md border border-vien bg-surface-2 p-1;
   }
 
   .quick-add-type-button {
-    @apply h-9 w-32 rounded px-4 text-sm font-bold text-slate-700 transition hover:bg-teal-50 hover:text-teal-700;
+    @apply h-9 w-32 rounded px-4 text-sm font-bold text-phu transition hover:bg-primary-soft hover:text-primary;
   }
 
   .quick-add-type-button-active {
-    @apply bg-teal-600 text-white hover:bg-teal-700 hover:text-white;
+    @apply bg-primary text-on-primary hover:bg-primary-hover hover:text-on-primary;
   }
 
   .quick-add-panel {
-    @apply min-h-0 flex-1 overflow-auto rounded-md border border-slate-300 bg-white p-4;
+    @apply min-h-0 flex-1 overflow-auto rounded-md border border-vien bg-surface p-4;
   }
 
   .quick-add-footer {
@@ -2383,11 +2463,11 @@
   }
 
   .quick-project-list {
-    @apply grid min-h-0 content-start gap-2 overflow-auto border-b border-slate-300 bg-slate-50 p-3 lg:border-b-0 lg:border-r;
+    @apply grid min-h-0 content-start gap-2 overflow-auto border-b border-vien bg-surface-2 p-3 lg:border-b-0 lg:border-r;
   }
 
   .quick-project-item {
-    @apply min-w-0 rounded-md border border-slate-300 bg-white px-3 py-3 text-left text-sm font-bold text-muc transition hover:border-teal-300 hover:bg-teal-50;
+    @apply min-w-0 rounded-md border border-vien bg-surface px-3 py-3 text-left text-sm font-bold text-muc transition hover:border-primary hover:bg-primary-soft;
   }
 
   .quick-project-item span,
@@ -2400,11 +2480,11 @@
   }
 
   .quick-project-item-active {
-    @apply border-teal-600 bg-teal-600 text-white hover:border-teal-700 hover:bg-teal-700;
+    @apply border-primary bg-primary text-on-primary hover:border-primary-hover hover:bg-primary-hover;
   }
 
   .quick-project-item-active small {
-    @apply text-teal-50;
+    @apply text-on-primary;
   }
 
   .quick-project-task-list {
@@ -2412,7 +2492,7 @@
   }
 
   .quick-project-task-toolbar {
-    @apply sticky top-0 z-10 mb-3 flex min-h-12 items-center justify-between gap-3 border-b border-vien bg-white/95 pb-3 backdrop-blur;
+    @apply sticky top-0 z-10 mb-3 flex min-h-12 items-center justify-between gap-3 border-b border-vien bg-[color-mix(in_srgb,var(--color-surface)_95%,transparent)] pb-3 backdrop-blur;
   }
 
   .quick-project-task-toolbar h3 {
@@ -2424,7 +2504,7 @@
   }
 
   .quick-project-level1-add {
-    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-teal-600 bg-teal-600 p-0 text-white transition hover:border-teal-700 hover:bg-teal-700;
+    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-primary bg-primary p-0 text-on-primary transition hover:border-primary-hover hover:bg-primary-hover;
   }
 
   .quick-project-level1-add svg {
@@ -2440,7 +2520,7 @@
   }
 
   .quick-project-task-main {
-    @apply mb-1 flex min-h-10 min-w-0 items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5;
+    @apply mb-1 flex min-h-10 min-w-0 items-center gap-2 rounded-md border border-vien bg-surface-2 px-2 py-1.5;
   }
 
   .quick-project-task-number {
@@ -2452,11 +2532,11 @@
   }
 
   .quick-project-task-progress {
-    @apply shrink-0 rounded bg-white px-2 py-1 text-xs font-bold text-teal-700;
+    @apply shrink-0 rounded bg-surface px-2 py-1 text-xs font-bold text-primary;
   }
 
   .quick-project-task-add {
-    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-teal-600 bg-teal-600 text-white transition hover:border-teal-700 hover:bg-teal-700 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-400 disabled:hover:border-slate-300 disabled:hover:bg-slate-100;
+    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-primary bg-primary text-on-primary transition hover:border-primary-hover hover:bg-primary-hover disabled:cursor-not-allowed disabled:border-vien disabled:bg-surface-2 disabled:text-muted-2 disabled:hover:border-vien disabled:hover:bg-surface-2;
   }
 
   .quick-project-task-children {
@@ -2464,15 +2544,15 @@
   }
 
   .quick-add-empty {
-    @apply rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-sm font-semibold text-phu;
+    @apply rounded-md border border-dashed border-vien bg-surface-2 px-3 py-3 text-sm font-semibold text-phu;
   }
 
   .quick-add-error {
-    @apply border-rose-200 bg-rose-50 text-rose-700;
+    @apply border-danger bg-danger-soft text-danger;
   }
 
   .quick-project-khac-create {
-    @apply flex flex-col items-center justify-center gap-2 rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-10;
+    @apply flex flex-col items-center justify-center gap-2 rounded-md border border-dashed border-vien bg-surface-2 px-4 py-10;
   }
 
   .quick-project-khac-create .nut-chinh {
@@ -2480,14 +2560,14 @@
   }
 
   .man-hinh-len-lich .release-hover-emerald:not(:disabled):hover {
-    background: #0f766e;
-    border-color: #0f766e;
-    color: white;
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+    color: var(--color-on-primary);
   }
 
   .man-hinh-len-lich .release-date-picker-button:hover {
-    background: #0f766e;
-    color: white;
+    background: var(--color-primary-hover);
+    color: var(--color-on-primary);
   }
 
   .nut-nguy-hiem {
@@ -2495,7 +2575,7 @@
   }
 
   .nut-nguy-hiem-text {
-    @apply border-red-600 bg-red-600 px-4 py-2 text-white hover:border-red-700 hover:bg-red-700 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400;
+    @apply border-danger bg-danger px-4 py-2 text-on-primary hover:opacity-90 disabled:cursor-not-allowed disabled:border-vien disabled:bg-surface-2 disabled:text-muted-2;
   }
 
   .nut-cancel-record {
@@ -2503,19 +2583,17 @@
   }
 
   .nut-trash-icon {
-    border-color: #ef4444;
-    background: #ef4444;
-    color: white;
+    border-color: var(--color-danger);
+    background: var(--color-danger);
+    color: var(--color-on-primary);
   }
 
   .nut-trash-icon:hover {
-    background: #dc2626;
-    border-color: #dc2626;
-    color: white;
+    @apply opacity-90;
   }
 
   .nut-sort {
-    @apply border-vien bg-white px-2.5 py-1.5 text-xs text-phu hover:border-sky-300 hover:text-sky-700;
+    @apply border-vien bg-surface px-2.5 py-1.5 text-xs text-phu hover:border-primary hover:text-primary;
   }
 
   .lich-dinh-ky {
@@ -2523,71 +2601,71 @@
   }
 
   .nut-lich-dinh-ky {
-    @apply inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50;
+    @apply inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-md border border-vien bg-surface px-3 py-2 text-sm font-bold text-muc transition hover:border-muted-2 hover:bg-surface-2;
   }
 
   .nut-lich-dinh-ky input {
-    @apply cursor-pointer border-0 bg-transparent p-0 font-bold text-slate-800 focus:ring-0;
+    @apply cursor-pointer border-0 bg-transparent p-0 font-bold text-muc focus:ring-0;
   }
 
   .nut-ngay-dinh-ky {
-    @apply inline-flex h-10 w-10 items-center justify-center rounded-md border text-white transition disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-300;
-    background: #0d9488;
-    border-color: #0d9488;
+    @apply inline-flex h-10 w-10 items-center justify-center rounded-md border text-on-primary transition disabled:cursor-not-allowed disabled:border-vien disabled:bg-surface-2 disabled:text-muted-2;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
   }
 
   .nut-ngay-dinh-ky:not(:disabled):hover {
-    background: #0f766e;
-    border-color: #0f766e;
-    color: white;
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+    color: var(--color-on-primary);
   }
 
   .nut-hom-nay {
-    @apply inline-flex min-h-10 items-center justify-center rounded-md border px-3 py-2 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400;
-    background: #0d9488;
-    border-color: #0d9488;
+    @apply inline-flex min-h-10 items-center justify-center rounded-md border px-3 py-2 text-sm font-bold text-on-primary transition disabled:cursor-not-allowed disabled:border-vien disabled:bg-surface-2 disabled:text-muted-2;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
   }
 
   .nut-hom-nay:not(:disabled):hover {
-    background: #0f766e;
-    border-color: #0f766e;
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
   }
 
   .nut-sort-active {
-    @apply text-white hover:text-white;
-    background: #0d9488;
-    border-color: #0d9488;
+    @apply text-on-primary hover:text-on-primary;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
   }
 
   .nut-sort-active:hover {
-    background: #0f766e;
-    border-color: #0f766e;
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
   }
 
   .nut-huy,
   .nut-icon {
-    @apply h-8 w-8 border-slate-300 bg-white text-slate-600 hover:border-slate-500 hover:bg-slate-100;
+    @apply h-8 w-8 border-vien bg-surface text-phu hover:border-muted-2 hover:bg-surface-2;
   }
 
   .nut-huy {
-    @apply hover:border-red-600 hover:bg-red-600 hover:text-white;
+    @apply hover:border-danger hover:bg-danger hover:text-on-primary;
   }
 
   .nut-icon {
-    @apply border-red-600 bg-red-600 text-white hover:border-red-700 hover:bg-red-700 hover:text-white;
+    @apply border-danger bg-danger text-on-primary hover:border-danger hover:bg-danger hover:opacity-90 hover:text-on-primary;
   }
 
   .checkbox-xong {
-    @apply flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border text-white transition;
-    background: #0d9488;
-    border-color: #0d9488;
+    @apply flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border text-on-primary transition;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
   }
 
   .checkbox-xong:hover,
   .nut-hoan-thanh-timeline:hover {
-    background: #0f766e;
-    border-color: #0f766e;
-    color: white;
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+    color: var(--color-on-primary);
   }
 
   .checkbox-xong input {
@@ -2595,11 +2673,11 @@
   }
 
   .checkbox-disabled {
-    @apply cursor-not-allowed border-slate-300 bg-slate-200 text-slate-500;
+    @apply cursor-not-allowed border-vien bg-surface-2 text-phu;
   }
 
   .empty {
-    @apply rounded-md border border-dashed border-slate-300 bg-slate-50 p-5 text-center text-sm text-phu;
+    @apply rounded-md border border-dashed border-vien bg-surface-2 p-5 text-center text-sm text-phu;
   }
 
   .overlay {
@@ -2616,7 +2694,7 @@
   }
 
   .popup {
-    @apply max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg border border-vien bg-white p-5;
+    @apply max-h-[calc(100vh-32px)] overflow-y-auto rounded-lg border border-vien bg-surface p-5;
     animation: popupSoftEnter 190ms ease-out backwards;
   }
 
@@ -2642,7 +2720,7 @@
   }
 
   .project-info-table th {
-    @apply border border-vien bg-slate-100 px-4 py-2 text-left font-bold text-muc;
+    @apply border border-vien bg-surface-2 px-4 py-2 text-left font-bold text-muc;
   }
 
   .project-info-table td {
@@ -2660,9 +2738,9 @@
 
   .popup-release-manager {
     @apply my-0 flex h-[calc(100vh-32px)] max-h-[calc(100vh-32px)] flex-col overflow-hidden;
-    border-color: #9ca3af;
+    border-color: var(--color-border);
     border-width: 1px;
-    background: #d1d5db;
+    background: var(--color-surface-2);
     animation: popupSoftEnter 190ms ease-out backwards;
   }
 
@@ -2691,7 +2769,7 @@
 
   .field input:disabled,
   .field select:disabled {
-    @apply cursor-not-allowed bg-slate-100 text-slate-400;
+    @apply cursor-not-allowed bg-surface-2 text-muted-2;
   }
 
   .field-readonly {
@@ -2699,7 +2777,7 @@
   }
 
   .field-readonly p {
-    @apply rounded-md border border-vien bg-slate-50 px-3 py-2 font-normal text-muc;
+    @apply rounded-md border border-vien bg-surface-2 px-3 py-2 font-normal text-muc;
   }
 
   .field-readonly span {
@@ -2707,15 +2785,15 @@
   }
 
   .field-checkbox {
-    @apply mb-4 flex w-fit cursor-pointer items-center gap-2 rounded-md border border-vien bg-white px-3 py-2 text-sm font-bold text-muc;
+    @apply mb-4 flex w-fit cursor-pointer items-center gap-2 rounded-md border border-vien bg-surface px-3 py-2 text-sm font-bold text-muc;
   }
 
   .field-checkbox input {
-    @apply h-4 w-4 rounded border-vien accent-emerald-600;
+    @apply h-4 w-4 rounded border-vien accent-primary;
   }
 
   .field-checkbox:has(input:disabled) {
-    @apply cursor-not-allowed text-slate-400;
+    @apply cursor-not-allowed text-muted-2;
   }
 
   .popup-project-form {
@@ -2727,7 +2805,7 @@
   }
 
   .multi-select summary {
-    @apply flex min-h-10 cursor-pointer list-none items-center justify-between rounded-md border border-vien bg-white px-3 py-2 text-sm font-normal text-muc outline-none transition hover:border-sky-300 focus:border-sky-400 focus:ring-2 focus:ring-sky-100;
+    @apply flex min-h-10 cursor-pointer list-none items-center justify-between rounded-md border border-vien bg-surface px-3 py-2 text-sm font-normal text-muc outline-none transition hover:border-primary focus:border-primary focus:ring-2 focus:ring-primary-soft;
   }
 
   .multi-select summary::-webkit-details-marker {
@@ -2740,32 +2818,32 @@
   }
 
   .multi-select[open] summary {
-    @apply border-sky-400 ring-2 ring-sky-100;
+    @apply border-primary ring-2 ring-primary-soft;
   }
 
   .multi-select-menu {
-    @apply absolute left-0 right-0 top-[calc(100%+4px)] z-20 grid max-h-72 gap-1 overflow-y-auto rounded-md border border-vien bg-white p-2 shadow-lg;
+    @apply absolute left-0 right-0 top-[calc(100%+4px)] z-20 grid max-h-72 gap-1 overflow-y-auto rounded-md border border-vien bg-surface p-2 shadow-lg;
   }
 
-  /* Vùng ô tìm kiếm: sticky, nền trắng phủ full mép menu + gạch ngăn để option không lộ phía sau */
+  /* Vùng ô tìm kiếm: sticky, phủ full mép menu + gạch ngăn để option không lộ phía sau */
   .multi-select-search-wrap {
-    @apply sticky top-0 z-10 relative -mx-2 -mt-2 mb-1 border-b border-slate-100 bg-white px-2 pb-2 pt-2;
+    @apply sticky top-0 z-10 relative -mx-2 -mt-2 mb-1 border-b border-vien bg-surface px-2 pb-2 pt-2;
   }
 
   .multi-select-search-icon {
-    @apply pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400;
+    @apply pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-2;
   }
 
   .multi-select-search {
-    @apply w-full rounded-md border border-vien bg-white py-1.5 pl-8 pr-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100;
+    @apply w-full rounded-md border border-vien bg-surface py-1.5 pl-8 pr-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft;
   }
 
   .multi-select-option {
-    @apply flex cursor-pointer items-center gap-2 rounded px-2 py-2 text-sm font-semibold text-muc transition hover:bg-sky-50;
+    @apply flex cursor-pointer items-center gap-2 rounded px-2 py-2 text-sm font-semibold text-muc transition hover:bg-primary-soft;
   }
 
   .multi-select-option input {
-    @apply h-4 w-4 rounded border-vien accent-sky-600;
+    @apply h-4 w-4 rounded border-vien accent-primary;
   }
 
   /* Droplist chọn nhiều PIC (wizard bước 4) — controlled, có chevron riêng */
@@ -2774,24 +2852,24 @@
   }
 
   .multi-pic-trigger {
-    @apply flex w-full items-center justify-between gap-1 rounded border border-vien bg-white px-2 py-1 text-xs text-muc hover:border-sky-300;
+    @apply flex w-full items-center justify-between gap-1 rounded border border-vien bg-surface px-2 py-1 text-xs text-muc hover:border-primary;
   }
 
   /* Vị trí do JS đặt (position:fixed neo theo nút). Ở đây chỉ định kiểu hiển thị. */
   .multi-pic-menu {
-    @apply z-50 grid max-h-60 min-w-[9rem] gap-0.5 overflow-auto rounded-md border border-vien bg-white p-1 shadow-lg;
+    @apply z-50 grid max-h-60 min-w-[9rem] gap-0.5 overflow-auto rounded-md border border-vien bg-surface p-1 shadow-lg;
   }
 
   .multi-pic-option {
-    @apply flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-xs font-medium text-muc hover:bg-sky-50;
+    @apply flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-xs font-medium text-muc hover:bg-primary-soft;
   }
 
   .multi-pic-option input {
-    @apply h-3.5 w-3.5 cursor-pointer accent-sky-600;
+    @apply h-3.5 w-3.5 cursor-pointer accent-primary;
   }
 
   .search-box {
-    @apply flex min-h-10 w-full max-w-sm items-center gap-2 rounded-md border border-vien bg-white px-3 text-phu;
+    @apply flex min-h-10 w-full max-w-sm items-center gap-2 rounded-md border border-vien bg-surface px-3 text-phu;
   }
 
   .search-box input {
@@ -2809,15 +2887,15 @@
   }
 
   .toast-success {
-    @apply border-emerald-200 bg-emerald-50 text-emerald-800;
+    @apply border-success bg-success-soft text-success;
   }
 
   .toast-error {
-    @apply border-rose-200 bg-rose-50 text-rose-700;
+    @apply border-danger bg-danger-soft text-danger;
   }
 
   .toast-info {
-    @apply border-sky-200 bg-sky-50 text-sky-800;
+    @apply border-primary bg-primary-soft text-primary;
   }
 }
 
@@ -3135,66 +3213,66 @@
    ───────────────────────────────────────────────────────────────────────────── */
 .mm-root { display: flex; flex: 1; min-height: 0; gap: 12px; }
 .mm-spin { animation: ld-spin 0.8s linear infinite; }
-.mm-muted { color: #64748b; font-size: 0.85rem; }
+.mm-muted { color: var(--color-muted); font-size: 0.85rem; }
 .mm-center { display: flex; align-items: center; justify-content: center; gap: 6px; text-align: center; padding: 16px 8px; }
 
 /* Sidebar danh sách sơ đồ */
 .mm-sidebar { width: 240px; flex: none; display: flex; flex-direction: column; min-height: 0;
-  background: rgba(255,255,255,0.82); border: 1px solid #9ca3af; border-radius: 12px; backdrop-filter: blur(4px); overflow: hidden; }
-.mm-sidebar-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px; border-bottom: 1px solid #e2e8f0; }
-.mm-sidebar-title { font-weight: 700; color: #0f172a; }
+  background: color-mix(in srgb, var(--color-surface) 82%, transparent); border: 1px solid var(--color-border); border-radius: 12px; backdrop-filter: blur(4px); overflow: hidden; } /* design-token-ok: token --color-surface pha trong suốt, không phải hardcode raw */
+.mm-sidebar-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px; border-bottom: 1px solid var(--color-border); }
+.mm-sidebar-title { font-weight: 700; color: var(--color-text); }
 .mm-sidebar-list { flex: 1; min-height: 0; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 4px; }
-.mm-list-item { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 8px; cursor: pointer; color: #1e293b; }
-.mm-list-item:hover { background: #f1f5f9; }
-.mm-list-item-active { background: #ccfbf1; font-weight: 600; }
+.mm-list-item { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 8px; cursor: pointer; color: var(--color-text); }
+.mm-list-item:hover { background: var(--color-surface-2); }
+.mm-list-item-active { background: var(--color-primary-soft); font-weight: 600; }
 .mm-list-item-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.88rem; }
 .mm-list-del { opacity: 0; }
 .mm-list-item:hover .mm-list-del { opacity: 1; }
-.mm-rename-input { flex: 1; min-width: 0; height: 26px; padding: 0 7px; border: 1px solid #0d9488; border-radius: 6px;
-  font-size: 0.88rem; outline: none; box-shadow: 0 0 0 2px rgba(13,148,136,0.14); }
+.mm-rename-input { flex: 1; min-width: 0; height: 26px; padding: 0 7px; border: 1px solid var(--color-primary); border-radius: 6px;
+  font-size: 0.88rem; outline: none; box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 14%, transparent); }
 
 /* Khu vực chính */
 .mm-main { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0;
-  background: rgba(255,255,255,0.82); border: 1px solid #9ca3af; border-radius: 12px; backdrop-filter: blur(4px); overflow: hidden; }
-.mm-toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
-.mm-toolbar-sep { width: 1px; align-self: stretch; background: #e2e8f0; margin: 0 2px; }
+  background: color-mix(in srgb, var(--color-surface) 82%, transparent); border: 1px solid var(--color-border); border-radius: 12px; backdrop-filter: blur(4px); overflow: hidden; } /* design-token-ok: token --color-surface pha trong suốt, không phải hardcode raw */
+.mm-toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--color-border); flex-wrap: wrap; }
+.mm-toolbar-sep { width: 1px; align-self: stretch; background: var(--color-border); margin: 0 2px; }
 .mm-toolbar-spacer { flex: 1; }
-.mm-title-input { font-weight: 700; font-size: 0.95rem; color: #0f172a; border: 1px solid transparent; border-radius: 6px; padding: 4px 8px; background: transparent; min-width: 160px; }
-.mm-title-input:hover { border-color: #e2e8f0; }
-.mm-title-input:focus { border-color: #0d9488; outline: none; background: #fff; }
-.mm-hint { font-size: 0.72rem; color: #94a3b8; display: inline-flex; align-items: center; gap: 4px; }
+.mm-title-input { font-weight: 700; font-size: 0.95rem; color: var(--color-text); border: 1px solid transparent; border-radius: 6px; padding: 4px 8px; background: transparent; min-width: 160px; }
+.mm-title-input:hover { border-color: var(--color-border); }
+.mm-title-input:focus { border-color: var(--color-primary); outline: none; background: var(--color-surface); }
+.mm-hint { font-size: 0.72rem; color: var(--color-muted-2); display: inline-flex; align-items: center; gap: 4px; }
 .mm-hint svg { vertical-align: middle; }
 
-.mm-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; color: #1e293b; font-size: 0.85rem; cursor: pointer; }
-.mm-btn:hover { background: #f8fafc; }
+.mm-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); font-size: 0.85rem; cursor: pointer; }
+.mm-btn:hover { background: var(--color-surface-2); }
 .mm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .mm-btn-sm { padding: 5px 10px; font-size: 0.8rem; }
-.mm-btn-primary { background: #0d9488; border-color: #0d9488; color: #fff; }
-.mm-btn-primary:hover { background: #0f766e; }
-.mm-icon-btn { display: inline-flex; align-items: center; justify-content: center; padding: 5px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: #475569; cursor: pointer; }
-.mm-icon-btn:hover { background: #f1f5f9; }
+.mm-btn-primary { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-on-primary); }
+.mm-btn-primary:hover { background: var(--color-primary-hover); }
+.mm-icon-btn { display: inline-flex; align-items: center; justify-content: center; padding: 5px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--color-muted); cursor: pointer; }
+.mm-icon-btn:hover { background: var(--color-surface-2); }
 
 .mm-save { font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; min-width: 78px; }
-.mm-save-saving { color: #d97706; }
-.mm-save-saved { color: #16a34a; }
-.mm-save-dirty { color: #94a3b8; }
+.mm-save-saving { color: var(--color-warning); }
+.mm-save-saved { color: var(--color-success); }
+.mm-save-dirty { color: var(--color-muted-2); }
 .mm-zoom { display: inline-flex; align-items: center; gap: 2px; }
-.mm-zoom-val { font-size: 0.75rem; color: #475569; min-width: 38px; text-align: center; }
+.mm-zoom-val { font-size: 0.75rem; color: var(--color-muted); min-width: 38px; text-align: center; }
 
-.mm-error { margin: 8px 12px; padding: 8px 12px; border-radius: 8px; background: #fef2f2; color: #b91c1c; font-size: 0.85rem; cursor: pointer; border: 1px solid #fecaca; }
+.mm-error { margin: 8px 12px; padding: 8px 12px; border-radius: 8px; background: var(--color-danger-soft); color: var(--color-danger); font-size: 0.85rem; cursor: pointer; border: 1px solid var(--color-danger); }
 
 /* Canvas vẽ sơ đồ */
 .mm-stage { position: relative; flex: 1; min-height: 0; }
 .mm-scroll { position: absolute; inset: 0; overflow: auto; outline: none;
-  background-color: #f8fafc;
-  background-image: radial-gradient(#dbe2ea 1px, transparent 1px); background-size: 22px 22px; cursor: grab; }
+  background-color: var(--color-bg);
+  background-image: radial-gradient(var(--color-border) 1px, transparent 1px); background-size: 22px 22px; cursor: grab; }
 .mm-scroll:active { cursor: grabbing; }
 .mm-stage.mm-dragging .mm-scroll, .mm-stage.mm-dragging .mm-node { cursor: grabbing; }
 .mm-canvas { position: relative; }
 .mm-edges { position: absolute; top: 0; left: 0; pointer-events: none; }
 
 .mm-node { position: absolute; box-sizing: border-box; display: flex; align-items: center; padding: 8px 18px;
-  border: 1px solid #9ca3af; border-radius: 999px; font-size: 0.85rem; line-height: 1.3; cursor: pointer;
+  border: 1px solid var(--color-border); border-radius: 999px; font-size: 0.85rem; line-height: 1.3; cursor: pointer;
   box-shadow: 0 1px 4px rgba(15,23,42,0.10); transition: box-shadow 0.12s, transform 0.1s; }
 .mm-node:hover { box-shadow: 0 3px 12px rgba(15,23,42,0.16); }
 .mm-node-root { font-weight: 700; font-size: 0.95rem; padding: 12px 22px; }
@@ -3204,27 +3282,27 @@
 .mm-drag-ghost { position: absolute; z-index: 60; pointer-events: none; opacity: 0.92; }
 .mm-ghost-edges { position: absolute; left: 0; top: 0; pointer-events: none; }
 .mm-ghost-node { position: absolute; box-sizing: border-box; display: flex; align-items: center; gap: 4px; padding: 6px 14px;
-  background: #fff; border: 1px solid #9ca3af; border-radius: 999px; color: #0f172a; line-height: 1.3;
+  background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 999px; color: var(--color-text); line-height: 1.3;
   white-space: nowrap; overflow: hidden; box-shadow: 0 2px 8px rgba(15,23,42,0.14); }
-.mm-ghost-node-main { box-shadow: 0 10px 26px rgba(13,148,136,0.34); border-width: 1px; }
+.mm-ghost-node-main { box-shadow: 0 10px 26px color-mix(in srgb, var(--color-primary) 34%, transparent); border-width: 1px; }
 .mm-ghost-text { overflow: hidden; text-overflow: ellipsis; }
-.mm-drag-hint { position: absolute; font-size: 0.72rem; font-weight: 600; color: #0d9488; background: #ccfbf1;
+.mm-drag-hint { position: absolute; font-size: 0.72rem; font-weight: 600; color: var(--color-primary); background: var(--color-primary-soft);
   padding: 2px 8px; border-radius: 999px; white-space: nowrap; box-shadow: 0 2px 8px rgba(15,23,42,0.15); }
-.mm-node-drop { box-shadow: 0 0 0 3px #0d9488, 0 4px 14px rgba(13,148,136,0.30) !important; }
-.mm-node-drop-before, .mm-node-drop-after { box-shadow: 0 4px 14px rgba(13,148,136,0.22) !important; }
+.mm-node-drop { box-shadow: 0 0 0 3px var(--color-primary), 0 4px 14px color-mix(in srgb, var(--color-primary) 30%, transparent) !important; }
+.mm-node-drop-before, .mm-node-drop-after { box-shadow: 0 4px 14px color-mix(in srgb, var(--color-primary) 22%, transparent) !important; }
 .mm-node-drop-before::before, .mm-node-drop-after::after {
   content: ""; position: absolute; left: 14px; right: 14px; height: 4px; border-radius: 999px;
-  background: #0d9488; box-shadow: 0 0 0 3px rgba(13,148,136,0.16);
+  background: var(--color-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 16%, transparent);
 }
 .mm-node-drop-before::before { top: -9px; }
 .mm-node-drop-after::after { bottom: -9px; }
 .mm-node-text { width: 100%; word-break: break-word; white-space: pre-wrap; }
-.mm-node-empty { color: #94a3b8; font-style: italic; }
+.mm-node-empty { color: var(--color-muted-2); font-style: italic; }
 .mm-edit { width: 100%; border: none; outline: none; resize: none; background: transparent; font: inherit; color: inherit; line-height: 1.3; overflow: hidden; text-align: inherit; }
 
 .mm-collapse { position: absolute; top: 50%; transform: translateY(-50%); width: 18px; height: 18px;
-  display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid #9ca3af;
-  background: #fff; color: #475569; cursor: pointer; padding: 0; z-index: 2; }
+  display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--color-border);
+  background: var(--color-surface); color: var(--color-muted); cursor: pointer; padding: 0; z-index: 2; }
 .mm-collapse-r { right: -9px; }
 .mm-collapse-l { left: -9px; }
 .mm-collapse:hover { filter: brightness(0.95); }
@@ -3240,88 +3318,88 @@
 /* Thanh công cụ nổi trên node được chọn — nền đen, không viền (đồng bộ với root box) */
 .mm-floating { position: absolute; transform: translate(-50%, -100%); z-index: 20;
   display: flex; align-items: center; gap: 2px; padding: 5px; border-radius: 12px;
-  background: #1e293b; box-shadow: 0 8px 26px rgba(15,23,42,0.35); border: none; }
+  background: var(--color-surface-2); box-shadow: 0 8px 26px rgba(15,23,42,0.35); border: none; }
 .mm-fbtn { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 30px; padding: 0 7px;
-  border: none; background: transparent; color: #e2e8f0; border-radius: 8px; cursor: pointer; }
-.mm-fbtn:hover { background: rgba(255,255,255,0.12); color: #fff; }
-.mm-fbtn-on { background: rgba(129,140,248,0.32); color: #c7d2fe; }
+  border: none; background: transparent; color: var(--color-text); border-radius: 8px; cursor: pointer; }
+.mm-fbtn:hover { background: rgba(255,255,255,0.12); color: var(--color-text); }
+.mm-fbtn-on { background: color-mix(in srgb, var(--color-secondary) 32%, transparent); color: var(--color-secondary); } /* design-token-ok: token --color-secondary pha trong suốt, không phải hardcode raw */
 .mm-fbtn-aa { font-weight: 700; font-size: 0.9rem; }
-.mm-fbtn-danger:hover { background: rgba(239,68,68,0.22); color: #fca5a5; }
+.mm-fbtn-danger:hover { background: color-mix(in srgb, var(--color-danger) 22%, transparent); color: var(--color-danger); } /* design-token-ok: token --color-danger pha trong suốt, không phải hardcode raw */
 .mm-fbtn-sep { width: 1px; height: 20px; background: rgba(255,255,255,0.15); margin: 0 2px; }
 .mm-swatches { position: absolute; top: calc(100% + 6px); left: 0; display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px;
-  padding: 8px; border-radius: 10px; background: #fff; box-shadow: 0 6px 22px rgba(15,23,42,0.20); border: 1px solid #e2e8f0; }
-.mm-swatch { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px #e2e8f0; cursor: pointer; padding: 0; }
+  padding: 8px; border-radius: 10px; background: var(--color-surface); box-shadow: 0 6px 22px rgba(15,23,42,0.20); border: 1px solid var(--color-border); }
+.mm-swatch { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--color-surface); box-shadow: 0 0 0 1px var(--color-border); cursor: pointer; padding: 0; }
 .mm-swatch:hover { transform: scale(1.12); }
-.mm-swatch-reset { background: #f1f5f9; color: #475569; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+.mm-swatch-reset { background: var(--color-surface-2); color: var(--color-muted); font-size: 13px; display: flex; align-items: center; justify-content: center; }
 
 /* Trạng thái "đã có giá trị" (link/file đính kèm) trên nút thanh edit */
 .mm-fbtn { position: relative; }
-.mm-fbtn-active { color: #c7d2fe; }
-.mm-fbtn-active::after { content: ''; position: absolute; bottom: 3px; right: 4px; width: 5px; height: 5px; border-radius: 50%; background: #14b8a6; }
+.mm-fbtn-active { color: var(--color-secondary); }
+.mm-fbtn-active::after { content: ''; position: absolute; bottom: 3px; right: 4px; width: 5px; height: 5px; border-radius: 50%; background: var(--color-primary); }
 .mm-fbtn:disabled { opacity: 0.5; cursor: default; }
 /* Thanh màu nhỏ dưới biểu tượng nút màu chữ / màu nền */
 .mm-fbtn-bar { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 15px; height: 3px; border-radius: 2px; box-shadow: 0 0 0 1px rgba(255,255,255,0.25); }
 
 /* Popover chung trên thanh edit (font, cỡ chữ, căn lề, link, icon) */
 .mm-pop { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30;
-  padding: 6px; border-radius: 10px; background: #fff; box-shadow: 0 6px 22px rgba(15,23,42,0.20); border: 1px solid #e2e8f0; }
+  padding: 6px; border-radius: 10px; background: var(--color-surface); box-shadow: 0 6px 22px rgba(15,23,42,0.20); border: 1px solid var(--color-border); }
 .mm-pop-list { display: flex; flex-direction: column; gap: 2px; min-width: 132px; }
 .mm-pop-sizes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; }
 .mm-pop-row { display: flex; gap: 2px; flex-wrap: wrap; max-width: 232px; }
 .mm-shape-glyph { font-size: 18px; line-height: 1; transform: skewX(-12deg); display: inline-block; }
 .mm-pop-item { display: flex; align-items: center; min-height: 30px; padding: 4px 10px; border: none; background: transparent;
-  color: #334155; border-radius: 7px; cursor: pointer; font-size: 0.85rem; justify-content: center; }
+  color: var(--color-text); border-radius: 7px; cursor: pointer; font-size: 0.85rem; justify-content: center; }
 .mm-pop-list .mm-pop-item { justify-content: flex-start; }
-.mm-pop-item:hover { background: #f1f5f9; }
-.mm-pop-item-on { background: #ccfbf1; color: #0d9488; font-weight: 600; }
+.mm-pop-item:hover { background: var(--color-surface-2); }
+.mm-pop-item-on { background: var(--color-primary-soft); color: var(--color-primary); font-weight: 600; }
 
 /* Popover đính link */
 .mm-pop-link { display: flex; align-items: center; gap: 4px; }
-.mm-pop-input { width: 220px; height: 32px; padding: 0 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.85rem; outline: none; }
-.mm-pop-input:focus { border-color: #0d9488; box-shadow: 0 0 0 2px rgba(13,148,136,0.14); }
-.mm-pop-btn { height: 32px; padding: 0 12px; border: none; border-radius: 8px; background: #0d9488; color: #fff; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+.mm-pop-input { width: 220px; height: 32px; padding: 0 10px; border: 1px solid var(--color-border); border-radius: 8px; font-size: 0.85rem; outline: none; }
+.mm-pop-input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 14%, transparent); }
+.mm-pop-btn { height: 32px; padding: 0 12px; border: none; border-radius: 8px; background: var(--color-primary); color: var(--color-on-primary); font-size: 0.82rem; font-weight: 600; cursor: pointer; }
 .mm-pop-btn:hover { filter: brightness(1.05); }
-.mm-pop-btn-ghost { background: #f1f5f9; color: #64748b; padding: 0 8px; display: inline-flex; align-items: center; gap: 4px; }
-.mm-pop-btn-ghost:hover { background: #fee2e2; color: #dc2626; }
+.mm-pop-btn-ghost { background: var(--color-surface-2); color: var(--color-muted); padding: 0 8px; display: inline-flex; align-items: center; gap: 4px; }
+.mm-pop-btn-ghost:hover { background: var(--color-danger-soft); color: var(--color-danger); }
 
 /* Popover kho icon dịch vụ (AWS/GCP… — placeholder) */
 .mm-pop-icon { width: 240px; }
-.mm-pop-note { font-size: 0.76rem; line-height: 1.5; color: #94a3b8; padding: 6px 6px 8px; }
+.mm-pop-note { font-size: 0.76rem; line-height: 1.5; color: var(--color-muted-2); padding: 6px 6px 8px; }
 
 /* Bộ chọn emoji đầy đủ: tab nhóm + tìm kiếm + lưới cuộn */
 .mm-pop-emoji { padding: 0; width: 320px; overflow: hidden; }
 .mm-pop-emoji .mm-pop-icon-clear { margin: 0 8px 8px; width: calc(100% - 16px); }
 .mm-emoji { display: flex; flex-direction: column; }
-.mm-emoji-tabs { display: flex; gap: 1px; padding: 6px 6px 4px; border-bottom: 1px solid #eef2f6; }
+.mm-emoji-tabs { display: flex; gap: 1px; padding: 6px 6px 4px; border-bottom: 1px solid var(--color-border); }
 .mm-emoji-tab { flex: 1; height: 30px; border: none; background: transparent; border-radius: 7px; cursor: pointer; font-size: 16px; padding: 0; opacity: 0.65; }
-.mm-emoji-tab:hover { background: #f1f5f9; opacity: 1; }
-.mm-emoji-tab-on { background: #ccfbf1; opacity: 1; box-shadow: inset 0 -2px 0 #0d9488; }
-.mm-emoji-search { display: flex; align-items: center; gap: 6px; margin: 7px 8px; padding: 0 9px; height: 32px; background: #f1f5f9; border-radius: 8px; color: #94a3b8; }
-.mm-emoji-search input { flex: 1; min-width: 0; border: none; background: transparent; outline: none; font-size: 0.85rem; color: #0f172a; }
+.mm-emoji-tab:hover { background: var(--color-surface-2); opacity: 1; }
+.mm-emoji-tab-on { background: var(--color-primary-soft); opacity: 1; box-shadow: inset 0 -2px 0 var(--color-primary); }
+.mm-emoji-search { display: flex; align-items: center; gap: 6px; margin: 7px 8px; padding: 0 9px; height: 32px; background: var(--color-surface-2); border-radius: 8px; color: var(--color-muted-2); }
+.mm-emoji-search input { flex: 1; min-width: 0; border: none; background: transparent; outline: none; font-size: 0.85rem; color: var(--color-text); }
 .mm-emoji-scroll { max-height: 244px; overflow-y: auto; padding: 0 6px 8px; }
-.mm-emoji-head { font-size: 0.72rem; font-weight: 700; color: #94a3b8; padding: 8px 4px 4px; position: sticky; top: 0; background: #fff; z-index: 1; }
+.mm-emoji-head { font-size: 0.72rem; font-weight: 700; color: var(--color-muted-2); padding: 8px 4px 4px; position: sticky; top: 0; background: var(--color-surface); z-index: 1; }
 .mm-emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 1px; }
 .mm-emoji-cell { display: flex; align-items: center; justify-content: center; height: 33px; border: none; background: transparent; border-radius: 7px; cursor: pointer; font-size: 20px; padding: 0; line-height: 1; }
-.mm-emoji-cell:hover { background: #f1f5f9; }
-.mm-emoji-empty { padding: 28px 8px; text-align: center; color: #94a3b8; font-size: 0.82rem; }
+.mm-emoji-cell:hover { background: var(--color-surface-2); }
+.mm-emoji-empty { padding: 28px 8px; text-align: center; color: var(--color-muted-2); font-size: 0.82rem; }
 
 /* Kho icon hạ tầng (logo 1 màu) */
 .mm-iconlib { width: 320px; }
 .mm-iconlib .mm-emoji-tabs { flex-wrap: wrap; padding: 6px 6px 6px; }
-.mm-iconlib-tab { height: 26px; padding: 0 9px; border: none; background: #f1f5f9; color: #64748b; border-radius: 999px;
+.mm-iconlib-tab { height: 26px; padding: 0 9px; border: none; background: var(--color-surface-2); color: var(--color-muted); border-radius: 999px;
   cursor: pointer; font-size: 0.72rem; font-weight: 600; }
-.mm-iconlib-tab:hover { background: #e2e8f0; color: #1e293b; }
-.mm-iconlib-tab.mm-emoji-tab-on { background: #ccfbf1; color: #0d9488; box-shadow: none; }
+.mm-iconlib-tab:hover { background: var(--color-border); color: var(--color-text); }
+.mm-iconlib-tab.mm-emoji-tab-on { background: var(--color-primary-soft); color: var(--color-primary); box-shadow: none; }
 .mm-iconlib-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
 .mm-iconlib-cell { display: flex; align-items: center; justify-content: center; height: 38px; border: none; background: transparent;
-  border-radius: 8px; cursor: pointer; color: #334155; padding: 0; }
-.mm-iconlib-cell:hover { background: #f1f5f9; color: #0f172a; }
+  border-radius: 8px; cursor: pointer; color: var(--color-text); padding: 0; }
+.mm-iconlib-cell:hover { background: var(--color-surface-2); color: var(--color-text); }
 
 /* Logo hạ tầng hiển thị trong box */
 .mm-node-svcicon { display: inline-flex; align-items: center; margin-right: 5px; vertical-align: middle; }
 .mm-icon-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; }
 .mm-icon-cell { display: flex; align-items: center; justify-content: center; height: 26px; border: none; background: transparent; border-radius: 6px; cursor: pointer; font-size: 15px; padding: 0; }
-.mm-icon-cell:hover { background: #f1f5f9; }
+.mm-icon-cell:hover { background: var(--color-surface-2); }
 .mm-pop-icon-clear { margin-top: 6px; width: 100%; justify-content: center; }
 
 /* Nội dung node: chữ + chip đính kèm xếp dọc */
@@ -3330,19 +3408,19 @@
 .mm-node-bullet { color: inherit; opacity: 0.7; margin-right: 1px; }
 .mm-node-atts { display: flex; flex-direction: column; gap: 3px; width: 100%; }
 .mm-chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 2px 7px; border-radius: 6px;
-  background: #f1f5f9; color: #475569; font-size: 0.72rem; text-decoration: none; cursor: pointer; }
-.mm-chip:hover { background: #e2e8f0; color: #1e293b; }
-.mm-chip-link { background: #f0fdfa; color: #0d9488; }
-.mm-chip-link:hover { background: #ccfbf1; }
+  background: var(--color-surface-2); color: var(--color-muted); font-size: 0.72rem; text-decoration: none; cursor: pointer; }
+.mm-chip:hover { background: var(--color-border); color: var(--color-text); }
+.mm-chip-link { background: var(--color-primary-soft); color: var(--color-primary); }
+.mm-chip-link:hover { background: var(--color-primary-soft); }
 .mm-chip-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Huy hiệu link/file trên node: chỉ icon + số lượng (nếu nhiều) */
 .mm-node-badges { display: flex; gap: 5px; }
 .mm-badge { display: inline-flex; align-items: center; gap: 2px; height: 20px; padding: 0 7px; border: none; border-radius: 999px;
-  background: #f1f5f9; color: #475569; cursor: pointer; font-size: 0.72rem; font-weight: 700; }
-.mm-badge:hover { background: #e2e8f0; color: #1e293b; }
-.mm-badge-link { background: #f0fdfa; color: #0d9488; }
-.mm-badge-link:hover { background: #ccfbf1; }
+  background: var(--color-surface-2); color: var(--color-muted); cursor: pointer; font-size: 0.72rem; font-weight: 700; }
+.mm-badge:hover { background: var(--color-border); color: var(--color-text); }
+.mm-badge-link { background: var(--color-primary-soft); color: var(--color-primary); }
+.mm-badge-link:hover { background: var(--color-primary-soft); }
 .mm-badge-num { line-height: 1; }
 
 /* Popover danh sách đính kèm (link/file): thêm mới + danh sách gỡ được */
@@ -3353,45 +3431,45 @@
 .mm-att-items { display: flex; flex-direction: column; gap: 3px; max-height: 210px; overflow: auto; }
 .mm-att-item { display: flex; align-items: center; gap: 4px; }
 .mm-att-open { flex: 1; min-width: 0; display: inline-flex; align-items: center; gap: 6px; padding: 6px 9px; border-radius: 7px;
-  background: #f8fafc; color: #334155; text-decoration: none; font-size: 0.8rem; }
-.mm-att-open:hover { background: #f0fdfa; color: #0d9488; }
+  background: var(--color-surface-2); color: var(--color-text); text-decoration: none; font-size: 0.8rem; }
+.mm-att-open:hover { background: var(--color-primary-soft); color: var(--color-primary); }
 .mm-att-del { display: inline-flex; align-items: center; justify-content: center; width: 27px; height: 27px; flex-shrink: 0;
-  border: none; background: transparent; color: #94a3b8; border-radius: 7px; cursor: pointer; }
-.mm-att-del:hover { background: #fee2e2; color: #dc2626; }
+  border: none; background: transparent; color: var(--color-muted-2); border-radius: 7px; cursor: pointer; }
+.mm-att-del:hover { background: var(--color-danger-soft); color: var(--color-danger); }
 
 /* Điều khiển góc dưới phải */
 .mm-controls { position: absolute; right: 14px; bottom: 14px; z-index: 15;
   display: flex; align-items: center; gap: 1px; padding: 4px 6px; border-radius: 12px;
-  background: #fff; box-shadow: 0 4px 16px rgba(15,23,42,0.16); border: 1px solid #e2e8f0; }
+  background: var(--color-surface); box-shadow: 0 4px 16px rgba(15,23,42,0.16); border: 1px solid var(--color-border); }
 .mm-controls .mm-icon-btn { padding: 6px; }
-.mm-ctrl-sep { width: 1px; height: 22px; background: #e2e8f0; margin: 0 4px; }
+.mm-ctrl-sep { width: 1px; height: 22px; background: var(--color-border); margin: 0 4px; }
 
 .mm-empty { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; }
 .mm-empty-card { display: none; }
-.mm-empty-card h3 { font-size: 1.15rem; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
-.mm-empty-card p { color: #64748b; font-size: 0.9rem; margin-bottom: 16px; }
+.mm-empty-card h3 { font-size: 1.15rem; font-weight: 700; color: var(--color-text); margin-bottom: 8px; }
+.mm-empty-card p { color: var(--color-muted); font-size: 0.9rem; margin-bottom: 16px; }
 .mm-empty-card .mm-btn { margin: 0 auto; }
 
 /* Nút & modal Export (Markdown/Mermaid) của MindMap */
-.mm-btn-export { display: inline-flex; align-items: center; gap: 5px; background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
-.mm-btn-export:hover { background: #dcfce7; }
+.mm-btn-export { display: inline-flex; align-items: center; gap: 5px; background: var(--color-success-soft); color: var(--color-success); border: 1px solid var(--color-success); }
+.mm-btn-export:hover { background: var(--color-success-soft); }
 .mm-export-overlay { position: fixed; inset: 0; z-index: 50; background: rgba(15,23,42,0.45);
   display: flex; align-items: center; justify-content: center; padding: 24px; }
 .mm-export-card { width: min(720px, 92vw); max-height: 80vh; display: flex; flex-direction: column;
-  background: #fff; border-radius: 14px; box-shadow: 0 20px 60px rgba(15,23,42,0.4); overflow: hidden; }
-.mm-export-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid #eef2f6; }
+  background: var(--color-surface); border-radius: 14px; box-shadow: 0 20px 60px rgba(15,23,42,0.4); overflow: hidden; }
+.mm-export-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--color-border); }
 .mm-export-tabs { display: flex; gap: 4px; }
-.mm-export-tabs button { padding: 6px 14px; border: none; background: #f1f5f9; color: #475569; border-radius: 999px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
-.mm-export-tabs button:hover { background: #e2e8f0; }
-.mm-export-tab-on { background: #ccfbf1 !important; color: #0d9488 !important; }
+.mm-export-tabs button { padding: 6px 14px; border: none; background: var(--color-surface-2); color: var(--color-muted); border-radius: 999px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+.mm-export-tabs button:hover { background: var(--color-border); }
+.mm-export-tab-on { background: var(--color-primary-soft) !important; color: var(--color-primary) !important; } /* design-token-ok: chỉ ghép token có sẵn + !important giữ độ ưu tiên trên .mm-emoji-tab-on, không phải hardcode raw */
 .mm-export-text { flex: 1; min-height: 260px; resize: none; border: none; outline: none; padding: 14px 16px;
-  font-family: ui-monospace, Consolas, monospace; font-size: 0.82rem; line-height: 1.55; color: #0f172a; background: #f8fafc; white-space: pre; overflow: auto; }
-.mm-export-actions { display: flex; gap: 8px; padding: 12px; border-top: 1px solid #eef2f6; }
+  font-family: ui-monospace, Consolas, monospace; font-size: 0.82rem; line-height: 1.55; color: var(--color-text); background: var(--color-surface-2); white-space: pre; overflow: auto; }
+.mm-export-actions { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--color-border); }
 .mm-export-actions .mm-btn { display: inline-flex; align-items: center; gap: 6px; }
 
 /* MindMap: lời mời khi canvas trống (đã xoá hết ý tưởng trung tâm) */
 .mm-empty-canvas { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; pointer-events: none; }
-.mm-empty-canvas p { color: #64748b; font-size: 0.95rem; }
+.mm-empty-canvas p { color: var(--color-muted); font-size: 0.95rem; }
 .mm-empty-canvas .mm-btn { pointer-events: auto; }
 
 /* MindMap: viết tay + phím tắt + nút active */
@@ -3399,26 +3477,26 @@
 .mm-pen-overlay { position: absolute; inset: 0; z-index: 8; cursor: crosshair; }
 .mm-pen-bar { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 25;
   display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 12px;
-  background: #1e293b; box-shadow: 0 8px 26px rgba(15,23,42,0.35); }
+  background: var(--color-surface-2); box-shadow: 0 8px 26px rgba(15,23,42,0.35); }
 .mm-pen-color { width: 20px; height: 20px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
-.mm-pen-color-on { box-shadow: 0 0 0 2px #1e293b, 0 0 0 3px #fff; }
-.mm-icon-btn-on { background: #ccfbf1; color: #0d9488; }
+.mm-pen-color-on { box-shadow: 0 0 0 2px var(--color-surface-2), 0 0 0 3px var(--color-text); }
+.mm-icon-btn-on { background: var(--color-primary-soft); color: var(--color-primary); }
 .mm-help-table { width: 100%; border-collapse: collapse; }
-.mm-help-table td { padding: 6px 4px; border-bottom: 1px solid #f1f5f9; vertical-align: top; font-size: 0.85rem; }
+.mm-help-table td { padding: 6px 4px; border-bottom: 1px solid var(--color-surface-2); vertical-align: top; font-size: 0.85rem; }
 .mm-help-key { white-space: nowrap; width: 1%; }
-.mm-help-key kbd { display: inline-block; padding: 2px 7px; border-radius: 6px; background: #f1f5f9; border: 1px solid #e2e8f0;
-  font-family: ui-monospace, Consolas, monospace; font-size: 0.78rem; color: #334155; }
-.mm-help-desc { color: #475569; padding-left: 12px; }
+.mm-help-key kbd { display: inline-block; padding: 2px 7px; border-radius: 6px; background: var(--color-surface-2); border: 1px solid var(--color-border);
+  font-family: ui-monospace, Consolas, monospace; font-size: 0.78rem; color: var(--color-text); }
+.mm-help-desc { color: var(--color-muted); padding-left: 12px; }
 
 /* MindMap: phóng khung sơ đồ chiếm hết cửa sổ trình duyệt (không phải F11) */
-.mm-root-full { position: fixed; inset: 0; z-index: 200; margin: 0; padding: 12px; background: #f8fafc; }
+.mm-root-full { position: fixed; inset: 0; z-index: 200; margin: 0; padding: 12px; background: var(--color-bg); }
 
 /* Bảng hướng dẫn phím tắt dock góc phải (không che toàn màn hình) */
 .mm-help-panel { position: absolute; top: 12px; right: 12px; z-index: 30; width: 340px; max-width: calc(100% - 24px);
-  max-height: calc(100% - 24px); overflow: auto; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+  max-height: calc(100% - 24px); overflow: auto; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px;
   box-shadow: 0 10px 30px rgba(15,23,42,0.18); padding: 4px 12px 12px; }
-.mm-help-head { position: sticky; top: 0; background: #fff; display: flex; align-items: center; justify-content: space-between;
-  font-weight: 700; color: #0f172a; padding: 8px 0; border-bottom: 1px solid #f1f5f9; margin-bottom: 4px; }
+.mm-help-head { position: sticky; top: 0; background: var(--color-surface); display: flex; align-items: center; justify-content: space-between;
+  font-weight: 700; color: var(--color-text); padding: 8px 0; border-bottom: 1px solid var(--color-surface-2); margin-bottom: 4px; }
 
 .sf-wrap { padding: 20px 24px; max-width: 1180px; margin: 0 auto; }
 .sf-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
