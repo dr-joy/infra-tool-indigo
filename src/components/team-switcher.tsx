@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, LogOut, Users } from 'lucide-react';
 import { useAuth } from '../auth-context';
 
-export function TeamSwitcher() {
+export function TeamSwitcher({ collapsed = false }: { collapsed?: boolean }) {
   const { actor, myTeams, activeTeamId, setActiveTeamId, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -21,19 +21,27 @@ export function TeamSwitcher() {
 
   if (!actor) return null;
   const activeTeam = myTeams.find((t) => t.id === activeTeamId) || null;
+  const teamLabel = activeTeam ? activeTeam.name : 'Chưa chọn team';
 
   return (
     <div ref={ref} className="relative">
       <button
         type="button"
-        className="flex items-center gap-2 rounded-md border border-vien bg-surface px-3 py-1.5 text-sm font-medium text-muc hover:bg-surface-2"
+        className={collapsed
+          ? 'flex h-10 w-10 items-center justify-center rounded-md border border-vien bg-surface text-muc hover:bg-surface-2'
+          : 'flex items-center gap-2 rounded-md border border-vien bg-surface px-3 py-1.5 text-sm font-medium text-muc hover:bg-surface-2'}
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
+        title={collapsed ? teamLabel : undefined}
       >
         <Users size={16} className="text-primary" />
-        <span className="max-w-[12rem] truncate">{activeTeam ? activeTeam.name : 'Chưa chọn team'}</span>
-        <ChevronDown size={14} />
+        {!collapsed && (
+          <>
+            <span className="max-w-[12rem] truncate">{teamLabel}</span>
+            <ChevronDown size={14} />
+          </>
+        )}
       </button>
 
       {open && (

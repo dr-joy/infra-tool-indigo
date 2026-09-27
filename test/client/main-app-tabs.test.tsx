@@ -137,4 +137,28 @@ describe('App() — ẩn tab theo team_feature_visibility (CR-20260913 FR-7)', (
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Projects' })).toBeInTheDocument());
   });
+
+  it('nút thu gọn sidebar -> ẩn nhãn chữ (còn icon bấm được), bấm lại -> hiện lại; nhớ qua localStorage', async () => {
+    mockApi([{ id: 1, name: 'Team A', role: 'leader', features: ['personal_task', 'project'] }]);
+    renderApp();
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Projects' })).toBeInTheDocument());
+    expect(screen.getByText('Personal Tool')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Thu gọn menu' }));
+    // Nhãn chữ biến mất khỏi DOM (không phải chỉ ẩn CSS) — nút vẫn còn, tự lấy tên accessible qua
+    // title vì không còn text con.
+    expect(screen.queryByText('Personal Tool')).toBeNull();
+    const projectButtonCollapsed = screen.getByRole('button', { name: 'Projects' });
+    expect(projectButtonCollapsed).toBeInTheDocument();
+    expect(window.localStorage.getItem('sidebar_collapsed')).toBe('1');
+
+    // Điều hướng vẫn hoạt động bình thường khi đang thu gọn — không phải chỉ còn icon trang trí.
+    fireEvent.click(projectButtonCollapsed);
+    await waitFor(() => expect(projectButtonCollapsed).toHaveClass('side-item-active'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mở rộng menu' }));
+    expect(screen.getByText('Personal Tool')).toBeInTheDocument();
+    expect(window.localStorage.getItem('sidebar_collapsed')).toBe('0');
+  });
 });

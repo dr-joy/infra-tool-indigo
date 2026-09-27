@@ -174,11 +174,29 @@
      có overflow-y-auto thì popup bị cắt cụt (đúng lỗi CSS thật đã từng xảy ra 25/09 với menu-tabs
      backdrop-blur, xem lịch sử file này trước khi sửa). */
   .sidebar {
-    @apply flex w-56 shrink-0 flex-col border-r border-vien px-3 py-4;
+    @apply flex w-56 shrink-0 flex-col border-r border-vien px-3 py-4 transition-[width] duration-150;
+  }
+
+  /* Thu gọn sidebar (nút ở .sidebar-brand-row) — chỉ đổi bề rộng + ẩn nhãn chữ, icon vẫn đủ để bấm,
+     giữ nguyên mọi hành vi điều hướng (không ẩn hẳn màn nào). */
+  .sidebar-collapsed {
+    @apply w-16 px-2;
+  }
+
+  .sidebar-brand-row {
+    @apply mb-3 flex items-center justify-between gap-2 px-1;
+  }
+
+  .sidebar-collapsed .sidebar-brand-row {
+    @apply justify-center px-0;
   }
 
   .sidebar-brand {
-    @apply mb-3 px-1 text-sm font-black uppercase tracking-wide text-muc;
+    @apply truncate text-sm font-black uppercase tracking-wide text-muc;
+  }
+
+  .sidebar-collapse-btn {
+    @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-phu transition hover:bg-surface-2 hover:text-muc;
   }
 
   .sidebar-nav {
@@ -193,6 +211,14 @@
     @apply mb-0.5 flex h-9 w-full items-center gap-2 rounded-md border border-transparent px-2 text-left text-sm font-semibold text-phu transition;
   }
 
+  .sidebar-collapsed .side-item {
+    @apply justify-center px-0;
+  }
+
+  .side-item-label {
+    @apply truncate;
+  }
+
   .side-item:hover {
     @apply border-vien bg-surface-2 text-muc;
   }
@@ -204,6 +230,10 @@
 
   .sidebar-foot {
     @apply mt-3 border-t border-vien pt-3;
+  }
+
+  .sidebar-collapsed .sidebar-foot {
+    @apply flex justify-center;
   }
 
   .topbar {
@@ -237,7 +267,7 @@
   }
 
   .project-sidebar-header h2 {
-    @apply text-xl font-bold text-muc;
+    @apply min-w-0 flex-1 truncate text-xl font-bold text-muc;
   }
 
   .project-sidebar-actions {

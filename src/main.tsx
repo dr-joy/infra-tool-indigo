@@ -37,6 +37,8 @@ import {
   Info,
   ListChecks,
   Paperclip,
+  PanelLeftClose,
+  PanelLeftOpen,
   Rocket,
   Settings,
   ShieldCheck,
@@ -171,6 +173,14 @@ export function App() {
   const toast = useToast();
   const mmGuard = useRef<{ dirty: boolean; luu: () => Promise<void> } | null>(null);
   const [pendingTab, setPendingTab] = useState<TabChinh | null>(null);
+  // Thu gọn sidebar (chỉ còn icon) — nhớ theo máy qua localStorage, mỗi máy tự chọn trạng thái riêng,
+  // không đồng bộ qua server vì đây là sở thích hiển thị cá nhân, không phải dữ liệu nghiệp vụ.
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    try { return localStorage.getItem('sidebar_collapsed') === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('sidebar_collapsed', sidebarCollapsed ? '1' : '0'); } catch { /* bỏ qua, chỉ là sở thích hiển thị */ }
+  }, [sidebarCollapsed]);
   const chuyenTab = useCallback((next: TabChinh) => {
     if (next === tabDangMo) return;
     if (tabDangMo === 'so_do' && mmGuard.current?.dirty) { setPendingTab(next); return; }
@@ -206,24 +216,36 @@ export function App() {
 
   return (
     <main className="flex h-screen overflow-hidden bg-nen text-muc">
-      <aside className="sidebar">
-        <div className="sidebar-brand">Personal Tool</div>
+      <aside className={`sidebar ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        <div className="sidebar-brand-row">
+          {!sidebarCollapsed && <span className="sidebar-brand">Personal Tool</span>}
+          <button
+            type="button"
+            className="sidebar-collapse-btn"
+            onClick={() => setSidebarCollapsed((v) => !v)}
+            title={sidebarCollapsed ? 'Mở rộng menu' : 'Thu gọn menu'}
+            aria-label={sidebarCollapsed ? 'Mở rộng menu' : 'Thu gọn menu'}
+          >
+            {sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
+        </div>
         <nav className="sidebar-nav" aria-label="Chức năng chính">
           {SIDEBAR_GROUPS.map((group) => {
             const items = tabsHienThi.filter((tab) => group.keys.includes(tab.key));
             if (items.length === 0) return null;
             return (
               <div key={group.label}>
-                <div className="side-group-label">{group.label}</div>
+                {!sidebarCollapsed && <div className="side-group-label">{group.label}</div>}
                 {items.map((tab) => (
                   <button
                     key={tab.key}
                     type="button"
                     className={`side-item ${tabDangMo === tab.key ? 'side-item-active' : ''}`}
                     onClick={() => chuyenTab(tab.key)}
+                    title={sidebarCollapsed ? t(tab.i18nKey) : undefined}
                   >
                     {TAB_ICON[tab.key]}
-                    {t(tab.i18nKey)}
+                    {!sidebarCollapsed && <span className="side-item-label">{t(tab.i18nKey)}</span>}
                   </button>
                 ))}
               </div>
@@ -234,7 +256,7 @@ export function App() {
           {/* CR-20260913 FR-13 — bộ chọn team (kiểu chuyển workspace Slack/Notion), chuyển ngay không
               tải lại trang. Đặt NGOÀI .sidebar-nav (không bị overflow-y-auto cắt popup) — xem ghi chú
               tại định nghĩa .sidebar-nav trong styles.css. */}
-          <TeamSwitcher />
+          <TeamSwitcher collapsed={sidebarCollapsed} />
         </div>
       </aside>
 

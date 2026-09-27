@@ -139,7 +139,7 @@ const dict = {
 
   // === PROJECT SIDEBAR ===
   'project.sidebar_label': 'Danh sách project',
-  'project.title': 'Danh sách project',
+  'project.title': 'Danh sách',
   'project.roadmap': 'Roadmap',
   'project.history_closed': 'Lịch sử project',
   'project.add': 'Thêm project',
