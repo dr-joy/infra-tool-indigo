@@ -1484,7 +1484,7 @@ function ProjectTaskRow({
             <div className="project-task-title-main">
               <h4>
                 {isGoal && (
-                  <span title="Mục tiêu tuần này" style={{ color: '#f59e0b', marginRight: 4, display: 'inline-flex', verticalAlign: 'middle' }}>
+                  <span title="Mục tiêu tuần này" style={{ color: 'var(--color-warning)', marginRight: 4, display: 'inline-flex', verticalAlign: 'middle' }}>
                     <Target size={14} />
                   </span>
                 )}
@@ -1503,7 +1503,7 @@ function ProjectTaskRow({
         <div className="project-task-fields">
           <div className="project-task-date-column">
             <span className="project-task-date-line" title={t('ptask.planned')}><strong>{t('ptask.planned')}:</strong><span>{dinhDangNgay(task.ngayBatDauDuKien)} - {dinhDangNgay(task.ngayKetThucDuKien)}</span></span>
-            <span className="project-task-date-line" title={t('ptask.pic')}><strong>{t('ptask.pic')}:</strong><span style={{ fontWeight: 600, color: '#2563eb' }}>{task.assignee || '--'}</span></span>
+            <span className="project-task-date-line" title={t('ptask.pic')}><strong>{t('ptask.pic')}:</strong><span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{task.assignee || '--'}</span></span>
           </div>
           <div className="project-task-status-column">
             <span className={isExecutableWithoutEstimate ? 'project-task-missing-estimate' : undefined}>
