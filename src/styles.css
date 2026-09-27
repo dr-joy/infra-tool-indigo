@@ -10,6 +10,13 @@
    để cập nhật baseline, rồi `node scripts/check-design-tokens.mjs` để xác nhận xanh. */
 @layer base {
   :root {
+    /* Bảng tối DUY NHẤT (không fallback sáng) — an toàn thêm lại từ đây vì Pha 3 đã hoàn tất di trú
+       toàn bộ 9 màn + MindMap (không còn `bg-white`/nền sáng hardcode nào che khuất chữ sáng do
+       control gốc tự đổi màu theo color-scheme). Bị BỎ ở Pha 1 vì thêm quá sớm: lúc đó nhiều màn còn
+       hardcode `bg-white` trong khi input/select đã đổi màu chữ theo dark -> chữ trắng trên nền
+       trắng (Council review run 59bf8aee phát hiện, xem log "Tiến độ" Pha 1). */
+    color-scheme: dark;
+
     /* Màu ngữ nghĩa — border/text/muted tái dùng đúng hex vien/muc/phu đã có trong
        tailwind.config.js (không tạo hệ đặt tên song song); primary/surface/record/danger/warning/
        success là khái niệm mới. Giá trị dưới đây là bảng "Chàm Nửa Đêm" đã chốt qua Council +
