@@ -397,6 +397,26 @@ Không đụng.
   Project/Release-timeline/task-định-kỳ/quét-Tailwind-class dựa vào tường thuật CR doc, chưa tự diff
   riêng — ghi nhận minh bạch, không che giấu.
 
+- **Đã merge vào `master` và push production (2026-09-27, sau khi Leader trực tiếp yêu cầu và xác
+  nhận hiểu rõ push sẽ tự động deploy thật qua Drone CI).** Merge commit (`--no-ff`, gộp 41 commit từ
+  `feature/style-cham-nua-dem`) không xung đột. Phát hiện thêm 3 việc nhỏ qua phản hồi trực tiếp của
+  Leader trên bản chạy thật trước khi merge (đã sửa, xem các commit cuối trên nhánh trước merge):
+  bỏ hẳn tiêu đề chữ sidebar Project, sửa chữ mờ droplist %, tách màu Gantt tổng khỏi màu UI chính.
+
+  **Push lần 1 bị `pre-push` hook chặn** (hook tự chạy `npm run check` trước khi cho push) — cổng
+  Design token đỏ vì `.release-timeline-decoration::after` (gradient trang trí, nợ cũ có từ trước CR
+  này, đã ghi ở trên) nhạy CRLF/LF: baseline sinh trên máy dùng LF, máy Windows đang chạy checkout ra
+  CRLF (`core.autocrlf=true`, không có `.gitattributes` ép LF) nên cùng nội dung nhưng khác byte xuống
+  dòng. Đây đúng là rủi ro CR đã cảnh báo trước ("sửa ẩu có thể chỉ chuyển lỗi sang máy khác"), nhưng
+  giờ nó chặn thẳng hành động Leader vừa yêu cầu nên phải xử lý ngay, không thể để đó. **Đã sửa TRIỆT
+  ĐỂ (không phải chuyển lỗi sang máy khác):** gộp gradient 3 lớp về 1 dòng duy nhất — CSS không phân
+  biệt khoảng trắng/xuống dòng giữa các giá trị gradient cách nhau bởi dấu phẩy nên KHÔNG đổi hiển thị
+  (xác nhận qua CSS biên dịch: value/size/position/opacity/animation giống hệt trước/sau). Vì không
+  còn ký tự xuống dòng nào bên trong giá trị, cổng hết nhạy CRLF/LF trên MỌI máy, không riêng máy này.
+  Push lần 2 qua `pre-push` hook: **11/11 cổng xanh thật** (kể cả test backend — không dính flaky lần
+  này). Đã đẩy lên `origin/master` (`43768974..56d4f132`), Drone CI tự chạy build Docker + SSH restart
+  service theo `.drone.yml`.
+
 ## 11. Docs cần cập nhật sau khi làm xong
 
 - [ ] `docs/standards/design-standard.md` (bộ token mới) · [ ] không đụng docs/01-05 khác (không đổi
