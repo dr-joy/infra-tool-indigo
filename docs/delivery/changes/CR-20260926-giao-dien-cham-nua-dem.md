@@ -276,11 +276,88 @@ Không đụng.
 - **Pha 3 — đợt 4/N XONG (commit `fabb62ae`) — màn Lịch release chung.** Di trú
   `release-calendar.tsx` (board + 3 popup Đăng ký/Yêu cầu mở khoá/Ép giờ chung).
 
-- **Còn lại theo thứ tự dễ→khó đã chốt:** Admin(146) → Project(200, cần quyết định câu hỏi tiêu đề
-  trùng ở mục "Tiến độ" phần Pha 2 review) → Weekly(211) → Task cá nhân(223) → Release đăng ký/`
-  release.tsx`(231, khó nhất — 2 Gantt + PopupYeuCauMoKhoa). Cộng thêm khối `.mm-*` (MindMap) trong
-  `styles.css` khi tới màn MindMap (không thuộc 9 màn theo thứ tự dễ→khó gốc vì MindMap không có
-  trong bảng Pha 3, nhưng vẫn cần làm nếu Leader muốn phủ hết — cần hỏi lại phạm vi này).
+- **Pha 3 — đợt 5/N XONG (commit `aa59827e`) — màn Admin (7 mục con).** Di trú `admin.tsx` (Tổng
+  quan/Người dùng/Phân quyền/Hiển thị chức năng/Audit log/Điều phối release/...). 3 toggle-switch
+  track color đổi theo state (on/off), giữ nguyên thumb `bg-white` (mục "Màu cố ý giữ" đã liệt kê ở
+  đầu CR — cần độ tương phản cố định trên cả 2 trạng thái track, không theo theme).
+
+- **Phát hiện lỗi nghiêm trọng, tự phát hiện qua build+soi CSS biên dịch (commit `7a2e8fce`), KHÔNG
+  phải do Council chỉ ra:** hậu tố opacity Tailwind (`bg-danger/15` kiểu) sinh ra **KHÔNG CSS NÀO** khi
+  màu gốc là custom token dạng chuỗi `var(--color-...)` — khác hẳn màu built-in của Tailwind (có hỗ
+  trợ opacity nội bộ riêng). Đã âm thầm làm hỏng mọi chỗ từng viết `bg-danger/15`/`bg-warning/15`/
+  `bg-success/15` từ đợt 2-4 (nền trong suốt hoàn toàn, không phải lỗi hiển thị nhẹ — xác nhận bằng
+  `npx vite build` + grep CSS biên dịch, rule không tồn tại). Sửa toàn cục: thêm 3 token `*-soft` mới
+  (`--color-danger-soft`/`--color-warning-soft`/`--color-success-soft`) vào `:root` +
+  `tailwind.config.js`, grep-replace toàn bộ chỗ đã dùng sai pattern trước đó. Đã ghi thành quy tắc
+  chuẩn trong comment `tailwind.config.js` để các đợt sau không lặp lại: **không dùng hậu tố
+  opacity (`/NN`) trên token tự định nghĩa, luôn dùng token `*-soft` riêng.**
+
+- **Pha 3 — đợt 6/N XONG (commit `6f3d1b78`) — màn Project (sidebar/tree/Gantt/roadmap).** Di trú
+  toàn bộ prefix `.project-*` trong `styles.css` (đây là phần CSS lớn nhất của 1 màn tính tới lúc đó).
+
+- **Pha 3 — đợt 7/N XONG (commit `1918ed2d`) — hệ "release manager" (popup quản lý template/định nghĩa
+  task).** Di trú `.release-manager-*` + 4 cặp biến `--release-week-*` (thang màu theo giai đoạn
+  release: jack/develop/staging/demo).
+
+- **Pha 3 — đợt 8/N XONG (commit `29eb74b3`) — trang trí "release timeline" + `.task-row`/
+  `.task-link-badge`.** Gộp 3 biến thể `.task-row` trùng lặp thành 1. Nhân tiện tự dọn được 1 trong 3
+  gradient nợ cũ (bỏ nền gradient sáng của `.release-timeline-decoration`, dùng
+  `var(--color-surface)` phẳng) — còn lại đúng 2 gradient nợ cũ (xác nhận qua `git diff master`: y hệt
+  master, có từ trước CR, không sửa vì ngoài phạm vi — xem đợt 14 dưới).
+
+- **Pha 3 — đợt 9/N XONG (commit `a31d5a65`) — `.task-dinh-ky`/`.ai-badge-*`/nhóm class timeline dùng
+  chung.**
+
+- **Đợt 10 (commit `7158e9a5`) — quét sạch màu Tailwind hardcode còn lại trong `styles.css`.** Di trú
+  nốt `.cot-kanban`/`.project-gantt-header`/toàn bộ popup `quick-add-*`/`quick-project-*` (Thêm task
+  nhanh, Task cá nhân) sang teal→primary/danger→danger-soft/v.v., cùng `field`/`field-checkbox`/
+  `multi-select`/`multi-pic`/`search-box`/`toast`. Sau đợt này quét lại bằng regex chính xác hơn (loại
+  false-positive `translate-` chứa substring `slate`) xác nhận vùng đang sống (< dòng 2900, trừ
+  `.ld-*`/`.sf-*` chết đã xác nhận) không còn `bg-slate-*`/`bg-teal-*`/... nào ngoài màu nhận diện cố ý
+  giữ.
+
+- **Đợt 11-13 — hoàn tất 3 màn còn lại + MindMap ở tầng `.tsx` (không chỉ `styles.css`).**
+  - Đợt 11 (`aab39c07`): `release.tsx` (1 chỗ sót), `auth-shell.tsx` (6 chỗ, màn đăng nhập/onboarding —
+    không nằm trong bảng 9 màn gốc nhưng là màn thật người dùng thấy, sửa luôn cho nhất quán), và
+    `personal-task.tsx` (Task cá nhân — timeline giờ/nghỉ trưa/vạch "hiện tại", popup Xem lịch sử).
+    Kèm sửa `.bg-hoa-van` (hoạ tiết nền trang trí màn đăng nhập, hardcode nền sáng #edf1f0 cũ) sang
+    nền tối theo token (stroke SVG phải hardcode hex vì data-URI không dùng `var()` được, đã ghi chú).
+  - Đợt 12 (`ff7ada0a`): toàn bộ `weekly.tsx` (Báo cáo tuần — màn `.tsx` nặng nhất, ~124 dòng đổi).
+    Nhân tiện bắt + sửa 20 chỗ `border` trần (không màu) trên `div`/`button`/`tr` theo đúng quy tắc đã
+    chốt ở đợt 2 (Tailwind `border` trần = xám mặc định của Tailwind, không phải `--color-border` của
+    app).
+  - Đợt 13 (`845812e5`) — **màn Sơ đồ tư duy (MindMap), phát hiện lúc rà soát cuối: không nằm trong 9
+    màn gốc vì MindMap không có trong bảng Pha 3, đã hỏi lại Leader qua AskUserQuestion và được xác
+    nhận làm luôn trong CR này (không tách CR riêng).** ~196 rule `.mm-*` (raw CSS, không qua
+    `@apply`) đổi từ bảng màu sáng cũ sang token, cộng 5 chỗ mặc định trắng/đen trong `mind-map.tsx`
+    (bg/text mặc định khi node chưa tuỳ chỉnh màu). **Không đụng** `PEN_COLORS`/`PALETTE`/`SWATCHES`/
+    `TEXT_SWATCHES`/`BG_SWATCHES` — đây là bảng màu NGƯỜI DÙNG CHỌN cho node/nét vẽ, không phải màu
+    theme, cùng loại với màu PIC/avatar/emergency-shape đã liệt kê ở mục "Màu cố ý giữ".
+
+- **Đợt 14-15 — quét bổ sung 2 loại hardcode nằm ngoài phạm vi quét trước đó (raw CSS + inline
+  style).** Toàn bộ 10 đợt trước chỉ quét theo tên class Tailwind (`bg-slate-300` kiểu) — bỏ sót màu
+  viết trực tiếp dạng `color: #hex`/`background: rgba(...)` trong CSS thuần (không qua `@apply`) và
+  trong `style={{...}}` inline của `.tsx`. Quét lại toàn bộ 2 dạng này trên cả file, tìm và sửa
+  (`959703e7`, `834c0f40`): nền/nút xanh dương lạc tông trong `.popup-release-emergency-manager` (đổi
+  về đúng quy ước secondary/surface-2 đã dùng ở các popup release-manager anh em); 2 border-color
+  focus `#0d9488` sót; nốt `--release-week-afterDemo` (1/5 cặp biến giai đoạn còn hex cũ, 4 cặp kia đã
+  đổi từ đợt 7); `.release-token-guide`; và 2 chỗ `style={{color:'#hex'}}` trong `project.tsx` (icon
+  "Mục tiêu tuần này", tên PIC). Xác nhận lại 2 lần bằng quét riêng từng vùng file (tránh lỗi đánh số
+  dòng sai khi nối 2 đoạn awk) — không còn hardcode nào ngoài: token `:root`, 1 biến CSS chết
+  (`--project-task-guide-color`, định nghĩa nhưng không nơi nào đọc, không đụng vì ngoài phạm vi dọn
+  dẹp CSS chết), màu nhận diện cố ý giữ (PIC/Gantt-bar-text-contrast/thứ Bảy-Chủ Nhật/`.mm-add`), và 2
+  gradient nợ cũ đã xác nhận qua `git diff master` (y hệt master, có trước CR).
+
+- **Trạng thái hiện tại (sau đợt 15): toàn bộ 9 màn gốc + MindMap đã di trú xong ở cả 2 tầng
+  (`styles.css` và `.tsx`).** `npm run check`: 9/11 cổng xanh thật; cổng Design token xanh (0 hardcode
+  mới, baseline khớp); test backend+frontend — phát hiện MỚI đáng chú ý: bài test
+  `project-tasks-rollup-and-delete.test.ts` (2 case con) đang FAIL **cả khi chạy riêng lẻ và 3/3 lần**
+  (khác mô tả cũ "chỉ flaky lúc chạy chung"), đã xác nhận **fail y hệt trên `master` sạch** (dùng
+  `git worktree`, không đụng gì của nhánh CR) → là lỗi/thay đổi hành vi có trước, không liên quan CSS,
+  không sửa trong CR này (ngoài phạm vi), nhưng đáng báo cho Leader vì nghiêm trọng hơn mức "flaky" đã
+  ghi nhận trước đó — nên có người kiểm lại độc lập với công việc CSS này. Còn lại: Council review cho
+  toàn bộ đợt 3-15 (chưa chạy từ sau run `bc2f9540`, chỉ phủ đợt 1-2) sắp chạy; sau đó đến bước thêm
+  lại `color-scheme: dark` (đủ điều kiện vì mọi màn đã xong) rồi merge 1 lần theo đúng kế hoạch.
 
 ## 11. Docs cần cập nhật sau khi làm xong
 
