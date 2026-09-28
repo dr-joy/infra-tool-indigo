@@ -29,7 +29,8 @@ import {
 } from '../lib/task-utils';
 import type {
   ProjectItem, ProjectTaskItem, ProjectTaskAssignment, ProjectTaskProgress, ProjectCreateBody,
-  ProjectTaskCreateBody, Task, TaskLink, TaskLinkType, DuLieuDashboard, SortState, TruongSort, HuongSort, PicItem
+  ProjectTaskCreateBody, Task, TaskLink, TaskLinkType, DuLieuDashboard, SortState, TruongSort, HuongSort, PicItem,
+  TeamMemberItem
 } from '../types';
 
 function khoangCachNgay(start: string, end: string) {
@@ -182,6 +183,9 @@ export function ManHinhProject() {
   // CR-20260913 FR-13 — mọi màn nghiệp vụ hiển thị theo đúng team đang chọn (server/routes/projects.ts
   // §6.2: GET /projects, GET /projects/closed, POST /projects, PATCH /projects/reorder bắt buộc teamId).
   const activeTeamId = useActiveTeamId();
+  // CR-20260913 Lát 4 (FR-15): nguồn chọn "người phụ trách"/PIC — thay cho bảng `pics` chuỗi tự do
+  // cũ (usePics()). Nạp lại mỗi khi đổi team đang chọn.
+  const [teamMembers, setTeamMembers] = useState<TeamMemberItem[]>([]);
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   // Cho phép deep-link tới 1 project qua ?project=<id>
   const [projectDangChon, setProjectDangChon] = useState(() => new URLSearchParams(window.location.search).get('project') || '');
@@ -283,6 +287,22 @@ export function ManHinhProject() {
     }
   }
 
+  // Danh sách thành viên team thật — nguồn chọn "người phụ trách"/PIC (CR-20260913 Lát 4, thay cho
+  // bảng `pics` chuỗi tự do cũ). Cùng aliveRef guard như taiProjects/taiBadgeIds phía trên.
+  async function taiTeamMembers(aliveRef?: { current: boolean }) {
+    if (activeTeamId == null) return;
+    try {
+      const data = await apiTeam<{ members: { id: number; email: string; display_name: string }[] }>(
+        activeTeamId, `/api/teams/${activeTeamId}/members`
+      );
+      if (aliveRef && !aliveRef.current) return;
+      setTeamMembers(data.members.map((m) => ({ id: m.id, displayName: m.display_name, email: m.email })));
+    } catch {
+      if (aliveRef && !aliveRef.current) return;
+      setTeamMembers([]);
+    }
+  }
+
   // Badge 🎯 = mục tiêu của tuần có mục tiêu mới nhất, chưa 100%.
   // Báo đỏ = carry-over chưa xử lý (không được duyệt tiếp, chưa reschedule).
   async function taiBadgeIds(aliveRef?: { current: boolean }) {
@@ -312,6 +332,7 @@ export function ManHinhProject() {
     setAtRiskTaskIds(new Set());
     void taiProjects(aliveRef);
     void taiBadgeIds(aliveRef);
+    void taiTeamMembers(aliveRef);
     return () => { aliveRef.current = false; };
   }, [activeTeamId]);
 
@@ -360,7 +381,10 @@ export function ManHinhProject() {
   }
 
   async function closeProject(project: ProjectItem) {
-    const closedProject = await api<ProjectItem>(`/api/projects/${project.id}/close`, { method: 'PATCH' });
+    // BUG-20260928: thiếu rowVersion -> PATCH luôn 409 dù không ai sửa trùng (xem src/types.ts).
+    const closedProject = await api<ProjectItem>(`/api/projects/${project.id}/close`, {
+      method: 'PATCH', body: JSON.stringify({ rowVersion: project.rowVersion })
+    });
     setProjects((current) => {
       const next = current.filter((item) => item.id !== project.id);
       setProjectDangChon((currentId) => currentId === project.id ? next[0]?.id || '' : currentId);
@@ -371,7 +395,10 @@ export function ManHinhProject() {
   }
 
   async function pendingProject(project: ProjectItem) {
-    const pending = await api<ProjectItem>(`/api/projects/${project.id}/pending`, { method: 'PATCH' });
+    // BUG-20260928: thiếu rowVersion -> PATCH luôn 409 dù không ai sửa trùng (xem src/types.ts).
+    const pending = await api<ProjectItem>(`/api/projects/${project.id}/pending`, {
+      method: 'PATCH', body: JSON.stringify({ rowVersion: project.rowVersion })
+    });
     setProjects((current) => {
       const next = current.filter((item) => item.id !== project.id);
       setProjectDangChon((currentId) => currentId === project.id ? next[0]?.id || '' : currentId);
@@ -382,7 +409,10 @@ export function ManHinhProject() {
   }
 
   async function restorePendingProject(project: ProjectItem) {
-    const restored = await api<ProjectItem>(`/api/projects/${project.id}/restore`, { method: 'PATCH' });
+    // BUG-20260928: thiếu rowVersion -> PATCH luôn 409 dù không ai sửa trùng (xem src/types.ts).
+    const restored = await api<ProjectItem>(`/api/projects/${project.id}/restore`, {
+      method: 'PATCH', body: JSON.stringify({ rowVersion: project.rowVersion })
+    });
     setClosedProjects((current) => current.filter((item) => item.id !== restored.id));
     await taiProjects();
     setProjectDangChon(restored.id);
@@ -562,7 +592,9 @@ export function ManHinhProject() {
     const payload = {
       parentId: task.parentId, tieuDe: task.tieuDe, ghiChu: task.ghiChu,
       links: normalizedTaskLinks(task.links), ngayBatDauDuKien: start, ngayKetThucDuKien: end,
-      estimateHours: task.estimateHours, tienDo: task.tienDo, assignee: task.assignee
+      estimateHours: task.estimateHours, tienDo: task.tienDo, assignee: task.assignee,
+      // BUG-20260928: thiếu rowVersion -> PATCH luôn 409 dù không ai sửa trùng (xem src/types.ts).
+      rowVersion: task.rowVersion
     };
     const url = `/api/projects/${task.projectId}/tasks/${task.id}`;
     try {
@@ -586,7 +618,7 @@ export function ManHinhProject() {
     const assignments = current.map((a, i) => {
       const u = byIndex.get(i);
       return {
-        pic: a.pic,
+        userId: a.userId,
         startDate: u ? u.start : a.startDate,
         endDate: u ? u.end : a.endDate,
         estimateHours: a.estimateHours
@@ -594,7 +626,8 @@ export function ManHinhProject() {
     });
     const url = `/api/projects/${task.projectId}/tasks/${task.id}/assignments`;
     try {
-      await api<ProjectTaskItem>(url, { method: 'PUT', body: JSON.stringify({ assignments }) });
+      // BUG-20260928: thiếu rowVersion -> PUT luôn 409 dù không ai sửa trùng (xem src/types.ts).
+      await api<ProjectTaskItem>(url, { method: 'PUT', body: JSON.stringify({ assignments, rowVersion: task.rowVersion }) });
     } catch (error) {
       setGanttTongError(error instanceof Error ? error.message : t('err.update_dates'));
       return;
@@ -676,7 +709,9 @@ export function ManHinhProject() {
           ngayKetThucDuKien: task.ngayKetThucDuKien,
           estimateHours: task.estimateHours,
           tienDo,
-          assignee: task.assignee
+          assignee: task.assignee,
+          // BUG-20260928: thiếu rowVersion -> PATCH luôn 409 dù không ai sửa trùng (xem src/types.ts).
+          rowVersion: task.rowVersion
         })
       });
       await taiProjectTasks(selectedProject.id);
@@ -915,6 +950,7 @@ export function ManHinhProject() {
       </section>
       {moTaoProject && (
         <PopupTaoProject
+          teamMembers={teamMembers}
           onClose={() => setMoTaoProject(false)}
           onCreated={taoProject}
         />
@@ -922,6 +958,7 @@ export function ManHinhProject() {
       {projectDangSua && (
         <PopupTaoProject
           project={projectDangSua}
+          teamMembers={teamMembers}
           onClose={() => setProjectDangSua(null)}
           onCreated={capNhatProject}
           onCloseProject={closeProject}
@@ -931,6 +968,7 @@ export function ManHinhProject() {
       {moLichSuProjectClose && (
         <PopupLichSuProjectClose
           projects={closedProjects}
+          teamMembers={teamMembers}
           isLoading={dangTaiClosedProjects}
           error={closedProjectsError}
           onClose={() => setMoLichSuProjectClose(false)}
@@ -950,6 +988,7 @@ export function ManHinhProject() {
         <PopupTaoProjectTask
           project={selectedProject}
           parentTask={taskParentDangTao}
+          teamMembers={teamMembers}
           onClose={() => {
             setMoTaoProjectTask(false);
             setTaskParentDangTao(null);
@@ -987,6 +1026,7 @@ export function ManHinhProject() {
         <PopupGanttTong
           projects={projects}
           tasksByProject={ganttTongTasks}
+          teamMembers={teamMembers}
           isLoading={dangTaiGanttTong}
           error={ganttTongError}
           onClose={() => setMoGanttTong(false)}
@@ -1007,6 +1047,7 @@ export function ManHinhProject() {
             parentTask={ptasks.find((tk) => tk.id === ganttTongTaskDangSua.parentId) || null}
             task={ganttTongTaskDangSua}
             hasChildren={ptasks.some((tk) => tk.parentId === ganttTongTaskDangSua.id)}
+            teamMembers={teamMembers}
             onClose={() => setGanttTongTaskDangSua(null)}
             onCreated={(body) => capNhatProjectTaskTong(ganttTongTaskDangSua, body)}
           />
@@ -1018,6 +1059,7 @@ export function ManHinhProject() {
           parentTask={projectTasks.find((task) => task.id === projectTaskDangSua.parentId) || null}
           task={projectTaskDangSua}
           hasChildren={projectTasks.some((task) => task.parentId === projectTaskDangSua.id)}
+          teamMembers={teamMembers}
           onClose={() => setProjectTaskDangSua(null)}
           onCreated={capNhatProjectTask}
         />
@@ -1028,12 +1070,15 @@ export function ManHinhProject() {
 
 function PopupTaoProject({
   project,
+  teamMembers,
   onClose,
   onCreated,
   onCloseProject,
   onPendingProject
 }: {
   project?: ProjectItem;
+  // CR-20260913 Lát 4 (FR-15): nguồn chọn "người phụ trách" — thay cho PIC chuỗi tự do cũ.
+  teamMembers: TeamMemberItem[];
   onClose: () => void;
   onCreated: (project: ProjectCreateBody) => Promise<void>;
   onCloseProject?: (project: ProjectItem) => Promise<void>;
@@ -1041,34 +1086,10 @@ function PopupTaoProject({
 }) {
   const { t } = useLang();
   const [ten, setTen] = useState(project?.ten || '');
-  const [pics, setPics] = useState<string[]>(project?.pic ? project.pic.split(',').map((item) => item.trim()).filter(Boolean) : []);
-  const { pics: picOptions } = usePics();
-  const [moDropdownPic, setMoDropdownPic] = useState(false);
+  const [responsibleUserId, setResponsibleUserId] = useState(project?.responsibleUserId ? String(project.responsibleUserId) : '');
   const [ngayBatDau, setNgayBatDau] = useState(project?.ngayBatDau || currentVietnamDateInputValue());
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
-  const dropdownPicRef = useRef<HTMLDetailsElement>(null);
-
-  useEffect(() => {
-    if (!moDropdownPic) return;
-
-    function dongKhiClickNgoai(event: MouseEvent) {
-      if (!dropdownPicRef.current?.contains(event.target as Node)) {
-        setMoDropdownPic(false);
-      }
-    }
-
-    document.addEventListener('mousedown', dongKhiClickNgoai);
-    return () => document.removeEventListener('mousedown', dongKhiClickNgoai);
-  }, [moDropdownPic]);
-
-  function doiPic(value: string) {
-    setPics((current) => (
-      current.includes(value)
-        ? current.filter((item) => item !== value)
-        : [...current, value]
-    ));
-  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1076,8 +1097,11 @@ function PopupTaoProject({
     try {
       await onCreated({
         ten: ten.trim(),
-        pic: pics.join(', '),
-        ngayBatDau
+        responsibleUserId,
+        ngayBatDau,
+        // BUG-20260928: thiếu field này -> PATCH luôn 409 (xem src/types.ts ProjectItem.rowVersion).
+        // Project mới tạo (project undefined) không có rowVersion, route POST không đọc field này.
+        rowVersion: project?.rowVersion
       });
     } catch (error) {
       setError(error instanceof Error ? error.message : t('err.register_project'));
@@ -1128,32 +1152,13 @@ function PopupTaoProject({
         {/* Project hệ thống "Khác" (việc lẻ): không có PIC / ngày bắt đầu / đóng project */}
         {!project?.isSystem && (
           <>
-            <div className="field">
-              PIC
-              <details ref={dropdownPicRef} className="multi-select" open={moDropdownPic}>
-                <summary
-                  onClick={(event) => {
-                    event.preventDefault();
-                    if (!isSaving) setMoDropdownPic((value) => !value);
-                  }}
-                >
-                  <span>{pics.length > 0 ? pics.join(', ') : t('project.form.pic_placeholder')}</span>
-                </summary>
-                <div className="multi-select-menu">
-                  {picOptions.map((pic) => (
-                    <label key={pic} className="multi-select-option">
-                      <input
-                        type="checkbox"
-                        checked={pics.includes(pic)}
-                        disabled={isSaving}
-                        onChange={() => doiPic(pic)}
-                      />
-                      <span>{pic}</span>
-                    </label>
-                  ))}
-                </div>
-              </details>
-            </div>
+            <label className="field">
+              {t('project.form.responsible')}
+              <select value={responsibleUserId} disabled={isSaving} onChange={(event) => setResponsibleUserId(event.target.value)} required>
+                <option value="">— chọn người phụ trách —</option>
+                {teamMembers.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
+              </select>
+            </label>
             <label className="field">
               {t('project.form.start_date')}
               <input type="date" value={ngayBatDau} disabled={isSaving} onChange={(event) => setNgayBatDau(event.target.value)} required />
@@ -1176,7 +1181,7 @@ function PopupTaoProject({
           </div>
           <div className="flex justify-end gap-3">
             <button type="button" className="nut-phu" disabled={isSaving} onClick={onClose}>{t('btn.cancel')}</button>
-            <button className="nut-chinh" type="submit" disabled={isSaving || pics.length === 0}>{t('btn.save')}</button>
+            <button className="nut-chinh" type="submit" disabled={isSaving || !responsibleUserId}>{t('btn.save')}</button>
           </div>
         </div>
       </form>
@@ -1186,6 +1191,7 @@ function PopupTaoProject({
 
 function PopupLichSuProjectClose({
   projects,
+  teamMembers,
   isLoading,
   error,
   onClose,
@@ -1193,6 +1199,7 @@ function PopupLichSuProjectClose({
   onRestoreProject
 }: {
   projects: ProjectItem[];
+  teamMembers: TeamMemberItem[];
   isLoading: boolean;
   error: string;
   onClose: () => void;
@@ -1247,7 +1254,9 @@ function PopupLichSuProjectClose({
                 {projects.map((project) => (
                   <tr key={project.id}>
                     <td className="px-4 py-3 font-bold text-muc">{project.ten}</td>
-                    <td className="px-4 py-3 text-phu">{project.pic || '-'}</td>
+                    <td className="px-4 py-3 text-phu">
+                      {teamMembers.find((m) => m.id === project.responsibleUserId)?.displayName || project.legacyPicLabel || '-'}
+                    </td>
                     <td className="px-4 py-3">{project.pendingAt ? t('project.status.pending') : t('project.status.closed')}</td>
                     <td className="px-4 py-3">{dinhDangNgay(project.ngayBatDau)}</td>
                     <td className="px-4 py-3">{dinhDangNgay(project.pendingAt)}</td>
@@ -1998,6 +2007,7 @@ function PopupGanttTong({
   isLoading,
   error,
   onClose,
+  teamMembers,
   onReload,
   onTaskOpen,
   onTaskDatesChange,
@@ -2006,6 +2016,8 @@ function PopupGanttTong({
 }: {
   projects: ProjectItem[];
   tasksByProject: Record<string, ProjectTaskItem[]>;
+  // CR-20260913 Lát 4: nguồn tên hiển thị cho giai đoạn phân công (userId) — thay cho PIC chữ tự do.
+  teamMembers: TeamMemberItem[];
   isLoading: boolean;
   error: string;
   onClose: () => void;
@@ -2016,9 +2028,19 @@ function PopupGanttTong({
   onTaskReorder: (projectId: string, taskIds: string[]) => Promise<void>;
 }) {
   const { t } = useLang();
-  const { pics: picList, picColors } = usePics();
+  // picColors vẫn đọc từ bảng `pics` cũ (chưa có API màu theo User thật — team_member_gantt_colors
+  // mới có schema, chưa có route — nợ lại, xem báo cáo). Tra theo TÊN nên chỉ khớp màu khi tên User
+  // trùng đúng 1 PIC cũ đã có màu; không khớp thì vẽ xám trung tính (đúng thiết kế Lát 4: "Gantt vẽ
+  // xám trung tính kèm tên cho tới khi Leader gán màu", xem server/schema/project.ts).
+  const { picColors } = usePics();
   const picColorsForTask = (assignee: string): string[] =>
     splitAssignees(assignee).map((name) => picColors[name]).filter(Boolean) as string[];
+  // Tên hiển thị của 1 giai đoạn: User thật (đã vào team) -> displayName; giai đoạn di trú chưa gắn
+  // được User thật -> legacyPicLabel; còn lại (dữ liệu hỏng) -> placeholder không rỗng để không vỡ Map.
+  function tenGiaiDoan(a: ProjectTaskAssignment): string {
+    if (a.userId != null) return teamMembers.find((m) => m.id === a.userId)?.displayName || `User #${a.userId}`;
+    return a.legacyPicLabel || '(không rõ)';
+  }
   // Lane theo PIC cho task có phân công giai đoạn: mỗi PIC một dòng, mỗi giai đoạn một đoạn bar.
   const ganttLaneHeight = 16;
   function lanesOfTask(task: ProjectTaskItem) {
@@ -2027,16 +2049,17 @@ function PopupGanttTong({
     const order: string[] = [];
     const byPic = new Map<string, { start: string; end: string; index: number; estimateHours: number | null }[]>();
     segs.forEach((a, index) => {
+      const pic = tenGiaiDoan(a);
       // Lọc theo PIC: bỏ qua giai đoạn của PIC không được chọn (giữ nguyên index gốc cho kéo/preview).
-      if (activePic && a.pic !== activePic) return;
-      if (!byPic.has(a.pic)) { byPic.set(a.pic, []); order.push(a.pic); }
-      byPic.get(a.pic)!.push({ start: a.startDate, end: a.endDate, index, estimateHours: a.estimateHours });
+      if (activePic && pic !== activePic) return;
+      if (!byPic.has(pic)) { byPic.set(pic, []); order.push(pic); }
+      byPic.get(pic)!.push({ start: a.startDate, end: a.endDate, index, estimateHours: a.estimateHours });
     });
     return order.map((pic) => ({ pic, color: picColors[pic] || 'var(--color-gantt-neutral)', segs: byPic.get(pic)! }));
   }
   function rowHeightOf(task: ProjectTaskItem) {
-    const segs = (task.assignments || []).filter((a) => !activePic || a.pic === activePic);
-    const lanes = segs.length > 0 ? new Set(segs.map((a) => a.pic)).size : 0;
+    const segs = (task.assignments || []).filter((a) => !activePic || tenGiaiDoan(a) === activePic);
+    const lanes = segs.length > 0 ? new Set(segs.map((a) => tenGiaiDoan(a))).size : 0;
     return lanes > 0 ? Math.max(ganttRowHeight, lanes * ganttLaneHeight + 14) : ganttRowHeight;
   }
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -2334,7 +2357,7 @@ function PopupGanttTong({
             <select className="max-w-[11rem] truncate rounded border border-vien py-1 pl-2 pr-7 text-xs" value={filterPic} onChange={(e) => setFilterPic(e.target.value)} title="Lọc theo PIC">
               <option value="">— Lọc PIC —</option>
               <option value="all">Tất cả PIC</option>
-              {picList.map((n) => <option key={n} value={n}>{n}</option>)}
+              {teamMembers.map((m) => <option key={m.id} value={m.displayName}>{m.displayName}</option>)}
             </select>
           </div>
           <button type="button" className="nut-icon" onClick={onClose} aria-label={t('gantt.close')}><X size={18} /></button>
@@ -2437,7 +2460,7 @@ function PopupGanttTong({
                             const start = pv ? pv.start : a.startDate;
                             let end = pv ? pv.end : a.endDate;
                             if (khoangCachNgay(start, end) < 0) end = start;
-                            return { index, start, end, pic: a.pic };
+                            return { index, start, end, pic: tenGiaiDoan(a) };
                           }).filter((s) => !activePic || s.pic === activePic);
                           const parentStart = segCurrent.map((s) => s.start).sort()[0];
                           const parentEnd = segCurrent.map((s) => s.end).sort().at(-1) as string;

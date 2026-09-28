@@ -86,24 +86,41 @@ export interface Task {
   lechDefinition?: boolean;
 }
 
+// CR-20260913 Lát 4 (FR-15): `pic`/`moTa` chuỗi tự do đã bỏ hẳn khỏi server (mapProject không còn
+// trả 2 field này) — thay bằng responsibleUserId (User thật) + legacyPicLabel (chỉ đọc, dữ liệu di
+// trú). rowVersion: optimistic lock (BUG-20260928, xem ProjectTaskItem.rowVersion bên dưới — cùng lớp
+// bug, PATCH/close/pending/restore project đều đòi field này).
 export interface ProjectItem {
   id: string;
   ten: string;
-  pic: string;
+  teamId: number | null;
+  responsibleUserId: number | null;
+  legacyPicLabel: string | null;
   ngayBatDau: string;
-  moTa: string;
   sortOrder: number;
   closedAt: string | null;
   pendingAt: string | null;
   isSystem: boolean;
+  rowVersion?: number;
+}
+
+// Thành viên team thật (server/routes/teams.ts GET /teams/:teamId/members) — dùng làm nguồn chọn
+// "người phụ trách"/PIC ở Project và Task (CR-20260913 Lát 4, thay cho bảng `pics` chuỗi tự do cũ).
+export interface TeamMemberItem {
+  id: number;
+  displayName: string;
+  email: string;
 }
 
 export type ProjectTaskProgress = number;
 
-// Một giai đoạn phân công: PIC làm từ startDate → endDate, giờ dự kiến của giai đoạn.
+// Một giai đoạn phân công: 1 User thật làm từ startDate → endDate, giờ dự kiến của giai đoạn (CR
+// §6.3 Lát 4 — đổi từ `pic` chuỗi tự do sang `userId`). legacyPicLabel: chỉ đọc, dữ liệu di trú
+// (giai đoạn tạo trước Lát 4, chưa gắn được User thật).
 export interface ProjectTaskAssignment {
   id?: string;
-  pic: string;
+  userId: number | null;
+  legacyPicLabel?: string | null;
   startDate: string;
   endDate: string;
   estimateHours: number | null;
@@ -126,9 +143,16 @@ export interface ProjectTaskItem {
   executionOrder: number;
   links: TaskLink[];
   assignments?: ProjectTaskAssignment[];
+  // BUG-20260928: PATCH task đòi row_version (optimistic lock, xem server/types.ts ProjectTaskBody)
+  // nhưng FE trước đây không giữ field này từ response GET -> mọi PATCH đều gửi rowVersion=undefined,
+  // server coi là -1, luôn lệch với row_version thật (>=1) -> luôn 409 dù không ai sửa trùng.
+  rowVersion?: number;
 }
 
-export type ProjectCreateBody = Pick<ProjectItem, 'ten' | 'pic' | 'ngayBatDau'>;
+export type ProjectCreateBody = Pick<ProjectItem, 'ten' | 'ngayBatDau'> & {
+  responsibleUserId: number | string;
+  rowVersion?: number;
+};
 export type ProjectTaskCreateBody = Omit<ProjectTaskItem, 'id' | 'projectId' | 'level' | 'sortOrder' | 'executionOrder'>;
 
 export interface DuLieuDashboard {

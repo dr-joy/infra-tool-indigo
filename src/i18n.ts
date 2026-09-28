@@ -173,6 +173,7 @@ const dict = {
   'project.form.edit': 'Sửa project',
   'project.form.name': 'Tên Project',
   'project.form.pic_placeholder': 'Chọn PIC',
+  'project.form.responsible': 'Người phụ trách',
   'project.form.start_date': 'Ngày bắt đầu',
   'project.form.pending': 'Pending project',
   'project.form.close': 'Close Project',

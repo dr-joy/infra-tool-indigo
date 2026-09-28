@@ -20,7 +20,7 @@ import { api, apiTeam } from '../api';
 import { useActiveTeamId } from '../auth-context';
 import type {
   LoaiTask, TrangThai, TaskLink, Task, ProjectItem, ProjectTaskItem, ProjectTaskCreateBody,
-  DuLieuDashboard, SortState
+  DuLieuDashboard, SortState, TeamMemberItem
 } from '../types';
 
 // Tách khỏi src/main.tsx (kế hoạch Council run 022dd1e5, xem docs/exchanges/2026-09-12.md, hội tụ
@@ -1308,6 +1308,8 @@ function PopupThemTaskNhanh({
   const [isSavingPersonal, setIsSavingPersonal] = useState(false);
   const [personalError, setPersonalError] = useState('');
   const [projects, setProjects] = useState<ProjectItem[]>([]);
+  // CR-20260913 Lát 4: nguồn chọn "người phụ trách"/PIC — thay cho bảng `pics` chuỗi tự do cũ.
+  const [teamMembers, setTeamMembers] = useState<TeamMemberItem[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [projectTasks, setProjectTasks] = useState<ProjectTaskItem[]>([]);
   const [projectLoading, setProjectLoading] = useState(false);
@@ -1346,6 +1348,18 @@ function PopupThemTaskNhanh({
       });
     return () => { alive = false; };
   }, [t, activeTeamId]);
+
+  useEffect(() => {
+    if (activeTeamId == null) { setTeamMembers([]); return; }
+    let alive = true;
+    apiTeam<{ members: { id: number; email: string; display_name: string }[] }>(activeTeamId, `/api/teams/${activeTeamId}/members`)
+      .then((data) => {
+        if (!alive) return;
+        setTeamMembers(data.members.map((m) => ({ id: m.id, displayName: m.display_name, email: m.email })));
+      })
+      .catch(() => { if (alive) setTeamMembers([]); });
+    return () => { alive = false; };
+  }, [activeTeamId]);
 
   useEffect(() => {
     if (!selectedProjectId) {
@@ -1594,7 +1608,7 @@ function PopupThemTaskNhanh({
                       onClick={() => setSelectedProjectId(project.id)}
                     >
                       <span>{project.ten}</span>
-                      <small>{project.pic || '-'}</small>
+                      <small>{teamMembers.find((m) => m.id === project.responsibleUserId)?.displayName || project.legacyPicLabel || '-'}</small>
                     </button>
                   ))}
                   {projects.length === 0 && <div className="quick-add-empty">{t('empty.project')}</div>}
@@ -1632,6 +1646,7 @@ function PopupThemTaskNhanh({
         <PopupTaoProjectTask
           project={selectedProject}
           parentTask={parentDangTao}
+          teamMembers={teamMembers}
           onClose={() => setParentDangTao(undefined)}
           onCreated={taoProjectTask}
           nested

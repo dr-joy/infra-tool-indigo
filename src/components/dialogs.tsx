@@ -3,18 +3,19 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useLang } from '../useLang';
-import { useToast, usePics } from '../context';
+import { useToast } from '../context';
 import { Modal } from './Modal';
 import { TaskLinkEditor } from './task-atoms';
 import { normalizedTaskLinks, progressSelectOptions } from '../lib/task-utils';
 import { currentVietnamDateInputValue } from '../lib/date';
-import type { ProjectItem, ProjectTaskCreateBody, ProjectTaskItem, ProjectTaskProgress, TaskLink } from '../types';
+import type { ProjectItem, ProjectTaskCreateBody, ProjectTaskItem, ProjectTaskProgress, TaskLink, TeamMemberItem } from '../types';
 
 export function PopupTaoProjectTask({
   project,
   parentTask,
   task,
   hasChildren = false,
+  teamMembers,
   onClose,
   onCreated,
   nested = false,
@@ -24,6 +25,8 @@ export function PopupTaoProjectTask({
   parentTask: ProjectTaskItem | null;
   task?: ProjectTaskItem;
   hasChildren?: boolean;
+  // CR-20260913 Lát 4: giai đoạn phân công chọn User thật trong team (thay cho PIC chữ tự do cũ).
+  teamMembers: TeamMemberItem[];
   onClose: () => void;
   onCreated: (task: ProjectTaskCreateBody) => Promise<void>;
   nested?: boolean;
@@ -38,20 +41,20 @@ export function PopupTaoProjectTask({
   const [estimateHours, setEstimateHours] = useState(task?.estimateHours == null ? '' : String(task.estimateHours));
   // Tiến độ task lá nhập tay (không suy ra từ giai đoạn).
   const [tienDo, setTienDo] = useState<ProjectTaskProgress>(task?.tienDo || 0);
-  // Giai đoạn phân công (chỉ task lá): ai làm từ ngày nào tới ngày nào + giờ dự kiến. gio: chuỗi cho ô input.
-  type SegRow = { pic: string; startDate: string; endDate: string; gio: string };
-  const blankSeg = (): SegRow => ({ pic: '', startDate: '', endDate: '', gio: '' });
-  const isSegBlank = (r: SegRow) => !r.pic && !r.startDate && !r.endDate && !r.gio.trim();
+  // Giai đoạn phân công (chỉ task lá): User nào làm từ ngày nào tới ngày nào + giờ dự kiến. gio: chuỗi cho ô input.
+  // userId: '' = chưa chọn (khác null — null nghĩa là dòng cũ chỉ có legacyPicLabel, chưa gắn User thật).
+  type SegRow = { userId: number | ''; startDate: string; endDate: string; gio: string };
+  const blankSeg = (): SegRow => ({ userId: '', startDate: '', endDate: '', gio: '' });
+  const isSegBlank = (r: SegRow) => !r.userId && !r.startDate && !r.endDate && !r.gio.trim();
   // Luôn giữ 1 dòng trống ở cuối để thêm giai đoạn mới (không cần nút bấm).
   const withTrailingBlank = (rows: SegRow[]): SegRow[] =>
     (rows.length === 0 || !isSegBlank(rows[rows.length - 1])) ? [...rows, blankSeg()] : rows;
   const [segRows, setSegRows] = useState<SegRow[]>(() =>
     withTrailingBlank((task?.assignments || []).map((a) => ({
-      pic: a.pic, startDate: a.startDate, endDate: a.endDate,
+      userId: a.userId ?? '', startDate: a.startDate, endDate: a.endDate,
       gio: a.estimateHours == null ? '' : String(a.estimateHours)
     })))
   );
-  const { pics: picOptions } = usePics();
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const taskHasChildren = hasChildren;
@@ -75,7 +78,7 @@ export function PopupTaoProjectTask({
           setError(`Giai đoạn #${i + 1}: ngày kết thúc không thể trước ngày bắt đầu`); return;
         }
       }
-      validSegs = realSegs.filter((r) => r.pic && r.startDate && r.endDate);
+      validSegs = realSegs.filter((r) => r.userId && r.startDate && r.endDate);
       // Cho phép lưu dù thiếu thông tin, nhưng cảnh báo. Dòng thiếu PIC/ngày sẽ KHÔNG được lưu.
       const thieu = realSegs.length - validSegs.length;
       if (!skipEmptyAssignmentConfirm && (thieu > 0 || validSegs.length === 0)) {
@@ -93,7 +96,8 @@ export function PopupTaoProjectTask({
       const hasValid = !taskHasChildren && validSegs.length > 0;
       const vStart = validSegs.map((r) => r.startDate).sort()[0];
       const vEnd = validSegs.map((r) => r.endDate).sort().at(-1);
-      const vAssignee = [...new Set(validSegs.map((r) => r.pic))].join(', ');
+      const tenNguoi = (id: number | '') => teamMembers.find((m) => m.id === id)?.displayName || '';
+      const vAssignee = [...new Set(validSegs.map((r) => tenNguoi(r.userId)).filter(Boolean))].join(', ');
       await onCreated({
         parentId: parentTask?.id || null,
         tieuDe: tieuDe.trim(),
@@ -107,9 +111,13 @@ export function PopupTaoProjectTask({
         assignee: hasValid ? vAssignee : taskHasChildren ? (task?.assignee || '') : '',
         // Task lá: luôn gửi mảng giai đoạn HỢP LỆ ([] = không có giai đoạn). Task có con: không đụng tới.
         assignments: taskHasChildren ? undefined : validSegs.map((r, i) => ({
-          pic: r.pic, startDate: r.startDate, endDate: r.endDate,
+          userId: r.userId === '' ? null : r.userId, startDate: r.startDate, endDate: r.endDate,
           estimateHours: r.gio.trim() === '' ? null : Number(r.gio), sortOrder: i
-        }))
+        })),
+        // BUG-20260928: thiếu field này -> PATCH luôn 409 "Có người vừa thay đổi task này" (xem
+        // src/types.ts ProjectTaskItem.rowVersion). Task mới tạo (task undefined) không có rowVersion,
+        // route POST không đọc field này nên để undefined vô hại.
+        rowVersion: task?.rowVersion
       });
     } catch (error) {
       setError(error instanceof Error ? error.message : t('ptask.form.err_create'));
@@ -186,9 +194,13 @@ export function PopupTaoProjectTask({
               </div>
               {segRows.map((r, i) => (
                 <div key={i} className="ptask-seg-row">
-                  <select value={r.pic} disabled={isSaving} onChange={(e) => suaGiaiDoan(i, { pic: e.target.value })}>
+                  <select
+                    value={r.userId}
+                    disabled={isSaving}
+                    onChange={(e) => suaGiaiDoan(i, { userId: e.target.value === '' ? '' : Number(e.target.value) })}
+                  >
                     <option value="">— chọn PIC —</option>
-                    {picOptions.map((n) => <option key={n} value={n}>{n}</option>)}
+                    {teamMembers.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
                   </select>
                   <input type="date" value={r.startDate} disabled={isSaving} onChange={(e) => suaGiaiDoan(i, { startDate: e.target.value })} />
                   <input type="date" value={r.endDate} disabled={isSaving} onChange={(e) => suaGiaiDoan(i, { endDate: e.target.value })} />
