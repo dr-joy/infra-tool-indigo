@@ -63,12 +63,16 @@ async function req(method: string, p: string, body?: unknown) {
 async function createProject(ten: string) {
   const r = await req('POST', '/api/projects', { ten, teamId, responsibleUserId: leader.userId, ngayBatDau: '2099-01-01' });
   assert.equal(r.status, 201, JSON.stringify(r.json));
-  return r.json.id as number;
+  return r.json as { id: number; rowVersion: number };
 }
 
-async function createLeafTask(projectId: number, tieuDe: string) {
+async function createLeafTask(projectId: number, tieuDe: string, opts: { parentId?: number; tienDo?: number } = {}) {
   const r = await req('POST', `/api/projects/${projectId}/tasks`, {
-    tieuDe, ngayBatDauDuKien: '2099-01-01', ngayKetThucDuKien: '2099-01-02', tienDo: 0
+    tieuDe,
+    parentId: opts.parentId,
+    ngayBatDauDuKien: '2099-01-01',
+    ngayKetThucDuKien: '2099-01-02',
+    tienDo: opts.tienDo ?? 0
   });
   assert.equal(r.status, 201);
   return r.json.id as number;
@@ -87,14 +91,16 @@ test('PATCH /projects/:projectId/tasks/execution-order: project không tồn t�
 });
 
 test('PATCH /projects/:projectId/tasks/execution-order: taskIds rỗng -> 400 "Thứ tự task không hợp lệ"', async () => {
-  const projectId = await createProject('[itest] execution-order taskIds rỗng');
+  const project = await createProject('[itest] execution-order taskIds rỗng');
+  const projectId = project.id;
   const r = await req('PATCH', `/api/projects/${projectId}/tasks/execution-order`, { taskIds: [] });
   assert.equal(r.status, 400);
   assert.equal(r.json.message, 'Thứ tự task không hợp lệ');
 });
 
 test('PATCH /projects/:projectId/tasks/execution-order: taskIds không khớp đúng tập leaf task của project -> 400 "Chỉ có thể sắp xếp các task thực thi trong cùng project"', async () => {
-  const projectId = await createProject('[itest] execution-order khac project');
+  const project = await createProject('[itest] execution-order khac project');
+  const projectId = project.id;
   await createLeafTask(projectId, '[itest] task A');
   const r = await req('PATCH', `/api/projects/${projectId}/tasks/execution-order`, { taskIds: [999999] });
   assert.equal(r.status, 400);
@@ -102,7 +108,8 @@ test('PATCH /projects/:projectId/tasks/execution-order: taskIds không khớp đ
 });
 
 test('PATCH /projects/:projectId/tasks/execution-order: đúng leaf task -> 200, thứ tự execution_order được cập nhật', async () => {
-  const projectId = await createProject('[itest] execution-order thanh cong');
+  const project = await createProject('[itest] execution-order thanh cong');
+  const projectId = project.id;
   const taskA = await createLeafTask(projectId, '[itest] task A');
   const taskB = await createLeafTask(projectId, '[itest] task B');
   const r = await req('PATCH', `/api/projects/${projectId}/tasks/execution-order`, { taskIds: [taskB, taskA] });
@@ -112,7 +119,8 @@ test('PATCH /projects/:projectId/tasks/execution-order: đúng leaf task -> 200,
 });
 
 test('PATCH /projects/:projectId/tasks/execution-order: lỗi DB giữa chừng -> 500 "Không thể sắp xếp task trên Gantt"', async () => {
-  const projectId = await createProject('[itest] execution-order loi DB');
+  const project = await createProject('[itest] execution-order loi DB');
+  const projectId = project.id;
   const taskA = await createLeafTask(projectId, '[itest] task A');
 
   db.exec(`
@@ -129,4 +137,16 @@ test('PATCH /projects/:projectId/tasks/execution-order: lỗi DB giữa chừng 
   } finally {
     db.exec('DROP TRIGGER itest_block_execution_order');
   }
+});
+
+test('PATCH /projects/:projectId/close: chỉ xét task lá 100%, task cha stale chưa 100 không chặn close', async () => {
+  const project = await createProject('[itest] close leaf tasks done');
+  const parentId = await createLeafTask(project.id, '[itest] parent stale', { tienDo: 0 });
+  await createLeafTask(project.id, '[itest] leaf done', { parentId, tienDo: 100 });
+
+  db.prepare('UPDATE project_tasks SET tien_do = 0 WHERE id = ?').run(parentId);
+
+  const r = await req('PATCH', `/api/projects/${project.id}/close`, { rowVersion: project.rowVersion });
+  assert.equal(r.status, 200, JSON.stringify(r.json));
+  assert.ok(r.json.closedAt, 'project phải được close khi mọi task lá đã 100%');
 });

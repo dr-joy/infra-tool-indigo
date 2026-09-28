@@ -242,7 +242,15 @@ router.patch('/projects/:projectId/close', requireSession, requireActiveAccount,
   const projectRow = db.prepare('SELECT closed_at, pending_at FROM projects WHERE id = ?').get(projectId) as { closed_at: string | null; pending_at: string | null };
   if (projectRow.closed_at != null || projectRow.pending_at != null) return res.status(404).json({ message: 'Không tìm thấy project đang mở' });
   const incompleteTasks = db.prepare(`
-    SELECT COUNT(*) AS total FROM project_tasks WHERE project_id = ? AND tien_do <> 100
+    SELECT COUNT(*) AS total
+    FROM project_tasks t
+    WHERE t.project_id = ?
+      AND t.tien_do <> 100
+      AND NOT EXISTS (
+        SELECT 1
+        FROM project_tasks child
+        WHERE child.project_id = t.project_id AND child.parent_id = t.id
+      )
   `).get(projectId) as { total: number };
   if (incompleteTasks.total > 0) {
     return res.status(400).json({ message: 'Chỉ có thể close project khi tiến độ tất cả task là 100%' });
