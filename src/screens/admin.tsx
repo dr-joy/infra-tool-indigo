@@ -922,10 +922,11 @@ function AdminRedmine() {
 }
 
 // ── Khung ngoài — 7 mục con ──────────────────────────────────────────────────────────────
-type AdminMuc = 'teams' | 'feature_visibility' | 'release' | 'join_requests' | 'users' | 'audit' | 'redmine';
+export type AdminMuc = 'teams' | 'feature_visibility' | 'release' | 'join_requests' | 'users' | 'audit' | 'redmine';
 
-export function ManHinhAdmin() {
-  const [muc, setMuc] = useState<AdminMuc>('teams');
+export function ManHinhAdmin({ initialMuc = 'teams' }: { initialMuc?: AdminMuc }) {
+  const [muc, setMuc] = useState<AdminMuc>(initialMuc);
+  useEffect(() => { setMuc(initialMuc); }, [initialMuc]);
   const tabClass = (active: boolean) =>
     `rounded-md px-3 py-1.5 text-sm font-medium ${active ? 'bg-primary text-on-primary' : 'border border-vien bg-surface text-phu hover:bg-surface-2'}`;
 

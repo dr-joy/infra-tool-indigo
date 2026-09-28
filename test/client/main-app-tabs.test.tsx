@@ -13,12 +13,16 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 interface TeamStub { id: number; name: string; role: 'leader' | 'member'; features: string[] }
+interface NotificationStub { id: number; kind: string; payload: string; created_at: string; read_at: string | null }
 
 // Mock fetch tối thiểu cho mọi endpoint App() (và các màn con nó luôn mount) có thể gọi — bất kỳ
 // route nào ngoài danh sách này trả rỗng, cùng quy ước với test/client/screens.test.tsx. `teams` là
 // mảng SỐNG (mutate trực tiếp `features` của từng phần tử) để mô phỏng đúng chỗ vừa vá: PATCH
 // /api/admin/feature-visibility đổi state rồi phải phản ánh lại ở /api/me/teams sau khi reload().
-function mockApi(teams: TeamStub[], systemRole: 'user' | 'admin' = 'user') {
+function mockApi(teams: TeamStub[], systemRole: 'user' | 'admin' = 'user', notifications: NotificationStub[] = []) {
+  const joinRequests = [
+    { id: 10, user_id: 3, email: 'moi@drjoy.jp', display_name: 'Người Mới', requested_team_id: 1, requested_role: 'member', row_version: 1, created_at: '2026-09-28T00:00:00.000Z' }
+  ];
   globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input), 'http://localhost');
     const method = (init?.method || 'GET').toUpperCase();
@@ -33,7 +37,11 @@ function mockApi(teams: TeamStub[], systemRole: 'user' | 'admin' = 'user') {
     if (url.pathname === '/api/me/teams') {
       return jsonResponse({ teams: teams.map(({ id, name, role, features }) => ({ id, name, description: null, role, features })) });
     }
-    if (url.pathname === '/api/notifications') return jsonResponse({ notifications: [] });
+    if (url.pathname === '/api/notifications' && method === 'GET') return jsonResponse({ notifications });
+    if (url.pathname === '/api/notifications/1/read' && method === 'POST') {
+      notifications = notifications.map((n) => n.id === 1 ? { ...n, read_at: '2026-09-28T00:00:01.000Z' } : n);
+      return jsonResponse({ ok: true });
+    }
     if (url.pathname.startsWith('/api/tasks')) return jsonResponse({ khoTask: [], taskHomNay: [], taskDinhKy: [], lichSu: [] });
     if (url.pathname === '/api/admin/teams') {
       return jsonResponse({ teams: teams.map((t) => ({ id: t.id, name: t.name, description: null, row_version: 1, created_at: '' })), nextCursor: null });
@@ -45,6 +53,7 @@ function mockApi(teams: TeamStub[], systemRole: 'user' | 'admin' = 'user') {
       })));
       return jsonResponse({ visibility });
     }
+    if (url.pathname === '/api/admin/join-requests' && method === 'GET') return jsonResponse({ joinRequests });
     if (url.pathname === '/api/admin/feature-visibility' && method === 'PATCH') {
       const body = JSON.parse(String(init?.body)) as { teamId: number; feature: string; level: 'on' | 'off' };
       const team = teams.find((t) => t.id === body.teamId);
@@ -136,6 +145,26 @@ describe('App() — ẩn tab theo team_feature_visibility (CR-20260913 FR-7)', (
     fireEvent.click(screen.getByRole('switch', { name: 'Project — Dev13' }));
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Projects' })).toBeInTheDocument());
+  });
+
+  it('admin có notification yêu cầu tham gia -> chuông mở thẳng Admin/Yêu cầu tham gia và đánh dấu đã đọc', async () => {
+    const notifications = [{
+      id: 1,
+      kind: 'join_request_created',
+      payload: JSON.stringify({ joinRequestId: 10, userId: 3, teamId: 1, role: 'member' }),
+      created_at: '2026-09-28T00:00:00.000Z',
+      read_at: null
+    }];
+    mockApi([{ id: 1, name: 'Dev13', role: 'leader', features: [] }], 'admin', notifications);
+    renderApp();
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Thông báo (1 chưa đọc)' })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Thông báo (1 chưa đọc)' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /Có yêu cầu tham gia mới/ }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Yêu cầu tham gia' })).toHaveClass('bg-primary'));
+    await waitFor(() => expect(screen.getByText('Người Mới')).toBeInTheDocument());
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledWith('/api/notifications/1/read', expect.objectContaining({ method: 'POST' })));
   });
 
   it('nút thu gọn sidebar -> ẩn nhãn chữ (còn icon bấm được), bấm lại -> hiện lại; nhớ qua localStorage', async () => {

@@ -270,6 +270,42 @@
     @apply ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2;
   }
 
+  .notification-bell {
+    @apply relative flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-vien bg-surface text-phu transition hover:bg-surface-2 hover:text-muc;
+  }
+
+  .notification-badge {
+    @apply absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1 text-[11px] font-bold leading-none text-on-primary;
+  }
+
+  .notification-menu {
+    @apply absolute right-0 top-11 z-50 w-80 overflow-hidden rounded-lg border border-vien bg-surface shadow-lg;
+  }
+
+  .notification-menu-title {
+    @apply border-b border-vien px-3 py-2 text-sm font-bold text-muc;
+  }
+
+  .notification-empty {
+    @apply px-3 py-4 text-sm text-phu;
+  }
+
+  .notification-item {
+    @apply block w-full border-b border-vien px-3 py-3 text-left transition last:border-b-0 hover:bg-surface-2;
+  }
+
+  .notification-item:not(.notification-item-read) {
+    @apply bg-primary-soft;
+  }
+
+  .notification-item-title {
+    @apply block text-sm font-semibold text-muc;
+  }
+
+  .notification-item-desc {
+    @apply mt-1 block text-xs leading-5 text-phu;
+  }
+
   .man-hinh-project {
     @apply grid min-h-0 flex-1 overflow-hidden rounded-lg border border-vien backdrop-blur lg:grid-cols-[300px_1fr];
     background: var(--color-surface);

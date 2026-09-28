@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import { useLayoutEffect } from 'react';
 import { LangProvider, useLang } from './useLang';
 import { type TranslationKey } from './i18n';
+import type { AdminMuc } from './screens/admin';
 // Ba tab nặng & độc lập -> tải động (code-split) để bundle khởi động nhẹ hơn,
 // chỉ nạp khi người dùng mở đúng tab.
 // CR-20260819: release.tsx là 1 trong các file lớn nhất repo nhưng chưa code-split như 3 tab dưới —
@@ -63,7 +64,7 @@ import { PicProvider, ToastProvider, useToast } from './context';
 import { AuthProvider, useAuth } from './auth-context';
 import { AuthShell } from './screens/auth-shell';
 import { TeamSwitcher } from './components/team-switcher';
-import { ApiError } from './api';
+import { api, ApiError } from './api';
 import {
   VIETNAM_TIME_ZONE, dateTimePartsInVietnam, congNgayInput, congThangInput,
   roundedImmediateStartTime, normalizeEmergencyTaskStartTime,
@@ -75,6 +76,14 @@ import type {
   ReleaseSyncPreview, ProjectTaskProgress, ProjectTaskAssignment,
   ProjectCreateBody, ToastKind, ToastItem
 } from './types';
+
+interface NotificationRow {
+  id: number;
+  kind: string;
+  payload: string;
+  created_at: string;
+  read_at: string | null;
+}
 
 
 
@@ -137,6 +146,110 @@ function supportsBrowserNotifications() {
   return typeof window !== 'undefined' && 'Notification' in window;
 }
 
+function formatNotification(n: NotificationRow) {
+  let payload: Record<string, unknown> = {};
+  try {
+    const parsed = JSON.parse(n.payload) as unknown;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) payload = parsed as Record<string, unknown>;
+  } catch { /* payload hỏng -> dùng fallback an toàn */ }
+
+  if (n.kind === 'join_request_created') {
+    return {
+      title: 'Có yêu cầu tham gia mới',
+      description: 'Admin cần duyệt hoặc từ chối trong mục Yêu cầu tham gia.',
+      targetAdminMuc: 'join_requests' as AdminMuc
+    };
+  }
+  if (n.kind === 'join_request_approved') {
+    const role = payload.role === 'leader' ? 'Leader' : 'Member';
+    return {
+      title: 'Yêu cầu tham gia đã được duyệt',
+      description: `Bạn đã được cấp vai trò ${role}.`,
+      targetAdminMuc: null
+    };
+  }
+  return {
+    title: 'Thông báo mới',
+    description: n.kind,
+    targetAdminMuc: null
+  };
+}
+
+function NotificationBell({ onOpenAdminMuc }: { onOpenAdminMuc: (muc: AdminMuc) => void }) {
+  const [items, setItems] = useState<NotificationRow[]>([]);
+  const [open, setOpen] = useState(false);
+  const unreadCount = items.filter((n) => !n.read_at).length;
+
+  const load = useCallback(async (alive?: { current: boolean }) => {
+    try {
+      const res = await api<{ notifications: NotificationRow[] }>('/api/notifications');
+      if (!alive || alive.current) setItems(res.notifications);
+    } catch {
+      if (!alive || alive.current) setItems([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    const alive = { current: true };
+    void load(alive);
+    const id = window.setInterval(() => { void load(alive); }, 15000);
+    return () => { alive.current = false; window.clearInterval(id); };
+  }, [load]);
+
+  async function markRead(n: NotificationRow) {
+    if (n.read_at) return;
+    setItems((cur) => cur.map((item) => item.id === n.id ? { ...item, read_at: new Date().toISOString() } : item));
+    try {
+      await api(`/api/notifications/${n.id}/read`, { method: 'POST' });
+    } catch {
+      void load();
+    }
+  }
+
+  async function handleClick(n: NotificationRow) {
+    const formatted = formatNotification(n);
+    await markRead(n);
+    setOpen(false);
+    if (formatted.targetAdminMuc) onOpenAdminMuc(formatted.targetAdminMuc);
+  }
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        className="notification-bell"
+        onClick={() => setOpen((v) => !v)}
+        title="Thông báo"
+        aria-label={`Thông báo${unreadCount > 0 ? ` (${unreadCount} chưa đọc)` : ''}`}
+      >
+        <Bell size={18} />
+        {unreadCount > 0 && <span className="notification-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>}
+      </button>
+      {open && (
+        <div className="notification-menu" role="menu">
+          <div className="notification-menu-title">Thông báo</div>
+          {items.length === 0 && <div className="notification-empty">Chưa có thông báo.</div>}
+          {items.map((n) => {
+            const formatted = formatNotification(n);
+            return (
+              <button
+                key={n.id}
+                type="button"
+                className={`notification-item ${n.read_at ? 'notification-item-read' : ''}`}
+                onClick={() => void handleClick(n)}
+                role="menuitem"
+              >
+                <span className="notification-item-title">{formatted.title}</span>
+                <span className="notification-item-desc">{formatted.description}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Export (không chỉ dùng nội bộ file) để test tích hợp render được thật (Codex code-review vòng 3
 // §8.3 — không được lấy unit test reducer/store làm thay cho việc chưa từng render `main.tsx`).
 export function App() {
@@ -190,6 +303,7 @@ export function App() {
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(() => (
     supportsBrowserNotifications() ? Notification.permission : 'denied'
   ));
+  const [adminMucMacDinh, setAdminMucMacDinh] = useState<AdminMuc>('teams');
   // Council run 022dd1e5 (docs/exchanges/2026-09-12.md): ref-handle mỏng để shell điều khiển
   // module Task cá nhân (mở popup nhanh/lịch sử qua phím tắt, làm mới sau khi Lên lịch tạo task)
   // mà không phải nâng state của module đó lên đây.
@@ -211,6 +325,12 @@ export function App() {
     if (!supportsBrowserNotifications()) return;
     const permission = await Notification.requestPermission();
     setNotificationPermission(permission);
+  }
+
+  function moAdminMuc(muc: AdminMuc) {
+    if (!laAdmin) return;
+    setAdminMucMacDinh(muc);
+    chuyenTab('admin');
   }
 
   const activeTabMeta = tabsChinh.find((tab) => tab.key === tabDangMo);
@@ -268,6 +388,7 @@ export function App() {
         <header className="topbar">
           <h1 className="topbar-title">{activeTabMeta ? t(activeTabMeta.i18nKey) : ''}</h1>
           <div className="topbar-right">
+            <NotificationBell onOpenAdminMuc={moAdminMuc} />
             {tabDangMo === 'task_ca_nhan' && supportsBrowserNotifications() && notificationPermission !== 'granted' && (
               <button
                 className="nut-phu"
@@ -319,7 +440,7 @@ export function App() {
             lại từ trước khi actor mất quyền Admin giữa phiên (vd Admin khác vừa đổi system_role). */}
         {tabDangMo === 'admin' && laAdmin && (
           <Suspense fallback={<div className="p-6 text-sm">{t('loading.data')}</div>}>
-            <ManHinhAdmin />
+            <ManHinhAdmin initialMuc={adminMucMacDinh} />
           </Suspense>
         )}
 
