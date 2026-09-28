@@ -106,5 +106,9 @@ export const ERROR_CODE_REGISTRY: Record<string, ErrorCodeEntry> = {
   LAST_ADMIN: {
     status: 409,
     note: 'Hạ quyền (POST /admin/users/:id/demote-admin) hoặc khoá (POST /admin/users/:id/disable) Admin cuối cùng còn active — chặn cứng, phải gán thêm Admin khác trước (docs/exchanges/2026-09-25.md)'
+  },
+  COLOR_TAKEN: {
+    status: 409,
+    note: 'CR-20260913 FR-17: PUT /teams/:teamId/gantt-colors/:userId — color_key đã được User khác trong cùng team dùng (UNIQUE (team_id, color_key))'
   }
 };

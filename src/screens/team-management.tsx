@@ -5,9 +5,10 @@
 import { useEffect, useState } from 'react';
 import { UserMinus, UserPlus } from 'lucide-react';
 import { apiTeam } from '../api';
-import { useToast } from '../context';
+import { useToast, usePics } from '../context';
 import { useAuth, useActiveTeamId } from '../auth-context';
 import { Modal } from '../components/Modal';
+import { GANTT_COLOR_TOKENS, ganttColorHex } from '../lib/gantt-colors';
 
 function loiThanThien(e: unknown): string {
   return e instanceof Error ? e.message : 'Có lỗi xảy ra';
@@ -92,21 +93,29 @@ function TabTongQuan({ teamId, teamName, teamDesc, vaiTro }: { teamId: number | 
 }
 
 // ── Thành viên (FR-12: thêm/bớt, chỉ Leader) ─────────────────────────────────────────────
+interface GanttColorRow { userId: number; colorKey: string; rowVersion: number; }
+
 function TabThanhVien({ teamId, laLeader }: { teamId: number | null; laLeader: boolean }) {
   const toast = useToast();
   const [members, setMembers] = useState<MemberRow[]>([]);
+  // CR-20260913 FR-17: màu Gantt cố định 15 màu theo User — Leader gán ở đây, dùng chung màn add/bớt.
+  const [ganttColors, setGanttColors] = useState<GanttColorRow[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<MemberRow | null>(null);
+  // Danh sách (tên PIC cũ, màu cũ) làm tham khảo — Leader tự đối chiếu bằng mắt, KHÔNG map tự động
+  // sang User nào (đúng chốt FR-17/FR-15).
+  const { pics: picList, picColors } = usePics();
+  const [showPicRef, setShowPicRef] = useState(false);
 
   async function tai(aliveRef?: { current: boolean }) {
-    if (teamId == null) { setMembers([]); setLoading(false); return; }
+    if (teamId == null) { setMembers([]); setGanttColors([]); setLoading(false); return; }
     try {
-      const data = await apiTeam<{ members: MemberRow[] }>(teamId, `/api/teams/${teamId}/members`);
+      const membersData = await apiTeam<{ members: MemberRow[] }>(teamId, `/api/teams/${teamId}/members`);
       if (aliveRef && !aliveRef.current) return;
-      setMembers(data.members);
+      setMembers(membersData.members);
       setError('');
     } catch (e) {
       if (aliveRef && !aliveRef.current) return;
@@ -114,10 +123,39 @@ function TabThanhVien({ teamId, laLeader }: { teamId: number | null; laLeader: b
     } finally {
       if (!aliveRef || aliveRef.current) setLoading(false);
     }
+    // Màu Gantt (FR-17) tách riêng khỏi try/catch trên — lỗi ở đây (vd route mới trên bản cũ chưa
+    // deploy kịp) không được che mất danh sách thành viên đã tải thành công.
+    try {
+      const colorsData = await apiTeam<{ colors: GanttColorRow[] }>(teamId, `/api/teams/${teamId}/gantt-colors`);
+      if (aliveRef && !aliveRef.current) return;
+      setGanttColors(colorsData.colors);
+    } catch {
+      if (aliveRef && !aliveRef.current) return;
+      setGanttColors([]);
+    }
   }
+
+  async function doiMau(userId: number, colorKey: string | null) {
+    if (teamId == null) return;
+    const current = ganttColors.find((c) => c.userId === userId);
+    setBusy(true);
+    setError('');
+    try {
+      await apiTeam(teamId, `/api/teams/${teamId}/gantt-colors/${userId}`, {
+        method: 'PUT', body: JSON.stringify({ colorKey, rowVersion: current?.rowVersion })
+      });
+      await tai();
+    } catch (e) {
+      setError(loiThanThien(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   useEffect(() => {
     const aliveRef = { current: true };
     setMembers([]);
+    setGanttColors([]);
     setError('');
     setLoading(true);
     // Đóng luôn popup thêm/bớt thành viên nếu đổi team khi đang mở — Council review (run ba1e14ed) nêu
@@ -154,27 +192,74 @@ function TabThanhVien({ teamId, laLeader }: { teamId: number | null; laLeader: b
     <div className="flex flex-col gap-3">
       {error && <div className="rounded bg-danger-soft px-3 py-2 text-sm text-danger">{error}</div>}
       {laLeader && (
-        <div>
+        <div className="flex flex-wrap items-center gap-2">
           <button type="button" className={`${btnPrimary} flex w-fit items-center gap-1`} onClick={() => setShowAdd(true)}>
             <UserPlus size={16} /> Thêm thành viên
           </button>
+          {picList.length > 0 && (
+            <button type="button" className={btnSecondary} onClick={() => setShowPicRef((v) => !v)}>
+              {showPicRef ? 'Ẩn' : 'Xem'} màu PIC cũ (tham khảo)
+            </button>
+          )}
+        </div>
+      )}
+      {laLeader && showPicRef && (
+        <div className="rounded-lg border border-vien bg-surface p-3 text-sm">
+          <p className="mb-2 text-xs text-phu">
+            Danh sách (tên PIC cũ, màu cũ) chỉ để bạn tự đối chiếu bằng mắt — hệ thống KHÔNG tự khớp tên sang User.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {picList.map((n) => (
+              <span key={n} className="flex items-center gap-1.5">
+                <span className="h-4 w-4 shrink-0 rounded border border-vien" style={{ backgroundColor: picColors[n] || 'transparent' }} />
+                {n}
+              </span>
+            ))}
+          </div>
         </div>
       )}
       <div className="rounded-lg border border-vien bg-surface">
-        {members.map((m) => (
-          <div key={m.id} className="flex items-center gap-2 border-b border-vien p-3 last:border-b-0">
-            <div className="flex-1">
-              <div className="text-sm font-medium">{m.display_name}</div>
-              <div className="text-xs text-phu">{m.email}</div>
+        {members.map((m) => {
+          const mau = ganttColors.find((c) => c.userId === m.id);
+          return (
+            <div key={m.id} className="flex items-center gap-2 border-b border-vien p-3 last:border-b-0">
+              <div className="flex-1">
+                <div className="text-sm font-medium">{m.display_name}</div>
+                <div className="text-xs text-phu">{m.email}</div>
+              </div>
+              {m.role === 'leader' && <span className="rounded bg-primary-soft px-2 py-0.5 text-xs text-primary">Leader</span>}
+              {laLeader ? (
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className="h-5 w-5 shrink-0 rounded border border-vien"
+                    style={{ backgroundColor: ganttColorHex(mau?.colorKey) || 'transparent' }}
+                    title="Màu trên Gantt"
+                  />
+                  <select
+                    className="rounded border border-vien bg-surface px-1.5 py-1 text-xs"
+                    value={mau?.colorKey || ''}
+                    disabled={busy}
+                    onChange={(e) => doiMau(m.id, e.target.value === '' ? null : e.target.value)}
+                  >
+                    <option value="">— chưa gán màu —</option>
+                    {GANTT_COLOR_TOKENS.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+                  </select>
+                </div>
+              ) : mau && (
+                <span
+                  className="h-5 w-5 shrink-0 rounded border border-vien"
+                  style={{ backgroundColor: ganttColorHex(mau.colorKey) || 'transparent' }}
+                  title="Màu trên Gantt"
+                />
+              )}
+              {laLeader && (
+                <button type="button" className="rounded p-1.5 text-phu hover:bg-danger-soft hover:text-danger" title="Bớt khỏi team" onClick={() => setRemoveTarget(m)}>
+                  <UserMinus size={14} />
+                </button>
+              )}
             </div>
-            {m.role === 'leader' && <span className="rounded bg-primary-soft px-2 py-0.5 text-xs text-primary">Leader</span>}
-            {laLeader && (
-              <button type="button" className="rounded p-1.5 text-phu hover:bg-danger-soft hover:text-danger" title="Bớt khỏi team" onClick={() => setRemoveTarget(m)}>
-                <UserMinus size={14} />
-              </button>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {showAdd && teamId != null && (

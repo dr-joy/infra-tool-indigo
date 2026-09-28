@@ -5,6 +5,7 @@ import { requireSession, requireActiveAccount, actorFromRequest } from '../lib/a
 import { authorize } from '../lib/authorize.js';
 import { writeAudit } from '../lib/audit.js';
 import { provisionTeam } from '../lib/team-provisioning.js';
+import { isGanttColorKey } from '../lib/gantt-colors.js';
 
 // Lát 3 (FR-6, FR-12) — Admin quản lý team/Leader (toàn cục, policyKind 'team_feature' với
 // scope.teamId bỏ trống), Leader/Member tự quản thành viên đúng team mình (scope.teamId thật).
@@ -262,6 +263,75 @@ router.delete('/teams/:teamId/members/:userId', requireSession, requireActiveAcc
     res.json({ ok: true });
   } catch (error) {
     sendRouteError(res, error, 'Không xoá được thành viên');
+  }
+});
+
+// ── GET/PUT /teams/:teamId/gantt-colors — FR-17, màu Gantt cố định 15 màu theo User thật ──────────
+// Đọc: mọi thành viên (Gantt cần tô đúng màu khi xem). Gán: chỉ Leader, cùng màn với add/bớt thành
+// viên (Quản lý team → tab Thành viên). `pics.color` (PIC chữ tự do cũ) KHÔNG map tự động sang đây —
+// Leader tự đối chiếu bằng mắt (FR-17, xem docs/delivery/changes/CR-20260913...).
+router.get('/teams/:teamId/gantt-colors', requireSession, requireActiveAccount, (req, res) => {
+  const teamId = Number(req.params.teamId);
+  if (!Number.isInteger(teamId)) return res.status(400).json({ message: 'teamId không hợp lệ' });
+  authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'team_member_gantt_color', action: 'list', scope: { teamId } });
+  const rows = db.prepare('SELECT user_id, color_key, row_version FROM team_member_gantt_colors WHERE team_id = ?').all(teamId) as
+    { user_id: number; color_key: string; row_version: number }[];
+  res.json({ colors: rows.map((r) => ({ userId: r.user_id, colorKey: r.color_key, rowVersion: r.row_version })) });
+});
+
+router.put('/teams/:teamId/gantt-colors/:userId', requireSession, requireActiveAccount, (req, res) => {
+  const teamId = Number(req.params.teamId);
+  const userId = Number(req.params.userId);
+  if (!Number.isInteger(teamId) || !Number.isInteger(userId)) return res.status(400).json({ message: 'Tham số không hợp lệ' });
+  authorize({ actor: actorFromRequest(req), policyKind: 'team_feature', resource: 'team_member_gantt_color', action: 'update', scope: { teamId } });
+
+  const member = db.prepare('SELECT 1 FROM team_members WHERE team_id = ? AND user_id = ?').get(teamId, userId);
+  if (!member) return res.status(404).json({ message: 'Người này không phải thành viên của team' });
+
+  const body = req.body as { colorKey?: string | null; rowVersion?: number };
+  if (body.colorKey != null && !isGanttColorKey(body.colorKey)) {
+    return res.status(400).json({ message: 'Màu không hợp lệ' });
+  }
+
+  try {
+    withTransaction(() => {
+      const existing = db.prepare('SELECT row_version FROM team_member_gantt_colors WHERE team_id = ? AND user_id = ?')
+        .get(teamId, userId) as { row_version: number } | undefined;
+
+      if (body.colorKey == null) {
+        if (existing) {
+          const del = db.prepare('DELETE FROM team_member_gantt_colors WHERE team_id = ? AND user_id = ? AND row_version = ?')
+            .run(teamId, userId, body.rowVersion ?? -1);
+          if (del.changes === 0) throw new HttpError(409, 'Có người vừa thay đổi màu này, vui lòng tải lại', 'VERSION_CONFLICT');
+          writeAudit(req.user!.id, teamId, 'team_member_gantt_color.clear', `user:${userId}`, { teamId, userId });
+        }
+        return;
+      }
+
+      const clash = db.prepare('SELECT user_id FROM team_member_gantt_colors WHERE team_id = ? AND color_key = ? AND user_id != ?')
+        .get(teamId, body.colorKey, userId);
+      if (clash) throw new HttpError(409, 'Màu này đã được dùng cho người khác trong team, chọn màu khác', 'COLOR_TAKEN');
+
+      const now = new Date().toISOString();
+      if (existing) {
+        const updated = db.prepare(`
+          UPDATE team_member_gantt_colors SET color_key = ?, updated_at = ?, updated_by = ?, row_version = row_version + 1
+          WHERE team_id = ? AND user_id = ? AND row_version = ?
+        `).run(body.colorKey, now, req.user!.id, teamId, userId, body.rowVersion ?? -1);
+        if (updated.changes === 0) throw new HttpError(409, 'Có người vừa thay đổi màu này, vui lòng tải lại', 'VERSION_CONFLICT');
+      } else {
+        db.prepare(`
+          INSERT INTO team_member_gantt_colors (team_id, user_id, color_key, updated_at, updated_by)
+          VALUES (?, ?, ?, ?, ?)
+        `).run(teamId, userId, body.colorKey, now, req.user!.id);
+      }
+      writeAudit(req.user!.id, teamId, 'team_member_gantt_color.set', `user:${userId}`, { teamId, userId, colorKey: body.colorKey });
+    });
+    const row = db.prepare('SELECT color_key, row_version FROM team_member_gantt_colors WHERE team_id = ? AND user_id = ?')
+      .get(teamId, userId) as { color_key: string; row_version: number } | undefined;
+    res.json({ userId, colorKey: row?.color_key ?? null, rowVersion: row?.row_version ?? null });
+  } catch (error) {
+    sendRouteError(res, error, 'Không thể lưu màu Gantt');
   }
 });
 

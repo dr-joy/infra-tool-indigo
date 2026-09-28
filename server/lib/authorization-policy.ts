@@ -102,6 +102,12 @@ export const AUTHORIZATION_POLICY: Record<string, Record<string, PolicyEntry>> =
     // việc của chính mình) — route tự so diff mảng cũ/mới để chặn Member đụng dòng người khác.
     update: { feature: 'project', roles: ['leader', 'member'] }
   },
+  // FR-17: bảng màu Gantt cố định 15 màu theo User. Đọc cho mọi thành viên (cần để tô đúng màu khi
+  // xem Gantt), gán màu chỉ Leader (cùng màn Quản lý team → tab Thành viên với add/bớt, FR-12/17).
+  team_member_gantt_color: {
+    list: { feature: 'project', roles: ['leader', 'member'] },
+    update: { feature: 'project', roles: ['leader'] }
+  },
 
   // Lát 4 mới — Báo cáo tuần (CR §3.2/FR-21, sửa 13/09: KHÔNG có luồng Member tự đặt mục tiêu — Member
   // chỉ xem, mọi thao tác ghi/xoá thuộc Leader).

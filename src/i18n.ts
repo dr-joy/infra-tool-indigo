@@ -195,7 +195,7 @@ const dict = {
 
   // === PROJECT TASK ROW ===
   'ptask.planned': 'Dự kiến',
-  'ptask.pic': 'PIC',
+  'ptask.pic': 'Người phụ trách',
   'ptask.progress': 'Tiến độ',
   'ptask.progress_quick': 'Chọn % tiến độ (bước 10%)',
   'ptask.expand': 'Mở rộng task con',

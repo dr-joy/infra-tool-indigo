@@ -190,7 +190,7 @@ export function PopupTaoProjectTask({
             </div>
             <div className="ptask-seg-list">
               <div className="ptask-seg-row ptask-seg-row-head">
-                <span>PIC</span><span>Từ ngày</span><span>Đến ngày</span><span>estimate time</span><span />
+                <span>Người phụ trách</span><span>Từ ngày</span><span>Đến ngày</span><span>estimate time</span><span />
               </div>
               {segRows.map((r, i) => (
                 <div key={i} className="ptask-seg-row">
@@ -199,7 +199,7 @@ export function PopupTaoProjectTask({
                     disabled={isSaving}
                     onChange={(e) => suaGiaiDoan(i, { userId: e.target.value === '' ? '' : Number(e.target.value) })}
                   >
-                    <option value="">— chọn PIC —</option>
+                    <option value="">— chọn người —</option>
                     {teamMembers.map((m) => <option key={m.id} value={m.id}>{m.displayName}</option>)}
                   </select>
                   <input type="date" value={r.startDate} disabled={isSaving} onChange={(e) => suaGiaiDoan(i, { startDate: e.target.value })} />

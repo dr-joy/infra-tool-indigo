@@ -15,7 +15,8 @@ import { useActiveTeamId } from '../auth-context';
 import { Modal } from '../components/Modal';
 import { CopyNoteButton, TaskLinkIcon, TaskLinkBadges, TaskLinkEditor, SortIcon } from '../components/task-atoms';
 import { PopupTaoProjectTask, PopupXacNhanXoa } from '../components/dialogs';
-import { usePics, useToast } from '../context';
+import { useToast } from '../context';
+import { ganttColorHex } from '../lib/gantt-colors';
 import {
   taoNgayTuInput, localDateInputValue, mondayOfWeek, congNgayInput, congThangInput,
   currentVietnamDateInputValue, dinhDangNgay, dinhDangNgayDayDu, addDays,
@@ -186,6 +187,9 @@ export function ManHinhProject() {
   // CR-20260913 Lát 4 (FR-15): nguồn chọn "người phụ trách"/PIC — thay cho bảng `pics` chuỗi tự do
   // cũ (usePics()). Nạp lại mỗi khi đổi team đang chọn.
   const [teamMembers, setTeamMembers] = useState<TeamMemberItem[]>([]);
+  // CR-20260913 FR-17: màu Gantt cố định theo User (colorKey, tra hex qua ganttColorHex) — thay cho
+  // usePics().picColors (PIC chữ tự do). Key = userId.
+  const [teamGanttColors, setTeamGanttColors] = useState<Record<number, string>>({});
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   // Cho phép deep-link tới 1 project qua ?project=<id>
   const [projectDangChon, setProjectDangChon] = useState(() => new URLSearchParams(window.location.search).get('project') || '');
@@ -303,6 +307,21 @@ export function ManHinhProject() {
     }
   }
 
+  // Màu Gantt cố định theo User (FR-17) — dùng ở Gantt tổng, đọc lại mỗi khi đổi team.
+  async function taiTeamGanttColors(aliveRef?: { current: boolean }) {
+    if (activeTeamId == null) return;
+    try {
+      const data = await apiTeam<{ colors: { userId: number; colorKey: string }[] }>(
+        activeTeamId, `/api/teams/${activeTeamId}/gantt-colors`
+      );
+      if (aliveRef && !aliveRef.current) return;
+      setTeamGanttColors(Object.fromEntries(data.colors.map((c) => [c.userId, c.colorKey])));
+    } catch {
+      if (aliveRef && !aliveRef.current) return;
+      setTeamGanttColors({});
+    }
+  }
+
   // Badge 🎯 = mục tiêu của tuần có mục tiêu mới nhất, chưa 100%.
   // Báo đỏ = carry-over chưa xử lý (không được duyệt tiếp, chưa reschedule).
   async function taiBadgeIds(aliveRef?: { current: boolean }) {
@@ -333,6 +352,7 @@ export function ManHinhProject() {
     void taiProjects(aliveRef);
     void taiBadgeIds(aliveRef);
     void taiTeamMembers(aliveRef);
+    void taiTeamGanttColors(aliveRef);
     return () => { aliveRef.current = false; };
   }, [activeTeamId]);
 
@@ -1027,6 +1047,7 @@ export function ManHinhProject() {
           projects={projects}
           tasksByProject={ganttTongTasks}
           teamMembers={teamMembers}
+          teamGanttColors={teamGanttColors}
           isLoading={dangTaiGanttTong}
           error={ganttTongError}
           onClose={() => setMoGanttTong(false)}
@@ -2008,6 +2029,7 @@ function PopupGanttTong({
   error,
   onClose,
   teamMembers,
+  teamGanttColors,
   onReload,
   onTaskOpen,
   onTaskDatesChange,
@@ -2018,6 +2040,8 @@ function PopupGanttTong({
   tasksByProject: Record<string, ProjectTaskItem[]>;
   // CR-20260913 Lát 4: nguồn tên hiển thị cho giai đoạn phân công (userId) — thay cho PIC chữ tự do.
   teamMembers: TeamMemberItem[];
+  // CR-20260913 FR-17: màu Gantt cố định theo User (userId -> colorKey).
+  teamGanttColors: Record<number, string>;
   isLoading: boolean;
   error: string;
   onClose: () => void;
@@ -2028,19 +2052,28 @@ function PopupGanttTong({
   onTaskReorder: (projectId: string, taskIds: string[]) => Promise<void>;
 }) {
   const { t } = useLang();
-  // picColors vẫn đọc từ bảng `pics` cũ (chưa có API màu theo User thật — team_member_gantt_colors
-  // mới có schema, chưa có route — nợ lại, xem báo cáo). Tra theo TÊN nên chỉ khớp màu khi tên User
-  // trùng đúng 1 PIC cũ đã có màu; không khớp thì vẽ xám trung tính (đúng thiết kế Lát 4: "Gantt vẽ
-  // xám trung tính kèm tên cho tới khi Leader gán màu", xem server/schema/project.ts).
-  const { picColors } = usePics();
-  const picColorsForTask = (assignee: string): string[] =>
-    splitAssignees(assignee).map((name) => picColors[name]).filter(Boolean) as string[];
   // Tên hiển thị của 1 giai đoạn: User thật (đã vào team) -> displayName; giai đoạn di trú chưa gắn
   // được User thật -> legacyPicLabel; còn lại (dữ liệu hỏng) -> placeholder không rỗng để không vỡ Map.
   function tenGiaiDoan(a: ProjectTaskAssignment): string {
     if (a.userId != null) return teamMembers.find((m) => m.id === a.userId)?.displayName || `User #${a.userId}`;
     return a.legacyPicLabel || '(không rõ)';
   }
+  // FR-17: màu Gantt theo User thật (team_member_gantt_colors), KHÔNG còn đọc bảng `pics` cũ. Giai
+  // đoạn di trú chưa gắn User (chỉ có legacyPicLabel) luôn xám trung tính — đúng thiết kế, không phải
+  // thiếu sót (xem server/schema/project.ts).
+  function mauCuaGiaiDoan(a: ProjectTaskAssignment): string {
+    if (a.userId == null) return 'var(--color-gantt-neutral)';
+    return ganttColorHex(teamGanttColors[a.userId]) || 'var(--color-gantt-neutral)';
+  }
+  // Task KHÔNG có giai đoạn phân công thật (chỉ còn cache `assignee` chuỗi tự do từ trước Lát 4) — cố
+  // gắng khớp TÊN với 1 User thật trong team (không phải PIC cũ) để vẫn lên màu nếu trùng; không khớp
+  // thì xám trung tính (không màu).
+  function mauTheoTen(name: string): string | null {
+    const member = teamMembers.find((m) => m.displayName === name);
+    return member ? ganttColorHex(teamGanttColors[member.id]) : null;
+  }
+  const picColorsForTask = (assignee: string): string[] =>
+    splitAssignees(assignee).map((name) => mauTheoTen(name)).filter((c): c is string => Boolean(c));
   // Lane theo PIC cho task có phân công giai đoạn: mỗi PIC một dòng, mỗi giai đoạn một đoạn bar.
   const ganttLaneHeight = 16;
   function lanesOfTask(task: ProjectTaskItem) {
@@ -2048,14 +2081,15 @@ function PopupGanttTong({
     if (segs.length === 0) return [] as { pic: string; color: string; segs: { start: string; end: string; index: number; estimateHours: number | null }[] }[];
     const order: string[] = [];
     const byPic = new Map<string, { start: string; end: string; index: number; estimateHours: number | null }[]>();
+    const colorByPic = new Map<string, string>();
     segs.forEach((a, index) => {
       const pic = tenGiaiDoan(a);
       // Lọc theo PIC: bỏ qua giai đoạn của PIC không được chọn (giữ nguyên index gốc cho kéo/preview).
       if (activePic && pic !== activePic) return;
-      if (!byPic.has(pic)) { byPic.set(pic, []); order.push(pic); }
+      if (!byPic.has(pic)) { byPic.set(pic, []); order.push(pic); colorByPic.set(pic, mauCuaGiaiDoan(a)); }
       byPic.get(pic)!.push({ start: a.startDate, end: a.endDate, index, estimateHours: a.estimateHours });
     });
-    return order.map((pic) => ({ pic, color: picColors[pic] || 'var(--color-gantt-neutral)', segs: byPic.get(pic)! }));
+    return order.map((pic) => ({ pic, color: colorByPic.get(pic) || 'var(--color-gantt-neutral)', segs: byPic.get(pic)! }));
   }
   function rowHeightOf(task: ProjectTaskItem) {
     const segs = (task.assignments || []).filter((a) => !activePic || tenGiaiDoan(a) === activePic);
@@ -2328,7 +2362,7 @@ function PopupGanttTong({
 
   // Kéo BAR CHA của task có phân công: chỉ 'move' (dời cả cụm). Lưu ngày gốc (đã tính cả preview)
   // của mọi đoạn con để dời đồng loạt. Bar cha không có resize -> độ dài luôn suy từ con.
-  const legendNames = [...new Set(allTasks.flatMap((tk) => splitAssignees(tk.assignee)))].filter((n) => picColors[n]);
+  const legendNames = [...new Set(allTasks.flatMap((tk) => splitAssignees(tk.assignee)))].filter((n) => mauTheoTen(n));
 
   return (
     <Modal onClose={onClose}>
@@ -2339,7 +2373,7 @@ function PopupGanttTong({
             {legendNames.length > 0 && (
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                 {legendNames.map((n) => (
-                  <span key={n} className="flex items-center gap-1 text-xs text-phu"><span className="h-3 w-3 rounded-sm" style={{ backgroundColor: picColors[n] }} />{n}</span>
+                  <span key={n} className="flex items-center gap-1 text-xs text-phu"><span className="h-3 w-3 rounded-sm" style={{ backgroundColor: mauTheoTen(n) || undefined }} />{n}</span>
                 ))}
               </div>
             )}
@@ -2354,9 +2388,9 @@ function PopupGanttTong({
               <option value="all">Tất cả dự án</option>
               {projects.map((p) => <option key={p.id} value={p.id}>{p.ten}</option>)}
             </select>
-            <select className="max-w-[11rem] truncate rounded border border-vien py-1 pl-2 pr-7 text-xs" value={filterPic} onChange={(e) => setFilterPic(e.target.value)} title="Lọc theo PIC">
-              <option value="">— Lọc PIC —</option>
-              <option value="all">Tất cả PIC</option>
+            <select className="max-w-[11rem] truncate rounded border border-vien py-1 pl-2 pr-7 text-xs" value={filterPic} onChange={(e) => setFilterPic(e.target.value)} title="Lọc theo người phụ trách">
+              <option value="">— Lọc người —</option>
+              <option value="all">Tất cả</option>
               {teamMembers.map((m) => <option key={m.id} value={m.displayName}>{m.displayName}</option>)}
             </select>
           </div>
@@ -2369,7 +2403,7 @@ function PopupGanttTong({
         ) : error ? (
           <div className="project-gantt-empty project-list-error">{error}</div>
         ) : !hasFilter ? (
-          <div className="project-gantt-empty">Chọn <b className="mx-1">dự án</b> hoặc <b className="mx-1">PIC</b> ở trên để hiển thị Gantt.</div>
+          <div className="project-gantt-empty">Chọn <b className="mx-1">dự án</b> hoặc <b className="mx-1">người phụ trách</b> ở trên để hiển thị Gantt.</div>
         ) : groups.length === 0 ? (
           <div className="project-gantt-empty">Không có task thực thi nào khớp bộ lọc.</div>
         ) : (
@@ -2539,7 +2573,7 @@ function PopupGanttTong({
                         const left = Math.max(0, khoangCachNgay(timelineStart, dates.start) * ganttDayWidth);
                         const width = Math.max(ganttDayWidth, (khoangCachNgay(dates.start, safeEnd) + 1) * ganttDayWidth);
                         const picCols = activePic
-                          ? (picColors[activePic] ? [picColors[activePic]] : [])
+                          ? (mauTheoTen(activePic) ? [mauTheoTen(activePic) as string] : [])
                           : picColorsForTask(task.assignee);
                         return (
                           <div
