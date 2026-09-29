@@ -11,7 +11,7 @@ import { useLang } from '../useLang';
 import type { TranslationKey } from '../i18n';
 import { InfoTip, TimeInput } from '../ui';
 import { api, apiTeam, ApiError } from '../api';
-import { useActiveTeamId } from '../auth-context';
+import { useActiveTeamId, useAuth } from '../auth-context';
 import { Modal } from '../components/Modal';
 import { CopyNoteButton, TaskLinkIcon, TaskLinkBadges, TaskLinkEditor, SortIcon } from '../components/task-atoms';
 import { PopupTaoProjectTask, PopupXacNhanXoa } from '../components/dialogs';
@@ -184,6 +184,13 @@ export function ManHinhProject() {
   // CR-20260913 FR-13 — mọi màn nghiệp vụ hiển thị theo đúng team đang chọn (server/routes/projects.ts
   // §6.2: GET /projects, GET /projects/closed, POST /projects, PATCH /projects/reorder bắt buộc teamId).
   const activeTeamId = useActiveTeamId();
+  const { actor, myTeams } = useAuth();
+  // UI phản ánh đúng policy ở server: Leader quản lý toàn bộ project; Member chỉ sửa task
+  // có một giai đoạn phân công của chính mình. Server vẫn là cổng quyết định cuối cùng.
+  const isTeamLeader = myTeams.find((team) => team.id === activeTeamId)?.role === 'leader';
+  const canEditTask = useCallback((task: ProjectTaskItem) => (
+    isTeamLeader || task.assignments?.some((assignment) => assignment.userId === actor?.id) === true
+  ), [actor?.id, isTeamLeader]);
   // CR-20260913 Lát 4 (FR-15): nguồn chọn "người phụ trách"/PIC — thay cho bảng `pics` chuỗi tự do
   // cũ (usePics()). Nạp lại mỗi khi đổi team đang chọn.
   const [teamMembers, setTeamMembers] = useState<TeamMemberItem[]>([]);
@@ -824,6 +831,7 @@ export function ManHinhProject() {
                 title={t('project.add')}
                 aria-label={t('project.add')}
                 onClick={() => setMoTaoProject(true)}
+                disabled={!isTeamLeader}
               >
                 <Plus size={24} />
               </button>
@@ -840,14 +848,14 @@ export function ManHinhProject() {
                 key={project.id}
                 type="button"
                 className={`${project.id === projectDangChon ? 'project-item project-item-active' : 'project-item'}${project.id === projectDangKeo ? ' project-item-dragging' : ''}`}
-                draggable
+                draggable={isTeamLeader}
                 onDragStart={(event) => {
                   event.dataTransfer.effectAllowed = 'move';
                   event.dataTransfer.setData('text/plain', project.id);
                   setProjectDangKeo(project.id);
                 }}
                 onDragOver={(event) => {
-                  if (!projectDangKeo || projectDangKeo === project.id) return;
+                  if (!isTeamLeader || !projectDangKeo || projectDangKeo === project.id) return;
                   event.preventDefault();
                   event.dataTransfer.dropEffect = 'move';
                 }}
@@ -907,12 +915,12 @@ export function ManHinhProject() {
                   </button>
                 )}
                 {!selectedProject.isSystem && (
-                  <button type="button" className="nut-phu project-icon-button" onClick={() => setProjectDangSua(selectedProject)} title={t('project.edit')} aria-label={t('project.edit')}>
+                  <button type="button" className="nut-phu project-icon-button" disabled={!isTeamLeader} onClick={() => setProjectDangSua(selectedProject)} title={t('project.edit')} aria-label={t('project.edit')}>
                     <Pencil className="project-header-action-icon" size={20} strokeWidth={2.5} />
                   </button>
                 )}
                 {!selectedProject.isSystem && (
-                  <button type="button" className="nut-nguy-hiem-text project-icon-button" onClick={() => setProjectDangXoa(selectedProject)} title={t('project.delete')} aria-label={t('project.delete')}>
+                  <button type="button" className="nut-nguy-hiem-text project-icon-button" disabled={!isTeamLeader} onClick={() => setProjectDangXoa(selectedProject)} title={t('project.delete')} aria-label={t('project.delete')}>
                     <Trash2 className="project-header-action-icon" size={20} strokeWidth={2.5} />
                   </button>
                 )}
@@ -961,6 +969,8 @@ export function ManHinhProject() {
                     onDelete={setProjectTaskDangXoa}
                     onProgressChange={capNhatTienDoProjectTask}
                     onReorder={sapXepProjectTasks}
+                    canEditTask={canEditTask}
+                    canDeleteTask={isTeamLeader}
                   />
                 )}
               </div>
@@ -1056,6 +1066,8 @@ export function ManHinhProject() {
           onTaskDatesChange={capNhatNgayTaskTong}
           onAssignmentDatesChange={capNhatNgayAssignmentTong}
           onTaskReorder={sapXepTaskThucThiTrenGantt}
+          actorUserId={actor?.id ?? null}
+          isTeamLeader={isTeamLeader}
         />
       )}
       {ganttTongTaskDangSua && (() => {
@@ -1317,7 +1329,9 @@ function ProjectTaskTree({
   onEdit,
   onDelete,
   onProgressChange,
-  onReorder
+  onReorder,
+  canEditTask,
+  canDeleteTask
 }: {
   tasks: ProjectTaskItem[];
   goalTaskIds: Set<string>;
@@ -1332,6 +1346,8 @@ function ProjectTaskTree({
   onDelete: (task: ProjectTaskItem) => void;
   onProgressChange: (task: ProjectTaskItem, tienDo: number) => void;
   onReorder: (parentId: string | null, taskIds: string[]) => Promise<void>;
+  canEditTask: (task: ProjectTaskItem) => boolean;
+  canDeleteTask: boolean;
 }) {
   const hidden = hiddenTaskIds ?? EMPTY_HIDDEN_TASK_IDS;
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
@@ -1403,6 +1419,8 @@ function ProjectTaskTree({
               onEdit={onEdit}
               onDelete={onDelete}
               onProgressChange={onProgressChange}
+              canEdit={canEditTask(task)}
+              canDelete={canDeleteTask}
               isDragging={draggingTaskId === task.id}
               onDragStart={(event) => {
                 event.stopPropagation();
@@ -1444,6 +1462,8 @@ function ProjectTaskRow({
   onEdit,
   onDelete,
   onProgressChange,
+  canEdit,
+  canDelete,
   isDragging,
   onDragStart,
   onDragEnd,
@@ -1463,6 +1483,8 @@ function ProjectTaskRow({
   onEdit: (task: ProjectTaskItem) => void;
   onDelete: (task: ProjectTaskItem) => void;
   onProgressChange: (task: ProjectTaskItem, tienDo: number) => void;
+  canEdit: boolean;
+  canDelete: boolean;
   isDragging: boolean;
   onDragStart: (event: React.DragEvent<HTMLElement>) => void;
   onDragEnd: (event: React.DragEvent<HTMLElement>) => void;
@@ -1490,9 +1512,9 @@ function ProjectTaskRow({
         style={{ '--project-task-indent': taskIndent } as React.CSSProperties}
         onClick={(event) => {
           if ((event.target as HTMLElement).closest('button, select, a, input, textarea')) return;
-          onEdit(task);
+          if (canEdit) onEdit(task);
         }}
-        title={t('ptask.edit')}
+        title={canEdit ? t('ptask.edit') : 'Bạn không có quyền sửa task này'}
       >
         <span className="project-task-index-stack">
           <span className="project-task-number">{taskNumber}</span>
@@ -1552,6 +1574,7 @@ function ProjectTaskRow({
                   <select
                     className="project-task-progress-overlay"
                     value={task.tienDo}
+                    disabled={!canEdit}
                     onChange={(event) => onProgressChange(task, Number(event.target.value))}
                   >
                     {progressSelectOptions(task.tienDo).map((value) => (
@@ -1584,7 +1607,7 @@ function ProjectTaskRow({
               <Plus size={24} />
             </button>
           )}
-          <button type="button" className="nut-nguy-hiem-text project-icon-button" onClick={() => onDelete(task)} title={t('ptask.delete')} aria-label={t('ptask.delete')}>
+          <button type="button" className="nut-nguy-hiem-text project-icon-button" disabled={!canDelete} onClick={() => onDelete(task)} title={t('ptask.delete')} aria-label={t('ptask.delete')}>
             <Trash2 size={16} />
           </button>
         </div>
@@ -2034,7 +2057,9 @@ function PopupGanttTong({
   onTaskOpen,
   onTaskDatesChange,
   onAssignmentDatesChange,
-  onTaskReorder
+  onTaskReorder,
+  actorUserId,
+  isTeamLeader
 }: {
   projects: ProjectItem[];
   tasksByProject: Record<string, ProjectTaskItem[]>;
@@ -2050,8 +2075,13 @@ function PopupGanttTong({
   onTaskDatesChange: (task: ProjectTaskItem, start: string, end: string) => Promise<void>;
   onAssignmentDatesChange: (task: ProjectTaskItem, updates: { index: number; start: string; end: string }[]) => Promise<void>;
   onTaskReorder: (projectId: string, taskIds: string[]) => Promise<void>;
+  actorUserId: number | null;
+  isTeamLeader: boolean;
 }) {
   const { t } = useLang();
+  const canEditTask = (task: ProjectTaskItem) => isTeamLeader
+    || task.assignments?.some((assignment) => assignment.userId === actorUserId) === true;
+  const canMoveAssignment = (assignment: ProjectTaskAssignment) => isTeamLeader || assignment.userId === actorUserId;
   // Tên hiển thị của 1 giai đoạn: User thật (đã vào team) -> displayName; giai đoạn di trú chưa gắn
   // được User thật -> legacyPicLabel; còn lại (dữ liệu hỏng) -> placeholder không rỗng để không vỡ Map.
   function tenGiaiDoan(a: ProjectTaskAssignment): string {
@@ -2279,6 +2309,7 @@ function PopupGanttTong({
   }
 
   function startOrderDrag(event: React.DragEvent, task: ProjectTaskItem) {
+    if (!isTeamLeader) return;
     setOrderDragTaskId(task.id);
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData('text/plain', task.id);
@@ -2296,6 +2327,7 @@ function PopupGanttTong({
   }
 
   function allowOrderDrop(event: React.DragEvent, targetTask: ProjectTaskItem) {
+    if (!isTeamLeader) return;
     const taskId = orderDragTaskId || event.dataTransfer.getData('text/gantt-task-id') || event.dataTransfer.getData('text/plain');
     const draggedTask = findGanttTask(taskId);
     if (!draggedTask || draggedTask.id === targetTask.id || draggedTask.projectId !== targetTask.projectId) return;
@@ -2305,6 +2337,7 @@ function PopupGanttTong({
   }
 
   function reorderTaskAbove(draggedTask: ProjectTaskItem, targetTask: ProjectTaskItem) {
+    if (!isTeamLeader) return;
     if (draggedTask.id === targetTask.id || draggedTask.projectId !== targetTask.projectId) return;
     const allProjectTasks = tasksByProject[targetTask.projectId] || [];
     const parentIds = new Set(allProjectTasks.map((tk) => tk.parentId).filter((v): v is string => Boolean(v)));
@@ -2319,6 +2352,7 @@ function PopupGanttTong({
   }
 
   function dropOrderTask(event: React.DragEvent, targetTask: ProjectTaskItem) {
+    if (!isTeamLeader) return;
     event.preventDefault();
     const draggedTaskId = orderDragTaskId || event.dataTransfer.getData('text/gantt-task-id') || event.dataTransfer.getData('text/plain');
     const draggedTask = findGanttTask(draggedTaskId);
@@ -2335,6 +2369,7 @@ function PopupGanttTong({
   }
 
   function startOrderPointerDrag(event: React.PointerEvent, task: ProjectTaskItem) {
+    if (!isTeamLeader) return;
     event.preventDefault();
     event.stopPropagation();
     setOrderDragTaskId(task.id);
@@ -2435,18 +2470,19 @@ function PopupGanttTong({
                         title={`${g.numberById.get(task.id) || ''} · ${task.tieuDe}`}
                         data-gantt-task-id={task.id}
                         data-gantt-project-id={task.projectId}
+                        draggable={isTeamLeader}
                         onDragStart={(event) => startOrderDrag(event, task)}
                         onDragOver={(event) => allowOrderDrop(event, task)}
                         onDragLeave={() => setOrderDropTaskId((id) => id === task.id ? null : id)}
                         onDrop={(event) => dropOrderTask(event, task)}
                         onDragEnd={() => { setOrderDragTaskId(null); setOrderDropTaskId(null); }}
                       >
-                        <GripVertical
+                        {isTeamLeader && <GripVertical
                           size={14}
                           className="project-gantt-task-grip"
                           aria-hidden="true"
                           onPointerDown={(event) => startOrderPointerDrag(event, task)}
-                        />
+                        />}
                         <span className="project-gantt-task-id">{g.numberById.get(task.id)}</span>
                         <span className="project-gantt-task-title project-gantt-task-title-wrap">{task.tieuDe}</span>
                       </div>
@@ -2519,7 +2555,7 @@ function PopupGanttTong({
                                 className="project-gantt-parent-bar"
                                 style={{ left: parentLeft, width: parentWidth }}
                                 title={`${task.tieuDe} — ${dinhDangNgay(parentStart)} - ${dinhDangNgay(parentEnd)} (${task.tienDo}%)`}
-                                onDoubleClick={(e) => { e.stopPropagation(); onTaskOpen(task); }}
+                                onDoubleClick={(e) => { e.stopPropagation(); if (canEditTask(task)) onTaskOpen(task); }}
                               />
                               {/* % tiến độ luôn hiện ở mép phải bar cha */}
                               <span className="project-gantt-bar-progress-aside" style={{ left: parentLeft + parentWidth + 4 }}>{task.tienDo}%</span>
@@ -2532,14 +2568,16 @@ function PopupGanttTong({
                                     const sLeft = Math.max(0, khoangCachNgay(timelineStart, segDates.start) * ganttDayWidth);
                                     const sWidth = Math.max(ganttDayWidth, (khoangCachNgay(segDates.start, sEnd) + 1) * ganttDayWidth);
                                     const fallback = { start: segDates.start, end: sEnd };
+                                    const canMove = canMoveAssignment((task.assignments || [])[s.index]);
                                     return (
                                       <span
                                         key={si}
                                         className="project-gantt-lane-bar"
                                         style={{ left: sLeft, width: sWidth, backgroundColor: lane.color }}
-                                        title={`${lane.pic}: ${dinhDangNgay(segDates.start)} - ${dinhDangNgay(sEnd)}${s.estimateHours == null ? '' : ` · ${s.estimateHours}h`} — kéo để đổi ngày`}
-                                        onDoubleClick={(e) => { e.stopPropagation(); onTaskOpen(task); }}
-                                        onPointerDown={(event) => startDrag(event, task, 'move', fallback, s.index)}
+                                        title={`${lane.pic}: ${dinhDangNgay(segDates.start)} - ${dinhDangNgay(sEnd)}${s.estimateHours == null ? '' : ` · ${s.estimateHours}h`}${canMove ? ' — kéo để đổi ngày' : ' — chỉ người phụ trách hoặc Leader được đổi ngày'}`}
+                                        data-gantt-editable={canMove ? 'true' : 'false'}
+                                        onDoubleClick={(e) => { e.stopPropagation(); if (canEditTask(task)) onTaskOpen(task); }}
+                                        onPointerDown={canMove ? (event) => startDrag(event, task, 'move', fallback, s.index) : undefined}
                                       >
                                         {/* Estimate giờ NGAY TRÊN thân bar — chữ trắng + viền tối để đọc được trên
                                             mọi màu PIC, không phụ thuộc vị trí "0%" (progress-aside, z-index cao
@@ -2550,13 +2588,15 @@ function PopupGanttTong({
                                         <button
                                           type="button"
                                           className="project-gantt-lane-resize project-gantt-lane-resize-start"
-                                          onPointerDown={(event) => startDrag(event, task, 'resize-start', fallback, s.index)}
+                                          disabled={!canMove}
+                                          onPointerDown={canMove ? (event) => startDrag(event, task, 'resize-start', fallback, s.index) : undefined}
                                           aria-label={t('gantt.resize_start_planned')}
                                         />
                                         <button
                                           type="button"
                                           className="project-gantt-lane-resize project-gantt-lane-resize-end"
-                                          onPointerDown={(event) => startDrag(event, task, 'resize-end', fallback, s.index)}
+                                          disabled={!canMove}
+                                          onPointerDown={canMove ? (event) => startDrag(event, task, 'resize-end', fallback, s.index) : undefined}
                                           aria-label={t('gantt.resize_end_planned')}
                                         />
                                       </span>
@@ -2589,17 +2629,18 @@ function PopupGanttTong({
                               className={`project-gantt-bar project-gantt-bar-tall project-gantt-planned-bar project-gantt-bar-level-${task.level}${task.tienDo === 100 ? ' project-gantt-bar-done' : ''}`}
                               style={{ left, width }}
                               title={`${task.tieuDe} - ${t('ptask.planned')}: ${dinhDangNgay(dates.start)} - ${dinhDangNgay(safeEnd)} (${task.tienDo}%)${task.assignee ? ` — ${task.assignee}` : ''}`}
-                              onDoubleClick={() => onTaskOpen(task)}
-                              onPointerDown={(event) => startDrag(event, task, 'move', dates)}
+                              data-gantt-editable={canEditTask(task) ? 'true' : 'false'}
+                              onDoubleClick={() => { if (canEditTask(task)) onTaskOpen(task); }}
+                              onPointerDown={canEditTask(task) ? (event) => startDrag(event, task, 'move', dates) : undefined}
                             >
                               {picCols.length > 0 && (
                                 <span className="project-gantt-bar-pics" aria-hidden="true">
                                   {picCols.map((c, i) => <span key={i} style={{ flex: 1, backgroundColor: c }} />)}
                                 </span>
                               )}
-                              <button type="button" className="project-gantt-resize project-gantt-resize-start" onPointerDown={(event) => startDrag(event, task, 'resize-start', dates)} aria-label={t('gantt.resize_start_planned')} />
+                              <button type="button" className="project-gantt-resize project-gantt-resize-start" disabled={!canEditTask(task)} onPointerDown={canEditTask(task) ? (event) => startDrag(event, task, 'resize-start', dates) : undefined} aria-label={t('gantt.resize_start_planned')} />
                               <span className="project-gantt-bar-body" />
-                              <button type="button" className="project-gantt-resize project-gantt-resize-end" onPointerDown={(event) => startDrag(event, task, 'resize-end', dates)} aria-label={t('gantt.resize_end_planned')} />
+                              <button type="button" className="project-gantt-resize project-gantt-resize-end" disabled={!canEditTask(task)} onPointerDown={canEditTask(task) ? (event) => startDrag(event, task, 'resize-end', dates) : undefined} aria-label={t('gantt.resize_end_planned')} />
                             </div>
                             {/* % tiến độ luôn hiện ở mép phải thanh */}
                             <span className="project-gantt-bar-progress-aside" style={{ left: left + width + 4 }}>{task.tienDo}%</span>
