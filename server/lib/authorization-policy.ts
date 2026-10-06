@@ -10,7 +10,7 @@
 // - Có `scope.teamId` (route theo team, vd `team_member.*`): roles là vai trò TRONG TEAM (`leader`|`member`).
 // - Không có `scope.teamId` (route toàn cục, vd `team.*`, `user_account.*`): roles là `system_role`
 //   (`user`|`admin`) — đa số chỉ có `admin`.
-export type FeatureKey = 'personal_task' | 'project' | 'weekly_report' | 'release' | 'mind_map';
+export type FeatureKey = 'personal_task' | 'project' | 'release' | 'mind_map';
 
 export interface PolicyEntry {
   feature: FeatureKey | null;
@@ -109,23 +109,6 @@ export const AUTHORIZATION_POLICY: Record<string, Record<string, PolicyEntry>> =
     update: { feature: 'project', roles: ['leader'] }
   },
 
-  // Lát 4 mới — Báo cáo tuần (CR §3.2/FR-21, sửa 13/09: KHÔNG có luồng Member tự đặt mục tiêu — Member
-  // chỉ xem, mọi thao tác ghi/xoá thuộc Leader).
-  weekly_goal: {
-    list: { feature: 'weekly_report', roles: ['leader', 'member'] },
-    delete_one: { feature: 'weekly_report', roles: ['leader'] },
-    delete_all: { feature: 'weekly_report', roles: ['leader'] }
-  },
-  weekly_report: {
-    badges: { feature: 'weekly_report', roles: ['leader', 'member'] }, // goal-badge-ids/at-risk-ids/goal-task-ids/report-kinds
-    plan: { feature: 'weekly_report', roles: ['leader'] },
-    apply: { feature: 'weekly_report', roles: ['leader'] }, // chốt tuần (wizard "Xác nhận & lưu")
-    render: { feature: 'weekly_report', roles: ['leader', 'member'] }, // text/dm-report/xlsx — chỉ đọc/xuất, không ghi DB
-    history_list: { feature: 'weekly_report', roles: ['leader', 'member'] },
-    history_create: { feature: 'weekly_report', roles: ['leader'] }, // phê duyệt/finalize báo cáo
-    history_delete: { feature: 'weekly_report', roles: ['leader'] }
-  },
-
   // Lát 4 mới (Council review run e6cd1c8c, 22/09 — lỗ hổng thật: 5 route pics.ts không hề qua authorize()
   // trước bản sửa này). PIC đã chuyển hẳn thành dữ liệu lịch sử chỉ-đọc (CR §6.3, không còn là nguồn chọn
   // người) — không gắn với feature bật/tắt nào trong 5 feature ở trên nên `feature: null`, giống
@@ -171,17 +154,6 @@ export const AUTHORIZATION_POLICY: Record<string, Record<string, PolicyEntry>> =
     test_self: { feature: null, roles: ['user', 'admin'] },
     read_admin_url: { feature: null, roles: ['admin'] },
     write_admin_url: { feature: null, roles: ['admin'] }
-  },
-
-  // Lát 5 (FR-22) — cấu hình loại báo cáo tuần theo team + Risk theo team/tuần/loại/project.
-  weekly_report_kind: {
-    list: { feature: 'weekly_report', roles: ['leader', 'member'] },
-    create: { feature: 'weekly_report', roles: ['leader'] },
-    update: { feature: 'weekly_report', roles: ['leader'] }
-  },
-  weekly_project_risk: {
-    list: { feature: 'weekly_report', roles: ['leader', 'member'] },
-    upsert: { feature: 'weekly_report', roles: ['leader'] }
   },
 
   // Lát 6 (FR-24, CR §6.2: `GET /api/release/schedule-board`) — đúng policyKind 'cross_team_release',

@@ -253,10 +253,9 @@ test('FR-16: Member tự thêm chính mình vào assignments -> OK; Member xoá/
 });
 
 // ── FR-19: audit_log cho 6 hành động mới của Lát 4 ────────────────────────────────────────────
-test('FR-19: 6 hành động mới của Lát 4 đều ghi audit_log đúng action', async () => {
+test('FR-19: các hành động còn lại của Lát 4 đều ghi audit_log đúng action', async () => {
   const teamId = await onboarding.makeTeam(adminSession, '[itest] Team Audit');
   await onboarding.setFeatureVisibility(adminSession, teamId, 'project', 'on');
-  await onboarding.setFeatureVisibility(adminSession, teamId, 'weekly_report', 'on');
   const leader = await onboarding.joinAndApprove('audit-leader@drjoy.jp', 'Leader Audit', teamId, 'leader', adminSession);
   const H = flow.H(leader.session);
 
@@ -273,12 +272,6 @@ test('FR-19: 6 hành động mới của Lát 4 đều ghi audit_log đúng acti
     assignments: [], rowVersion: assignRes1.json.rowVersion
   });
 
-  // weekly_report.finalize
-  await req(H, 'POST', '/api/weeks/2026-09-07/report-history', { teamId, kind: 'internal', content: '[itest] noi dung bao cao' });
-
-  // weekly_goals.delete_all
-  await req(H, 'DELETE', `/api/weeks/2026-09-07/goals?teamId=${teamId}`);
-
   // project_task.delete rồi project.delete (project.delete cascade xoá luôn task còn lại nếu có,
   // nhưng ta đã xoá task trước để có riêng 1 dòng project_task.delete).
   await req(H, 'DELETE', `/api/projects/${project.json.id}/tasks/${task.json.id}`);
@@ -286,7 +279,7 @@ test('FR-19: 6 hành động mới của Lát 4 đều ghi audit_log đúng acti
 
   const actions = (db.prepare('SELECT DISTINCT action FROM audit_log WHERE team_id = ?').all(teamId) as { action: string }[]).map((r) => r.action);
   for (const expected of [
-    'project.delete', 'project_task.delete', 'weekly_report.finalize', 'weekly_goals.delete_all',
+    'project.delete', 'project_task.delete',
     'project_task.assignment.add', 'project_task.assignment.remove'
   ]) {
     assert.ok(actions.includes(expected), `thiếu audit_log cho hành động ${expected} (đã ghi: ${actions.join(', ')})`);

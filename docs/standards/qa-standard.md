@@ -166,7 +166,6 @@ Dùng khi đụng UI-flow mà chưa có E2E tự động. Chạy `npm run dev`, 
 
 - [ ] App mở, tab **Task cá nhân**: tạo task nhanh, đổi trạng thái, xóa — cập nhật đúng.
 - [ ] Tab **Project**: mở project, thêm task con, kéo Gantt, đổi % — không lỗi console.
-- [ ] Tab **Báo cáo tuần**: chọn tuần, đặt mục tiêu, tự đánh giá đạt/vượt.
 - [ ] Tab **Lên lịch (Release)**: sinh task theo ngày release; template render token đúng.
 - [ ] Tab **Luyện đề / Sơ đồ**: mở được (lazy-load), không màn trắng.
 - [ ] Đổi ngày xem: popup automation cũ đóng đúng.
@@ -203,11 +202,10 @@ Dự án **không dùng PR** ([ADR-P1](team-operating-standard.md)) — thay b�
 ## 10. Nợ test hiện tại & ưu tiên bổ sung
 
 Ghi lại để không quên (cập nhật khi giải quyết):
-1. Integration route còn trống: `projects`, `schedules`, `weekly`, `mindmaps` — ưu tiên `schedules` (logic sinh task định kỳ phức tạp).
+1. Integration route còn trống: `projects`, `schedules`, `mindmaps` — ưu tiên `schedules` (logic sinh task định kỳ phức tạp).
 2. Chưa có render test cho các popup tạo/sửa task (`PopupTaoTask`, `PopupSuaTask`) và `PopupAutomationSession`.
 3. Chưa có E2E (Playwright) — mục 8 đang làm thủ công.
 4. ~~Chưa có CI~~ → đã thay bằng `npm run check` + pre-push hook ([ADR-P2](team-operating-standard.md)). Lỗ hổng còn lại: dep chưa khai trong `package.json` vẫn lọt (không có "máy sạch").
-5. `weekly-report.ts` (logic báo cáo, ~800 dòng) chưa có unit test.
 
 ---
 

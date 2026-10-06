@@ -25,14 +25,14 @@ emergency_release_batches.release_month ⇄ tasks.release_month
 projects (1) ──< project_tasks (self-ref parent_id, 3 level) ──< project_task_assignments [FK CASCADE]
 projects.pic ──> pics.name (soft)
 
-weekly_goals / weekly_task_evaluations / weekly_project_summaries ──> projects.id, project_tasks.id (soft)
-weekly_report_history (lịch sử báo cáo đã duyệt)
 
 mindmaps (JSON tree)
 app_settings (key-value; cấu hình Redmine và nội dung release)
 ```
 
-FK thật được khai báo cho `project_task_assignments`. Các ref project, parent, PIC, weekly và release còn lại là soft link do backend kiểm tra.
+FK thật được khai báo cho `project_task_assignments`. Các ref project, parent, PIC và release còn lại là soft link do backend kiểm tra.
+> Chức năng Báo cáo tuần đã gỡ hẳn ([CR-20261006](../delivery/changes/CR-20261006-xoa-chuc-nang-bao-cao-tuan.md)): các bảng `weekly_*` bị DROP tự động khi boot và dòng feature `weekly_report` bị xóa.
+
 ## 3. Chi tiết bảng
 
 #
@@ -88,11 +88,6 @@ PK `id`. `project_task_id` NN **FK→project_tasks ON DELETE CASCADE**, `pic` NN
 Các field automation trên definition đã được archive rồi xoá. Team/Người/Group còn lại là cấu hình nội dung release thủ công, không phải trạng thái AI.
 #
 
-## 3.6 Weekly report
-- `weekly_goals`: mục tiêu tuần theo project/task. PK `id`. `week_start` NN, `project_id?`, `project_task_id?`, `assignee?`, `goal_text` d'', `reason` d'', `start_progress?`, `target_progress?`, `manual_done?`, `sort_order`, timestamps. Index `(week_start)`, `(project_task_id)`.
-- `weekly_task_evaluations`: đánh giá task/tuần. **PK ghép `(week_start, project_task_id)`**. `status` NN CHECK IN (`dat`,`vuot`,`khong_dat`), `note` d'', `unplanned` NN d0.
-- `weekly_project_summaries`: tổng kết project/tuần. **PK ghép `(week_start, project_id)`**, `content` d''.
-- `weekly_report_history`: lịch sử báo cáo đã duyệt. PK `id`, `week_start` NN, `kind` NN, `mode` d'by_project', `content` NN, timestamps. **UNIQUE `(week_start, kind, mode)`**. (Bảng cũ `weekly_project_reasons` đã DROP.)
 
 #
 
@@ -114,7 +109,7 @@ Các field automation trên definition đã được archive rồi xoá. Team/Ng
 - `automation_events`, `drjoy_posted_articles` và các key chỉ phục vụ runtime AI đã được archive rồi xoá theo CR-20260912.
 ## 4. Enum
 
-**Enforced bằng CHECK:** `tasks.loai_task`, `tasks.trang_thai`, `project_tasks.level` (1..3), `project_tasks.tien_do` (0..100), `weekly_task_evaluations.status`.
+**Enforced bằng CHECK:** `tasks.loai_task`, `tasks.trang_thai`, `project_tasks.level` (1..3), `project_tasks.tien_do` (0..100).
 **Chỉ enforce ở code (không CHECK):** `lap_lai_kieu`, emergency `task_date` token và `schedule_mode`.
 
 ## 5. Cột JSON-trong-TEXT

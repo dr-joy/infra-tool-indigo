@@ -3,7 +3,6 @@ import { db, withTransaction } from '../db.js';
 import { type ProjectBody, type ProjectTaskBody, type ProjectTaskAssignmentsBody, type ProjectTaskAssignmentInput, isValidProjectTaskProgress } from '../types.js';
 import { normalizeTaskLinks, isDateInput, isDateRangeValid, parseProjectEstimateHours, sendRouteError, parseIdList, HttpError } from '../lib/utils.js';
 import { mapProject, mapProjectTask, mapProjectTasksWithCalculatedRollups, recalculateProjectTaskRollups, attachAssignments, deriveLeafFromAssignments } from '../lib/mappers.js';
-import { mondayOf, addDays, toISODate, taskOverlapsWeek } from '../lib/date.js';
 import { requireSession, requireActiveAccount, actorFromRequest } from '../lib/auth-middleware.js';
 import { authorize, type Actor } from '../lib/authorize.js';
 import { writeAudit } from '../lib/audit.js';
@@ -346,12 +345,6 @@ router.delete('/projects/:projectId', requireSession, requireActiveAccount, (req
 
   try {
     withTransaction(() => {
-      // BL-20260924-004: weekly_project_risks.project_id là FK cứng NOT NULL (không ON DELETE) —
-      // để sót dù chỉ 1 dòng (kể cả tuần đã qua) là DB chặn thẳng xoá project bằng lỗi FK, khác
-      // weekly_goals (FK mềm, không chặn) nên không áp dụng được nguyên tắc "chỉ dọn tuần hiện
-      // tại/tương lai, giữ tuần đã qua làm hồ sơ" đang dùng khi xoá 1 task project (xem hàm xoá
-      // task project ở dưới) — project không còn tồn tại thì Risk gắn với nó không thể giữ lại.
-      db.prepare('DELETE FROM weekly_project_risks WHERE project_id = ?').run(projectId);
       db.prepare('DELETE FROM project_tasks WHERE project_id = ?').run(projectId);
       db.prepare('DELETE FROM projects WHERE id = ?').run(projectId);
       writeAudit(actor.userId, project.team_id, 'project.delete', `project:${projectId}`, { projectId });
@@ -587,26 +580,6 @@ router.patch('/projects/:projectId/tasks/:taskId', requireSession, requireActive
   const effectiveEstimateHours = hasChildren ? task.estimate_hours == null ? null : Number(task.estimate_hours) : estimateHours;
   const effectiveTienDo = hasChildren ? Number(task.tien_do || 0) : tienDo;
 
-  // Validate: nếu task đang là mục tiêu tuần (hiện tại trở đi) mà ngày dự kiến mới
-  // không còn giao với tuần đó -> cần user xác nhận; xác nhận thì gỡ khỏi mục tiêu tuần.
-  const currentWeek = mondayOf(toISODate(new Date()));
-  const goalWeeks = db.prepare('SELECT week_start FROM weekly_goals WHERE project_task_id = ? AND week_start >= ?')
-    .all(taskId, currentWeek) as { week_start: string }[];
-  const conflictWeeks = goalWeeks
-    .map((g) => g.week_start)
-    .filter((w) => !taskOverlapsWeek(ngayBatDauDuKien!, ngayKetThucDuKien!, w, addDays(w, 6)));
-  if (conflictWeeks.length > 0) {
-    if (!body.confirmRemoveGoal) {
-      return res.status(409).json({
-        message: 'Ngày dự kiến mới không còn thuộc tuần mà task đang là mục tiêu',
-        code: 'GOAL_CONFLICT',
-        details: { weeks: conflictWeeks },
-      });
-    }
-    const delGoal = db.prepare('DELETE FROM weekly_goals WHERE project_task_id = ? AND week_start = ?');
-    conflictWeeks.forEach((w) => delGoal.run(taskId, w));
-  }
-
   const updated = db.prepare(`
     UPDATE project_tasks
     SET tieu_de = ?, ghi_chu = ?, ngay_bat_dau_du_kien = ?, ngay_ket_thuc_du_kien = ?,
@@ -683,17 +656,8 @@ router.delete('/projects/:projectId/tasks/:taskId', requireSession, requireActiv
   `).all(taskId, projectId, projectId) as { id: number }[]).map((row) => row.id);
   const treeIdPlaceholders = treeIds.map(() => '?').join(', ');
 
-  // QA-2026-09-12: xoá task project (kể cả cây con) trước đây để lại weekly_goals MỒ CÔI vĩnh viễn —
-  // bảng này không có FK, không tự dọn theo khi project_tasks bị xoá (tái hiện được: tạo task, gán
-  // làm mục tiêu tuần hiện tại, xoá task -> goal vẫn còn nguyên, hiện "(không tên)" trên Weekly Report
-  // mãi mãi). Chỉ dọn mục tiêu tuần HIỆN TẠI/TƯƠNG LAI — task đã xoá thì không thể còn "đang là mục
-  // tiêu" của tuần chưa qua, cùng nguyên tắc đã áp dụng ở PATCH task (GOAL_CONFLICT, phía trên). Tuần
-  // ĐÃ QUA giữ nguyên — coi là hồ sơ lịch sử, không xoá goal/evaluation quá khứ.
-  const currentWeek = mondayOf(toISODate(new Date()));
   let deleted = 0;
   withTransaction(() => {
-    db.prepare(`DELETE FROM weekly_goals WHERE week_start >= ? AND project_task_id IN (${treeIdPlaceholders})`)
-      .run(currentWeek, ...treeIds);
     const result = db.prepare(`DELETE FROM project_tasks WHERE id IN (${treeIdPlaceholders})`).run(...treeIds);
     deleted = Number(result.changes);
     writeAudit(actor.userId, project.team_id, 'project_task.delete', `project_task:${taskId}`, { taskId, treeIds });

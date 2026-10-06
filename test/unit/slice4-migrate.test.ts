@@ -70,7 +70,7 @@ function buildFakeDesktopDb(dir: string): { dbPath: string; leaderUserId: number
 }
 
 // Dựng 1 DB "desktop cũ" ĐÚNG SCHEMA THẬT trước Lát 4 — dùng DDL thô lấy nguyên văn từ
-// `git show master:server/schema/project.ts|pic.ts|weekly-report.ts|tasks.ts|mindmap.ts` (nhánh
+// `git show master:server/schema/project.ts|pic.ts|tasks.ts|mindmap.ts` (nhánh
 // master, trước khi Lát 4 đổi schema), KHÔNG qua applySlice4Schema()/bootstrapDatabase() như
 // buildFakeDesktopDb() ở trên — 2 hàm đó luôn tạo shape MỚI ngay từ đầu nên KHÔNG mô phỏng đúng DB
 // Desktop thật. Khác biệt quan trọng nhất: project_task_assignments ở đây chỉ có cột `pic` TEXT NOT
@@ -168,45 +168,6 @@ function buildLegacyDesktopDb(dir: string): { dbPath: string } {
       sort_order INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
-    );
-    CREATE TABLE weekly_goals (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      week_start TEXT NOT NULL,
-      project_id INTEGER,
-      project_task_id INTEGER,
-      assignee TEXT,
-      goal_text TEXT NOT NULL DEFAULT '',
-      reason TEXT NOT NULL DEFAULT '',
-      start_progress INTEGER,
-      target_progress INTEGER,
-      manual_done INTEGER,
-      sort_order INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-    CREATE TABLE weekly_task_evaluations (
-      week_start TEXT NOT NULL,
-      project_task_id INTEGER NOT NULL,
-      status TEXT NOT NULL CHECK (status IN ('dat', 'vuot', 'khong_dat')),
-      note TEXT NOT NULL DEFAULT '',
-      unplanned INTEGER NOT NULL DEFAULT 0,
-      PRIMARY KEY (week_start, project_task_id)
-    );
-    CREATE TABLE weekly_project_summaries (
-      week_start TEXT NOT NULL,
-      project_id INTEGER NOT NULL,
-      content TEXT NOT NULL DEFAULT '',
-      PRIMARY KEY (week_start, project_id)
-    );
-    CREATE TABLE weekly_report_history (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      week_start TEXT NOT NULL,
-      kind TEXT NOT NULL,
-      mode TEXT NOT NULL DEFAULT 'by_project',
-      content TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
-      UNIQUE (week_start, kind, mode)
     );
     CREATE TABLE tasks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -310,7 +271,7 @@ test('applySlice4Schema: idempotent, tạo đủ bảng Lát 4 (teams/users/team
   const tables = new Set(
     (db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map((r) => r.name)
   );
-  for (const t of ['users', 'teams', 'team_members', 'team_feature_visibility', 'team_member_gantt_colors', 'weekly_report_kinds', 'weekly_project_risks']) {
+  for (const t of ['users', 'teams', 'team_members', 'team_feature_visibility', 'team_member_gantt_colors']) {
     assert.ok(tables.has(t), `thiếu bảng ${t}`);
   }
   db.close();
@@ -425,15 +386,9 @@ test('backfillDev13Scope: team đích ĐÃ CÓ SẴN project hệ thống "Khác
     INSERT INTO project_tasks (project_id, level, tieu_de, ngay_bat_dau_du_kien, ngay_ket_thuc_du_kien, tien_do, assignee, created_at, updated_at)
     VALUES (?, 1, 'Task lẻ cũ trong Khác', '2026-01-01', '2026-01-02', 0, 'Nam', ?, ?)
   `).run(legacySystemProjectId, now, now);
-  db.prepare(`
-    INSERT INTO weekly_goals (week_start, project_id, goal_text, created_at, updated_at) VALUES ('2026-01-05', ?, 'Mục tiêu cũ', ?, ?)
-  `).run(legacySystemProjectId, now, now);
-  db.prepare(`
-    INSERT INTO weekly_project_summaries (week_start, project_id, content) VALUES ('2026-01-05', ?, 'Tổng kết cũ')
-  `).run(legacySystemProjectId);
 
   const result = backfillDev13Scope(db, teamId, leaderUserId);
-  assert.equal(result.legacySystemProjectMergedRows, 3, '1 project_tasks + 1 weekly_goals + 1 weekly_project_summaries');
+  assert.equal(result.legacySystemProjectMergedRows, 1, '1 project_tasks');
 
   const remainingSystemProjects = db.prepare('SELECT id FROM projects WHERE is_system = 1 AND team_id = ?').all(teamId) as { id: number }[];
   assert.equal(remainingSystemProjects.length, 1, 'chỉ còn ĐÚNG 1 project hệ thống cho team này (không vi phạm idx_projects_system_per_team)');
@@ -444,10 +399,6 @@ test('backfillDev13Scope: team đích ĐÃ CÓ SẴN project hệ thống "Khác
 
   const movedTask = db.prepare("SELECT project_id FROM project_tasks WHERE tieu_de = 'Task lẻ cũ trong Khác'").get() as { project_id: number };
   assert.equal(movedTask.project_id, teamSystemProjectId, 'task cũ phải trỏ sang project hệ thống CỦA TEAM');
-  const movedGoal = db.prepare("SELECT project_id FROM weekly_goals WHERE goal_text = 'Mục tiêu cũ'").get() as { project_id: number };
-  assert.equal(movedGoal.project_id, teamSystemProjectId);
-  const movedSummary = db.prepare("SELECT project_id FROM weekly_project_summaries WHERE content = 'Tổng kết cũ'").get() as { project_id: number };
-  assert.equal(movedSummary.project_id, teamSystemProjectId);
 
   // Idempotent: gọi lại lần 2 không còn project cũ để gộp -> không đổi gì thêm, không lỗi.
   const second = backfillDev13Scope(db, teamId, leaderUserId);
@@ -781,29 +732,6 @@ test('verifySlice4Migration: rollup trước/sau lệch (con bị đổi estimat
   db.close();
 });
 
-test('verifySlice4Migration: weekly_goals trỏ project KHÁC team_id của chính nó -> ok=false', () => {
-  const dir = nextDir('verify-weekly-scope');
-  const { dbPath: sourceDbPath } = buildLegacyDesktopDb(dir);
-  const targetDir = path.join(dir, 'target');
-  fs.mkdirSync(targetDir, { recursive: true });
-  const { db } = buildMigratedTargetFromLegacySource(sourceDbPath, targetDir);
-
-  const now = new Date().toISOString();
-  const teamB = db.prepare("INSERT INTO teams (name, created_at) VALUES ('TeamB-weekly', ?)").run(now);
-  const teamBId = Number(teamB.lastInsertRowid);
-  const project = db.prepare("SELECT id FROM projects WHERE ten_project = 'Project desktop cũ'").get() as { id: number };
-  // team_id của dòng weekly_goals KHÁC team_id thật của project nó trỏ tới.
-  db.prepare(`
-    INSERT INTO weekly_goals (week_start, project_id, team_id, goal_text, created_at, updated_at)
-    VALUES ('2026-01-05', ?, ?, 'Mục tiêu sai team', ?, ?)
-  `).run(project.id, teamBId, now, now);
-
-  const result = verifySlice4Migration(sourceDbPath, db, targetDir, { autoRollbackOnFailure: false });
-  assert.equal(result.ok, false);
-  assert.ok(result.problems.some((p) => p.includes('weekly_goals') && p.includes('KHÔNG cùng team')));
-  db.close();
-});
-
 test('verifySlice4Migration: Mind Map data không phải JSON hợp lệ + file đính kèm bị thiếu trên đĩa -> ok=false, nêu cả 2', () => {
   const dir = nextDir('verify-mindmap');
   const { dbPath: sourceDbPath } = buildLegacyDesktopDb(dir);
@@ -880,7 +808,7 @@ test('verifySlice4Migration: mindmap_attachments — sha256 khớp manifest thì
   db.close();
 });
 
-test('smokeBootMigratedServer: boot server con thật, đăng nhập Leader, chọn Dev13, đọc đủ project/tree/weekly/tasks/mindmaps, xác nhận idempotent qua "restart lần hai"', { timeout: 60000 }, async () => {
+test('smokeBootMigratedServer: boot server con thật, đăng nhập Leader, chọn Dev13, đọc đủ project/tree/tasks/mindmaps, xác nhận idempotent qua "restart lần hai"', { timeout: 60000 }, async () => {
   const dir = nextDir('smoke-boot');
   const { dbPath, leaderUserId } = buildFakeDesktopDb(dir);
   const db = new DatabaseSync(dbPath);

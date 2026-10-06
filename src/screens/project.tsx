@@ -5,7 +5,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import {
   ArrowDownUp, ArrowDownWideNarrow, ArrowUpNarrowWide, Bell, CalendarDays, CalendarRange, Check,
   ChartGantt, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Copy, FileSpreadsheet, Github,
-  GripVertical, History, Info, Paperclip, Pencil, Plus, Rocket, Search, Target, Trash2, X
+  GripVertical, History, Info, Paperclip, Pencil, Plus, Rocket, Search, Trash2, X
 } from 'lucide-react';
 import { useLang } from '../useLang';
 import type { TranslationKey } from '../i18n';
@@ -24,7 +24,7 @@ import {
 } from '../lib/date';
 import {
   PIC_COLOR_PALETTE, projectTaskProgressOptions, progressSelectOptions, splitAssignees, clientAutoStatus,
-  parseGoalConflict, goalConflictMessage, buildProjectTaskNumbers, normalizedTaskLinks, taskLinkHref,
+  buildProjectTaskNumbers, normalizedTaskLinks, taskLinkHref,
   quickProjectTaskCreatedEvent, tenTrangThai, trangThaiLabel, sapXepTask, taoSortHienTai, sortButtonClass,
   taskLinkTypeLabels, maxTaskLinks
 } from '../lib/task-utils';
@@ -201,8 +201,6 @@ export function ManHinhProject() {
   // Cho phép deep-link tới 1 project qua ?project=<id>
   const [projectDangChon, setProjectDangChon] = useState(() => new URLSearchParams(window.location.search).get('project') || '');
   const [projectTasks, setProjectTasks] = useState<ProjectTaskItem[]>([]);
-  const [goalTaskIds, setGoalTaskIds] = useState<Set<string>>(new Set());
-  const [atRiskTaskIds, setAtRiskTaskIds] = useState<Set<string>>(new Set());
   const [moTaoProject, setMoTaoProject] = useState(false);
   const [projectDangSua, setProjectDangSua] = useState<ProjectItem | null>(null);
   const [projectDangXoa, setProjectDangXoa] = useState<ProjectItem | null>(null);
@@ -299,7 +297,7 @@ export function ManHinhProject() {
   }
 
   // Danh sách thành viên team thật — nguồn chọn "người phụ trách"/PIC (CR-20260913 Lát 4, thay cho
-  // bảng `pics` chuỗi tự do cũ). Cùng aliveRef guard như taiProjects/taiBadgeIds phía trên.
+  // bảng `pics` chuỗi tự do cũ). Cùng aliveRef guard như taiProjects phía trên.
   async function taiTeamMembers(aliveRef?: { current: boolean }) {
     if (activeTeamId == null) return;
     try {
@@ -329,21 +327,6 @@ export function ManHinhProject() {
     }
   }
 
-  // Badge 🎯 = mục tiêu của tuần có mục tiêu mới nhất, chưa 100%.
-  // Báo đỏ = carry-over chưa xử lý (không được duyệt tiếp, chưa reschedule).
-  async function taiBadgeIds(aliveRef?: { current: boolean }) {
-    if (activeTeamId == null) return;
-    try {
-      const [goalIds, riskIds] = await Promise.all([
-        apiTeam<string[]>(activeTeamId, '/api/weeks/goal-badge-ids'),
-        apiTeam<string[]>(activeTeamId, '/api/weeks/at-risk-ids')
-      ]);
-      if (aliveRef && !aliveRef.current) return;
-      setGoalTaskIds(new Set(goalIds));
-      setAtRiskTaskIds(new Set(riskIds));
-    } catch { /* ignore */ }
-  }
-
   // Component này mount lại mỗi lần mở tab project nên badge luôn được làm mới. Thêm activeTeamId vào
   // dependency (FR-13): đổi team ở bộ chọn phải tự nạp lại, KHÔNG tải lại trang. aliveRef bị dọn
   // (false) khi effect cleanup chạy (đổi team lần nữa hoặc unmount) -> response trễ của team cũ bị bỏ.
@@ -354,10 +337,7 @@ export function ManHinhProject() {
     // reset thì dữ liệu team cũ vẫn hiện tới khi fetch team mới xong (Council review Lát 7 giai đoạn
     // 1, vòng 2 — điểm "dữ liệu team cũ hiện thoáng qua").
     setProjects([]);
-    setGoalTaskIds(new Set());
-    setAtRiskTaskIds(new Set());
     void taiProjects(aliveRef);
-    void taiBadgeIds(aliveRef);
     void taiTeamMembers(aliveRef);
     void taiTeamGanttColors(aliveRef);
     return () => { aliveRef.current = false; };
@@ -367,7 +347,7 @@ export function ManHinhProject() {
   // này chỉ phụ thuộc [projectDangChon] nên đổi team nhanh trong lúc đang mở chi tiết 1 project KHÔNG
   // làm effect này chạy lại/cleanup -> response taiProjectTasks cũ (gọi lúc còn ở team trước) có thể
   // set state SAU khi đã ở team mới. aliveRef bị dọn (false) khi effect cleanup chạy (đổi
-  // project/team lần nữa hoặc unmount) -> response trễ tự bỏ qua, khớp pattern taiProjects/taiBadgeIds
+  // project/team lần nữa hoặc unmount) -> response trễ tự bỏ qua, khớp pattern taiProjects
   // ở trên.
   useEffect(() => {
     if (!projectDangChon) {
@@ -544,22 +524,10 @@ export function ManHinhProject() {
 
   async function capNhatProjectTask(task: ProjectTaskCreateBody) {
     if (!selectedProject || !projectTaskDangSua) return;
-    try {
-      await api<ProjectTaskItem>(`/api/projects/${selectedProject.id}/tasks/${projectTaskDangSua.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(task)
-      });
-    } catch (error) {
-      const conflict = parseGoalConflict(error);
-      if (!conflict) throw error;
-      // Ngày mới làm task rớt khỏi tuần mục tiêu -> hỏi xác nhận, OK thì gỡ khỏi mục tiêu tuần
-      if (!window.confirm(goalConflictMessage(conflict.weeks))) return;
-      await api<ProjectTaskItem>(`/api/projects/${selectedProject.id}/tasks/${projectTaskDangSua.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ ...task, confirmRemoveGoal: true })
-      });
-      void taiBadgeIds();
-    }
+    await api<ProjectTaskItem>(`/api/projects/${selectedProject.id}/tasks/${projectTaskDangSua.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(task)
+    });
     await taiProjectTasks(selectedProject.id);
     setProjectTaskDangSua(null);
   }
@@ -607,7 +575,6 @@ export function ManHinhProject() {
         if (projectDangChon === projectId) await taiProjectTasks(projectId);
         if (moGanttTong) await taiGanttTongTasks();
         if (moRoadmapProject) await taiRoadmapTasks();
-        void taiBadgeIds();
       })();
     }
     window.addEventListener(quickProjectTaskCreatedEvent, refreshAfterQuickAdd);
@@ -627,11 +594,8 @@ export function ManHinhProject() {
     try {
       await api<ProjectTaskItem>(url, { method: 'PATCH', body: JSON.stringify(payload) });
     } catch (error) {
-      const conflict = parseGoalConflict(error);
-      if (!conflict) { setGanttTongError(error instanceof Error ? error.message : t('err.update_dates')); return; }
-      if (!window.confirm(goalConflictMessage(conflict.weeks))) return;
-      await api<ProjectTaskItem>(url, { method: 'PATCH', body: JSON.stringify({ ...payload, confirmRemoveGoal: true }) });
-      void taiBadgeIds();
+      setGanttTongError(error instanceof Error ? error.message : t('err.update_dates'));
+      return;
     }
     await taiGanttTongTasks();
     if (selectedProject?.id === task.projectId) await taiProjectTasks(task.projectId);
@@ -666,18 +630,10 @@ export function ManHinhProject() {
   // Lưu chỉnh sửa task từ popup mở trên Gantt tổng -> ghi vào project của task + phản ánh lại danh sách
   async function capNhatProjectTaskTong(task: ProjectTaskItem, body: ProjectTaskCreateBody) {
     const url = `/api/projects/${task.projectId}/tasks/${task.id}`;
-    try {
-      await api<ProjectTaskItem>(url, { method: 'PATCH', body: JSON.stringify(body) });
-    } catch (error) {
-      const conflict = parseGoalConflict(error);
-      if (!conflict) throw error; // để popup hiển thị lỗi
-      if (!window.confirm(goalConflictMessage(conflict.weeks))) throw new Error('Đã hủy cập nhật');
-      await api<ProjectTaskItem>(url, { method: 'PATCH', body: JSON.stringify({ ...body, confirmRemoveGoal: true }) });
-    }
+    await api<ProjectTaskItem>(url, { method: 'PATCH', body: JSON.stringify(body) });
     setGanttTongTaskDangSua(null);
     await taiGanttTongTasks();
     if (selectedProject?.id === task.projectId) await taiProjectTasks(task.projectId);
-    void taiBadgeIds();
   }
 
   async function sapXepTaskThucThiTrenGantt(projectId: string, taskIds: string[]) {
@@ -960,8 +916,6 @@ export function ManHinhProject() {
                   <ProjectTaskTree
                     key={selectedProject.id}
                     tasks={projectTasks}
-                    goalTaskIds={goalTaskIds}
-                    atRiskTaskIds={atRiskTaskIds}
                     allowChildren={!selectedProject.isSystem}
                     hiddenTaskIds={selectedProject.isSystem && !showCompletedInKhac ? completedTaskIdsInKhac : undefined}
                     onAddChild={moPopupTaoProjectTask}
@@ -1321,8 +1275,6 @@ const EMPTY_HIDDEN_TASK_IDS: ReadonlySet<string> = new Set();
 
 function ProjectTaskTree({
   tasks,
-  goalTaskIds,
-  atRiskTaskIds,
   allowChildren = true,
   hiddenTaskIds,
   onAddChild,
@@ -1334,8 +1286,6 @@ function ProjectTaskTree({
   canDeleteTask
 }: {
   tasks: ProjectTaskItem[];
-  goalTaskIds: Set<string>;
-  atRiskTaskIds: Set<string>;
   allowChildren?: boolean;
   // Task có id trong đây KHÔNG được render (project "Khác" ẩn task 100%, Council run 9c9f21c4) — vẫn
   // giữ NGUYÊN trong `tasks`/`tasksByParent` để dropTask() dựng payload reorder đủ id anh em (server
@@ -1408,8 +1358,6 @@ function ProjectTaskTree({
             <ProjectTaskRow
               key={task.id}
               task={task}
-              isGoal={goalTaskIds.has(task.id)}
-              isAtRisk={atRiskTaskIds.has(task.id)}
               allowChildren={allowChildren}
               taskNumber={taskNumber}
               childrenCount={childrenCount}
@@ -1451,8 +1399,6 @@ function ProjectTaskTree({
 
 function ProjectTaskRow({
   task,
-  isGoal,
-  isAtRisk,
   allowChildren = true,
   taskNumber,
   childrenCount,
@@ -1472,8 +1418,6 @@ function ProjectTaskRow({
   children
 }: {
   task: ProjectTaskItem;
-  isGoal: boolean;
-  isAtRisk: boolean;
   allowChildren?: boolean;
   taskNumber: string;
   childrenCount: number;
@@ -1500,7 +1444,7 @@ function ProjectTaskRow({
 
   return (
     <article
-      className={`project-task-item project-task-level-${task.level}${isOverdue ? ' project-task-overdue' : ''}${isAtRisk ? ' project-task-at-risk' : ''}${isDragging ? ' project-task-dragging' : ''}`}
+      className={`project-task-item project-task-level-${task.level}${isOverdue ? ' project-task-overdue' : ''}${isDragging ? ' project-task-dragging' : ''}`}
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
@@ -1534,17 +1478,7 @@ function ProjectTaskRow({
           <div className="project-task-title-row">
             <div className="project-task-title-main">
               <h4>
-                {isGoal && (
-                  <span title="Mục tiêu tuần này" style={{ color: 'var(--color-warning)', marginRight: 4, display: 'inline-flex', verticalAlign: 'middle' }}>
-                    <Target size={14} />
-                  </span>
-                )}
                 {task.tieuDe}
-                {isAtRisk && (
-                  <span className="project-task-atrisk-chip" title="Carry-over: mục tiêu đã được mang sang từ tuần trước vì chưa hoàn thành — cần lưu tâm để hoàn thành dứt điểm.">
-                    ⚠ carry-over
-                  </span>
-                )}
               </h4>
             </div>
             <div className="project-task-title-actions">

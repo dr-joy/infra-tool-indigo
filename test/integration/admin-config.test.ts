@@ -133,39 +133,6 @@ test('PATCH /admin/feature-visibility: bật 1 feature thành công, ghi audit',
   assert.ok(audit);
 });
 
-test('PATCH /admin/feature-visibility: FR-7a — tắt project TỰ tắt weekly_report cùng transaction, kèm audit cascade riêng', async () => {
-  const adminSession = await loginAsAdmin();
-  const teamId = await makeTeam(adminSession, 'Team Visibility B');
-  // Bật cả 2 trước.
-  for (const feature of ['project', 'weekly_report']) {
-    const row = visibilityRow(teamId, feature);
-    await fetch(`${base}/api/admin/feature-visibility`, {
-      method: 'PATCH', headers: H(adminSession),
-      body: JSON.stringify({ teamId, feature, level: 'on', rowVersion: row.row_version })
-    });
-  }
-  assert.equal(visibilityRow(teamId, 'weekly_report').level, 'on');
-
-  // Tắt project -> weekly_report phải tự tắt theo.
-  const projectRow = visibilityRow(teamId, 'project');
-  const res = await fetch(`${base}/api/admin/feature-visibility`, {
-    method: 'PATCH', headers: H(adminSession),
-    body: JSON.stringify({ teamId, feature: 'project', level: 'off', rowVersion: projectRow.row_version })
-  });
-  assert.equal(res.status, 200);
-  assert.equal(visibilityRow(teamId, 'weekly_report').level, 'off');
-  const cascadeAudit = db.prepare("SELECT 1 FROM audit_log WHERE team_id = ? AND action = 'feature_visibility.cascade_off'").get(teamId);
-  assert.ok(cascadeAudit);
-
-  // Bật lại project -> weekly_report KHÔNG tự bật lại theo (bất biến 1 chiều).
-  const projectRow2 = visibilityRow(teamId, 'project');
-  await fetch(`${base}/api/admin/feature-visibility`, {
-    method: 'PATCH', headers: H(adminSession),
-    body: JSON.stringify({ teamId, feature: 'project', level: 'on', rowVersion: projectRow2.row_version })
-  });
-  assert.equal(visibilityRow(teamId, 'weekly_report').level, 'off');
-});
-
 test('PATCH /admin/feature-visibility: 2 Admin đổi cùng ô đồng thời -> đúng 1 thành công, 1 bị 409', async () => {
   const adminSession = await loginAsAdmin();
   const teamId = await makeTeam(adminSession, 'Team Visibility Race');

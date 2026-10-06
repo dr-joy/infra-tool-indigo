@@ -29,7 +29,6 @@ import {
   CalendarDays,
   CalendarRange,
   ChartGantt,
-  ClipboardList,
   Copy,
   FileSpreadsheet,
   FolderKanban,
@@ -53,11 +52,10 @@ import './styles.css';
 import { mondayOfWeek } from './lib/date';
 import {
   taskLinkTypeLabels, maxTaskLinks, projectTaskProgressOptions, progressSelectOptions, splitAssignees,
-  clientAutoStatus, parseGoalConflict, goalConflictMessage, taskLinkHref
+  clientAutoStatus, taskLinkHref
 } from './lib/task-utils';
 import { TaskLinkIcon } from './components/task-atoms';
 import { ManHinhProject } from './screens/project';
-import { ManHinhBaoCaoTuan } from './screens/weekly';
 import { ManHinhQuanLyDanhMuc } from './screens/settings';
 import { ManHinhTaskCaNhan, type ManHinhTaskCaNhanHandle } from './screens/personal-task';
 import { PicProvider, ToastProvider, useToast } from './context';
@@ -92,7 +90,6 @@ interface NotificationRow {
 const tabsChinh: { key: TabChinh; i18nKey: TranslationKey }[] = [
   { key: 'task_ca_nhan', i18nKey: 'tab.personal' },
   { key: 'project', i18nKey: 'tab.project' },
-  { key: 'bao_cao_tuan', i18nKey: 'tab.weekly' },
   { key: 'len_lich', i18nKey: 'tab.schedule' },
   { key: 'so_do', i18nKey: 'tab.so_do' },
   { key: 'quan_ly_pic', i18nKey: 'tab.pics' },
@@ -105,14 +102,13 @@ const tabsChinh: { key: TabChinh; i18nKey: TranslationKey }[] = [
 ];
 
 // 2026-09-25: tab nào ứng với 1 feature trong team_feature_visibility (CR-20260913 FR-7) thì đưa vào
-// đây — team mới (provisionTeam) mặc định TẮT cả 5 feature này. Tab KHÔNG có mặt ở map (quan_ly_pic,
+// đây — team mới (provisionTeam) mặc định TẮT cả 4 feature này. Tab KHÔNG có mặt ở map (quan_ly_pic,
 // quan_ly_team, admin) không bị gate theo team, giữ nguyên logic hiện có. Trước đây các
 // tab này vẫn hiện, bấm vào mới thấy lỗi "Chức năng này đang bị tắt cho team của bạn" (403
 // FEATURE_DISABLED từ server) — giờ ẩn hẳn nút, không để user bấm vào rồi mới biết.
 const TAB_FEATURE: Partial<Record<TabChinh, string>> = {
   task_ca_nhan: 'personal_task',
   project: 'project',
-  bao_cao_tuan: 'weekly_report',
   len_lich: 'release',
   so_do: 'mind_map'
 };
@@ -121,14 +117,13 @@ const TAB_FEATURE: Partial<Record<TabChinh, string>> = {
 // Nhóm KHÔNG ảnh hưởng logic hiện/ẩn (vẫn do tabsHienThi ở dưới quyết định) — chỉ quyết định tab đó
 // vẽ dưới nhãn nhóm nào trên sidebar.
 const SIDEBAR_GROUPS: { label: string; keys: TabChinh[] }[] = [
-  { label: 'Làm việc', keys: ['task_ca_nhan', 'project', 'bao_cao_tuan', 'len_lich', 'so_do'] },
+  { label: 'Làm việc', keys: ['task_ca_nhan', 'project', 'len_lich', 'so_do'] },
   { label: 'Hệ thống', keys: ['quan_ly_pic', 'quan_ly_team', 'admin'] }
 ];
 
 const TAB_ICON: Record<TabChinh, ReactNode> = {
   task_ca_nhan: <ListChecks size={17} />,
   project: <FolderKanban size={17} />,
-  bao_cao_tuan: <ClipboardList size={17} />,
   len_lich: <CalendarRange size={17} />,
   so_do: <Workflow size={17} />,
   quan_ly_pic: <Settings size={17} />,
@@ -269,7 +264,7 @@ export function App() {
     if (feature && !enabledFeatures.has(feature)) return false;
     return true;
   });
-  // Cho phép mở thẳng tab qua URL: ?tab=project / len_lich / bao_cao_tuan
+  // Cho phép mở thẳng tab qua URL: ?tab=project / len_lich
   const [tabDangMo, setTabDangMo] = useState<TabChinh>(() => {
     const fromUrl = new URLSearchParams(window.location.search).get('tab');
     return tabsHienThi.some((tab) => tab.key === fromUrl) ? (fromUrl as TabChinh) : 'task_ca_nhan';
@@ -313,7 +308,6 @@ export function App() {
   useGlobalShortcuts({
     'tab:task_ca_nhan': () => chuyenTab('task_ca_nhan'),
     'tab:project': () => chuyenTab('project'),
-    'tab:bao_cao_tuan': () => chuyenTab('bao_cao_tuan'),
     'tab:len_lich': () => chuyenTab('len_lich'),
     'tab:so_do': () => chuyenTab('so_do'),
     'tab:quan_ly_pic': () => chuyenTab('quan_ly_pic'),
@@ -420,10 +414,6 @@ export function App() {
           <Suspense fallback={<div className="p-6 text-sm">{t('loading.data')}</div>}>
             <ManHinhLenLich onTasksCreated={(date) => personalTaskRef.current?.refresh(date) ?? Promise.resolve()} />
           </Suspense>
-        )}
-
-        {tabDangMo === 'bao_cao_tuan' && enabledFeatures.has('weekly_report') && (
-          <ManHinhBaoCaoTuan />
         )}
 
         {tabDangMo === 'quan_ly_pic' && (

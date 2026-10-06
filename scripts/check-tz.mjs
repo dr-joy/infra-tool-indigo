@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 // VÙNG QUYẾT ĐỊNH — chốt trong CR-20260804 §6.1, không phải danh sách tuỳ ý.
-// Cố ý KHÔNG có mappers/utils/weekly-report/screens: gần như toàn bộ là hiển thị, kéo vào sẽ cần
+// Cố ý KHÔNG có mappers/utils/screens: gần như toàn bộ là hiển thị, kéo vào sẽ cần
 // ~15 marker và biến cổng thành tiếng ồn. Giới hạn đã biết, xem CR §5.
 export const VUNG_QUYET_DINH = [
   'server/lib/recurrence.ts',

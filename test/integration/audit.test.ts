@@ -168,30 +168,6 @@ test('GET /api/audit: Leader/Member không truyền teamId -> 403 (chỉ Admin x
   assert.equal(res.status, 403);
 });
 
-test('GET /api/audit: cascade FR-7a (tắt project tự tắt weekly_report) ghi ĐỦ 2 dòng audit cùng team_id', async () => {
-  const adminSession = await loginAsAdmin();
-  const teamId = await makeTeam(adminSession, 'Team Audit Cascade');
-  const leaderSession = await joinAndApprove('audit-cascade-leader@drjoy.jp', 'Leader cascade', teamId, 'leader', adminSession);
-
-  for (const feature of ['project', 'weekly_report']) {
-    const r = await (await fetch(`${base}/api/admin/feature-visibility`, { headers: H(adminSession) })).json();
-    const row = r.visibility.find((v: { team_id: number; feature: string }) => v.team_id === teamId && v.feature === feature);
-    await fetch(`${base}/api/admin/feature-visibility`, {
-      method: 'PATCH', headers: H(adminSession), body: JSON.stringify({ teamId, feature, level: 'on', rowVersion: row.row_version })
-    });
-  }
-  const r2 = await (await fetch(`${base}/api/admin/feature-visibility`, { headers: H(adminSession) })).json();
-  const projectRow = r2.visibility.find((v: { team_id: number; feature: string }) => v.team_id === teamId && v.feature === 'project');
-  await fetch(`${base}/api/admin/feature-visibility`, {
-    method: 'PATCH', headers: H(adminSession), body: JSON.stringify({ teamId, feature: 'project', level: 'off', rowVersion: projectRow.row_version })
-  });
-
-  const audit = await (await fetch(`${base}/api/audit?teamId=${teamId}`, { headers: H(leaderSession) })).json();
-  const actions = audit.entries.map((e: { action: string }) => e.action);
-  assert.ok(actions.includes('feature_visibility.update'));
-  assert.ok(actions.includes('feature_visibility.cascade_off'));
-});
-
 test('GET /api/audit: teamId không phải số hợp lệ -> 400 rõ ràng, không phải 500 (Council review run e8d20dc3)', async () => {
   const adminSession = await loginAsAdmin();
   const res = await fetch(`${base}/api/audit?teamId=khong-phai-so`, { headers: H(adminSession) });

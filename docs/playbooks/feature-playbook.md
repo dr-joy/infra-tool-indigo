@@ -74,7 +74,7 @@ npm run build     # tsc + bundle
 
 Thêm test cho phần logic mới theo tầng phù hợp (Definition of Done ở qa-standard).
 Nếu có UI thay đổi lớn → chạy smoke thủ công (qa-standard mục 8): Personal task · Project ·
-Weekly report · Release · Luyện đề · MindMap.
+Release · Luyện đề · MindMap.
 
 ## 7. Bao Cao Ket Qua
 

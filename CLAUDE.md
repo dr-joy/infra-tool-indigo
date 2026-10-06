@@ -72,6 +72,6 @@ npm run backup-db  # sao lưu DB (bắt buộc trước migration đụng dữ l
 
 ## Kiến trúc (tóm tắt)
 
-- **FE:** React + Vite + TS. `src/main.tsx` (App shell), màn lớn tách ở `src/screens/{project,weekly,release}.tsx`, dùng chung `src/components/`, `src/lib/`, `src/context.tsx`, `src/api.ts`, `src/types.ts` (re-export enum từ `server/types.ts`). Tab nặng code-split bằng `React.lazy`.
+- **FE:** React + Vite + TS. `src/main.tsx` (App shell), màn lớn tách ở `src/screens/{project,release}.tsx`, dùng chung `src/components/`, `src/lib/`, `src/context.tsx`, `src/api.ts`, `src/types.ts` (re-export enum từ `server/types.ts`). Tab nặng code-split bằng `React.lazy`.
 - **BE:** Express 5 + `node:sqlite`. `server/app.ts` (app, error middleware HttpError-aware), `server/routes/*` (throw `HttpError`, `withTransaction` cho thao tác đa bước), `server/db.ts` (schema + migration idempotent), `server/lib/*`. DB ở `%APPDATA%/TaskManager/data/tasks.sqlite`, bind `127.0.0.1`.
 - **Phân phối:** Node SEA (`scripts/build-sea.mjs`); MCP server `server/mcp.ts`.

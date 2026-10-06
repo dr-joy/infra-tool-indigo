@@ -39,7 +39,6 @@ interface AuditEntryAdmin { id: number; actorUserId: number; teamId: number | nu
 const FEATURES: { key: string; label: string }[] = [
   { key: 'personal_task', label: 'Task cá nhân' },
   { key: 'project', label: 'Project' },
-  { key: 'weekly_report', label: 'Báo cáo tuần' },
   { key: 'release', label: 'Release' },
   { key: 'mind_map', label: 'Mind Map' }
 ];

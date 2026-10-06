@@ -160,7 +160,6 @@ export interface ProjectTaskBody {
   // không phá interface cũ đang được tham chiếu ở nơi khác — route KHÔNG đọc field này nữa.
   assignee?: string | null;
   // Xác nhận gỡ task khỏi mục tiêu tuần khi ngày dự kiến mới không còn thuộc tuần đó
-  confirmRemoveGoal?: boolean;
   // Giai đoạn phân công (task lá). undefined = không đụng tới; [] = xóa hết giai đoạn.
   assignments?: ProjectTaskAssignmentInput[];
   rowVersion?: number;

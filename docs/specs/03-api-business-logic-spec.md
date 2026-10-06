@@ -41,7 +41,7 @@
 | POST `/api/projects/:id/tasks` | Tạo task | tieuDe; ngày valid+range; estimate **>0** nếu set; tien_do 0..100; system cấm task con; parent level<3 (max **3 cấp**) | rollup lại; lưu assignments |
 | PATCH `.../tasks/reorder` | Sắp xếp cùng cha | taskIds khớp anh em | transactional |
 | PATCH `.../tasks/execution-order` | Sắp xếp thứ tự Gantt (task lá) | taskIds = tập lá | transactional |
-| PATCH `.../tasks/:taskId` | Sửa task | estimate/tien_do check chỉ với lá; **409 `GOAL_CONFLICT`** nếu đổi ngày làm task rớt khỏi tuần mục tiêu (trừ khi `confirmRemoveGoal`) | rollup lại |
+| PATCH `.../tasks/:taskId` | Sửa task | estimate/tien_do check chỉ với lá | rollup lại |
 | PUT `.../tasks/:taskId/assignments` | Thay giai đoạn phân công | chỉ lá; mỗi phase pic+ngày+estimate>0 | derive ngày/estimate/assignee lá từ phase; rollup |
 | DELETE `.../tasks/:taskId` | Xoá task + con | 404 | CTE recursive; rollup |
 
@@ -75,27 +75,8 @@ tay nếu cần map lại.
 - **Template khẩn cấp** `/api/release/emergency/templates[/:id]`: CRUD; token phải thuộc `validEmergencyReleaseTemplateTokens`. Token `mention` được thay bằng danh sách tên đã nhập; không có tên thì thay bằng chuỗi rỗng.
 - **Definition định kỳ** `/api/release/task-definitions[/:id]`: `title`, `startTime`, `dateToken`, template, links, thứ tự và `replyToDefinitionId`. Backend xác nhận definition được reply tồn tại cùng bảng và không tự trỏ chính nó.
 - **Definition khẩn cấp** `/api/release/emergency/task-definitions[/:id]`: thêm timing token, immediate priority, relative offset và schedule mode; `replyToDefinitionId` tuân cùng quy tắc cùng loại/không tự trỏ.
-## 5. Weekly Report (`routes/weekly.ts` + `lib/weekly-report.ts`)
-
-Tuần = Thứ 2–CN. Eval `dat`/`vuot`/`khong_dat` (✅/🔼/❌). Kinds: `internal` (Nội bộ Dev13, Markdown), `vn_management` (DM).
-
-| Method + Path | Mục đích | Codes | Logic |
-|---|---|---|---|
-| GET `/api/weeks/report-kinds` | Kinds + tuần hiện tại | 200 | |
-| GET `/api/weeks/goal-badge-ids` | id 🎯 | 200 | goal tuần mới nhất, <100% |
-| GET `/api/weeks/at-risk-ids` | ⚠ carry-over | 200 | goal <100% project mở & là goal tuần trước |
-| GET/DELETE `/api/weeks/report-history[/:id]` | Lịch sử báo cáo | | |
-| POST `/api/weeks/:weekStart/report-history` | Lưu/duyệt báo cáo | **409 `REPORT_EXISTS`** nếu tồn tại & !force | upsert per week+kind+mode |
-| GET `/api/weeks/:weekStart/plan` | Plan wizard | 200 | `buildReportPlan` |
-| POST `/api/weeks/:weekStart/apply` | Áp kết quả wizard | 200 `{ok,created,skippedOutOfWeek}` | transaction lớn (dưới) |
-| GET `/api/weeks/:weekStart/text?kind=` | Text báo cáo | 200 | render |
-| POST `/api/weeks/:weekStart/dm-report` | Báo cáo DM + risks | 200 | |
-| GET/DELETE `/api/weeks/:weekStart/goals[/:id]` | Mục tiêu tuần | | |
-
-**`/apply` transaction**: (1) cập nhật tien_do task; (2) upsert đánh giá task tuần TRƯỚC (+manual goal, +project summary); (3) insert mục tiêu tuần này (validate ngày trùng tuần trừ carry-over, else skippedOutOfWeek++; phản ánh PIC; dedupe); (4) `newKhacGoals` tạo task thật trong project "Khác" rồi thêm goal. Rollup lại.
-
 ## 6. PIC (`routes/pics.ts`)
-GET (kèm `dangSuDung`) · POST (unique) · PATCH reorder · PATCH `:id` (đổi tên **cascade** projects.pic/assignee/weekly, đổi màu) · DELETE (**400** nếu còn task chưa xong).
+GET (kèm `dangSuDung`) · POST (unique) · PATCH reorder · PATCH `:id` (đổi tên **cascade** projects.pic/assignee, đổi màu) · DELETE (**400** nếu còn task chưa xong).
 
 ## 7. Redmine (`routes/redmine.ts`)
 Config trong `app_settings`; API key **mã hoá AES-256-GCM** (`enc:v1:...`), master key `%APPDATA%\TaskManager\data\secret.key` (0600, container: `DATA_DIR/secret.key`). GET config (mask key) · PUT (baseUrl bắt buộc, key rỗng→giữ cũ) · DELETE key · POST test (`/users/current.json` header `X-Redmine-API-Key`; **401** key sai, **502** lỗi khác).

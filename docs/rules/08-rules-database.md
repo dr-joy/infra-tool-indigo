@@ -59,13 +59,12 @@ Mapper phải parse phòng thủ: JSON hỏng không làm sập API.
 | Luyện đề | `_en` là nội dung gốc/import; `_vi` là bản dịch/chỉnh sửa tiếng Việt |
 | Project task | Tối đa 3 level; parent lấy ngày/estimate/progress từ con |
 | Project assignment | Leaf task có assignment theo phase; phase derive ngày/estimate/assignee của leaf |
-| Weekly | Goal/evaluation/summary liên kết mềm với project/task |
 | Release | `origin_ref`/`reply_to_ref` là ref mềm dùng để nối bài Dr.JOY |
 
 ## 7. FK & Soft Link
 
 - FK enforced chủ yếu ở assignment: `project_task_assignments`.
-- Nhiều quan hệ là soft link: `projects.pic`, `tasks.related_ids`, weekly project/task ids, release refs.
+- Nhiều quan hệ là soft link: `projects.pic`, `tasks.related_ids`, release refs.
 - Khi đổi/xóa dữ liệu soft link, route phải tự cascade hoặc chặn theo rule nghiệp vụ.
 
 ## 8. Cần Bổ Sung

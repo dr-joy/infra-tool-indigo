@@ -1,7 +1,4 @@
-// BL-20260924-004: xoá 1 project đã có Risk trong báo cáo tuần (weekly_project_risks) trả lỗi 500 —
-// weekly_project_risks.project_id là FK cứng NOT NULL REFERENCES projects(id), KHÔNG có ON DELETE.
-// Route DELETE /api/projects/:id trước đây chỉ xoá project_tasks rồi xoá thẳng projects, không dọn
-// weekly_project_risks, nên SQLite (foreign_keys=ON) chặn bằng lỗi FOREIGN KEY constraint failed.
+// Xoá project: route DELETE /api/projects/:id phải xoá project_tasks rồi xoá projects mà không lỗi FK.
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import os from 'node:os';
@@ -38,7 +35,6 @@ const onboarding = makeOnboardingHelpers(() => base, flow);
 const adminSession = await flow.loginAs(ADMIN_EMAIL, 'Admin Thật', 'project-delete-risk-admin-sub');
 const teamId = await onboarding.makeTeam(adminSession, '[itest] Team Delete Risk');
 await onboarding.setFeatureVisibility(adminSession, teamId, 'project', 'on');
-await onboarding.setFeatureVisibility(adminSession, teamId, 'weekly_report', 'on');
 const leader = await onboarding.joinAndApprove('project-delete-risk-leader@drjoy.jp', 'Leader risk', teamId, 'leader', adminSession);
 const authHeaders = flow.H(leader.session);
 
@@ -65,34 +61,18 @@ async function taoProject(ten: string): Promise<number> {
   return r.json.id;
 }
 
-async function taoReportKind(code: string): Promise<string> {
-  const r = await req('POST', '/api/weeks/report-kinds', {
-    teamId, code, label: code, renderMode: 'internal_markdown', requiresProjectRisk: true
+test('xoá project (có task con) trả 200 và dọn sạch project + project_tasks', async () => {
+  const projectId = await taoProject('[itest] Project xoá');
+  const t = await req('POST', `/api/projects/${projectId}/tasks`, {
+    tieuDe: 'Task trong project', ngayBatDauDuKien: '2026-09-12', ngayKetThucDuKien: '2026-09-20', tienDo: 0
   });
-  assert.equal(r.status, 201, JSON.stringify(r.json));
-  return r.json.rowId;
-}
-
-test('BUG BL-20260924-004: xoá project đã có Risk báo cáo tuần không được lỗi 500', async () => {
-  const projectId = await taoProject('[itest] Project có Risk');
-  const reportKindId = await taoReportKind('risk_delete_test');
-  const weekStart = '2026-09-14';
-
-  const putRisk = await req('PUT', `/api/weeks/${weekStart}/risks`, {
-    teamId, reportKindId,
-    risks: [{ projectId, risk: 'Rủi ro test', mitigation: 'Giảm thiểu test' }]
-  });
-  assert.equal(putRisk.status, 200, JSON.stringify(putRisk.json));
-
-  const before = db.prepare('SELECT COUNT(*) AS c FROM weekly_project_risks WHERE project_id = ?').get(projectId) as { c: number };
-  assert.equal(before.c, 1, 'setup phải tạo được đúng 1 dòng risk cho project này');
+  assert.equal(t.status, 201, JSON.stringify(t.json));
 
   const del = await req('DELETE', `/api/projects/${projectId}`);
-  assert.equal(del.status, 200, `Xoá project phải trả 200, không phải lỗi FK: ${JSON.stringify(del.json)}`);
+  assert.equal(del.status, 200, `Xoá project phải trả 200: ${JSON.stringify(del.json)}`);
 
   const project = db.prepare('SELECT 1 FROM projects WHERE id = ?').get(projectId);
   assert.equal(project, undefined, 'project phải bị xoá thật');
-
-  const after_ = db.prepare('SELECT COUNT(*) AS c FROM weekly_project_risks WHERE project_id = ?').get(projectId) as { c: number };
-  assert.equal(after_.c, 0, 'weekly_project_risks của project đã xoá phải được dọn theo (FK cứng, không thể để sót)');
+  const tasks = db.prepare('SELECT COUNT(*) AS c FROM project_tasks WHERE project_id = ?').get(projectId) as { c: number };
+  assert.equal(tasks.c, 0, 'project_tasks của project đã xoá phải được dọn theo');
 });

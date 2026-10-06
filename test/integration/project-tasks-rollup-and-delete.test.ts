@@ -6,8 +6,7 @@
 //    `estimate > 0`) — trong khi input estimateHours=1 đã được xác nhận là giá trị HỢP LỆ ở chỗ khác
 //    (xem test/integration/project-tasks-estimate.test.ts, bugfix cũ). Hậu quả: 1 project toàn task
 //    1 giờ luôn hiện estimate=null, tiến độ=0% dù đã làm xong hết.
-// 2. Xoá task project (kể cả cây con) để lại weekly_goals MỒ CÔI vĩnh viễn — bảng này không có FK,
-//    không tự dọn theo. Goal hiện "(không tên)" trên Weekly Report mãi mãi dù task đã bị xoá.
+// 2. Xoá task cha phải xoá cả cây con.
 // CR-20260913 Lát 4: /api/projects[...] giờ đòi phiên đăng nhập thật + team + responsibleUserId
 // (không còn `pic` chuỗi tự do) — dùng chung harness OIDC giả ở fixtures/auth-harness.ts.
 import { test, after } from 'node:test';
@@ -111,51 +110,7 @@ test('QA: rollup vẫn cộng đúng khi trộn task con estimate=1 và estimate
   assert.equal(parentRow?.tienDo, 25, '(1*100% + 3*0%) / 4 = 25%');
 });
 
-test('QA: xoá task project không được để lại weekly_goals mồ côi cho tuần hiện tại/tương lai', async () => {
-  const projectId = await taoProject();
-  const task = await req('POST', `/api/projects/${projectId}/tasks`, {
-    tieuDe: 'Task sẽ bị xoá', ngayBatDauDuKien: '2026-09-12', ngayKetThucDuKien: '2026-09-20', tienDo: 0
-  });
-  const taskId = Number(task.json.id);
-
-  const now = new Date().toISOString();
-  const d = new Date();
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); // thứ Hai của tuần hiện tại
-  const currentWeek = d.toISOString().slice(0, 10);
-  db.prepare(`
-    INSERT INTO weekly_goals (week_start, project_id, project_task_id, assignee, goal_text, reason, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(currentWeek, projectId, taskId, 'QA', 'Mục tiêu tuần này', '', now, now);
-
-  const del = await req('DELETE', `/api/projects/${projectId}/tasks/${taskId}`);
-  assert.equal(del.status, 200);
-
-  const orphan = db.prepare('SELECT COUNT(*) AS c FROM weekly_goals WHERE project_task_id = ?').get(taskId) as { c: number };
-  assert.equal(orphan.c, 0, 'weekly_goals của tuần hiện tại phải bị dọn theo khi task bị xoá');
-});
-
-test('QA: xoá task project KHÔNG được đụng weekly_goals của TUẦN ĐÃ QUA (hồ sơ lịch sử)', async () => {
-  const projectId = await taoProject();
-  const task = await req('POST', `/api/projects/${projectId}/tasks`, {
-    tieuDe: 'Task có lịch sử tuần trước', ngayBatDauDuKien: '2026-09-12', ngayKetThucDuKien: '2026-09-20', tienDo: 0
-  });
-  const taskId = Number(task.json.id);
-
-  const now = new Date().toISOString();
-  const pastWeek = '2020-01-06'; // chắc chắn đã qua
-  db.prepare(`
-    INSERT INTO weekly_goals (week_start, project_id, project_task_id, assignee, goal_text, reason, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(pastWeek, projectId, taskId, 'QA', 'Mục tiêu tuần đã qua (lịch sử)', '', now, now);
-
-  const del = await req('DELETE', `/api/projects/${projectId}/tasks/${taskId}`);
-  assert.equal(del.status, 200);
-
-  const historical = db.prepare('SELECT COUNT(*) AS c FROM weekly_goals WHERE project_task_id = ? AND week_start = ?').get(taskId, pastWeek) as { c: number };
-  assert.equal(historical.c, 1, 'goal của tuần ĐÃ QUA là hồ sơ lịch sử, không được xoá theo');
-});
-
-test('QA: xoá task cha (có con) dọn weekly_goals của CẢ CÂY, không chỉ chính task đó', async () => {
+test('QA: xoá task cha (có con) xoá CẢ CÂY, không chỉ chính task đó', async () => {
   const projectId = await taoProject();
   const parent = await req('POST', `/api/projects/${projectId}/tasks`, {
     tieuDe: 'Cha sẽ bị xoá cả cây', ngayBatDauDuKien: '2026-09-12', ngayKetThucDuKien: '2026-09-20', tienDo: 0
@@ -167,19 +122,10 @@ test('QA: xoá task cha (có con) dọn weekly_goals của CẢ CÂY, không ch�
   });
   const childId = Number(child.json.id);
 
-  const now = new Date().toISOString();
-  const d = new Date();
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  const currentWeek = d.toISOString().slice(0, 10);
-  db.prepare(`
-    INSERT INTO weekly_goals (week_start, project_id, project_task_id, assignee, goal_text, reason, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(currentWeek, projectId, childId, 'QA', 'Mục tiêu của con', '', now, now);
-
   const del = await req('DELETE', `/api/projects/${projectId}/tasks/${parentId}`);
   assert.equal(del.status, 200);
   assert.equal(del.json.deleted, 2, 'phải xoá cả cha lẫn con (2 dòng)');
 
-  const orphan = db.prepare('SELECT COUNT(*) AS c FROM weekly_goals WHERE project_task_id = ?').get(childId) as { c: number };
-  assert.equal(orphan.c, 0, 'goal của task con (trong cây bị xoá) cũng phải được dọn theo');
+  const left = db.prepare('SELECT COUNT(*) AS c FROM project_tasks WHERE id IN (?, ?)').get(parentId, childId) as { c: number };
+  assert.equal(left.c, 0, 'task con trong cây bị xoá cũng phải biến mất');
 });

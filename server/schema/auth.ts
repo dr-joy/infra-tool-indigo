@@ -103,7 +103,7 @@ export function applyAuthSchema(db: DatabaseSync): void {
     -- toàn, không tái tạo ngầm). Seed đủ 5 dòng off khi tạo team (fail-closed) — xem seedTeamFeatureVisibility.
     CREATE TABLE IF NOT EXISTS team_feature_visibility (
       team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
-      feature TEXT NOT NULL CHECK (feature IN ('personal_task', 'project', 'weekly_report', 'release', 'mind_map')),
+      feature TEXT NOT NULL CHECK (feature IN ('personal_task', 'project', 'release', 'mind_map')),
       level TEXT NOT NULL DEFAULT 'off' CHECK (level IN ('off', 'on')),
       updated_at TEXT NOT NULL,
       updated_by INTEGER REFERENCES users(id),
@@ -149,7 +149,7 @@ export function applyAuthSchema(db: DatabaseSync): void {
     INSERT OR IGNORE INTO team_feature_visibility (team_id, feature, level, updated_at) VALUES (?, ?, 'off', ?)
   `);
   for (const team of teamIds) {
-    for (const feature of ['personal_task', 'project', 'weekly_report', 'release', 'mind_map']) {
+    for (const feature of ['personal_task', 'project', 'release', 'mind_map']) {
       insertVisibility.run(team.id, feature, now);
     }
   }

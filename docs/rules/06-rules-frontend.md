@@ -50,7 +50,6 @@ Ví dụ:
 
 - Task cá nhân: `.cot-kanban` trắng; `.task-row` và `.timeline` xám nhẹ.
 - Project: màn, sidebar, detail trắng; `.project-item`, `.project-task-card` xám nhẹ.
-- Báo cáo tuần: panel lớn trắng; goal/history/empty area xám nhẹ.
 - Luyện đề: `.ld-card` xám nhẹ.
 
 ## 4. Button & Icon

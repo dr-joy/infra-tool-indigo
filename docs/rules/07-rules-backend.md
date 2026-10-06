@@ -15,7 +15,6 @@ Ví dụ:
 |---|---|
 | Tasks | `/api/tasks` |
 | Project tasks | `/api/projects/:projectId/tasks` |
-| Weekly goals | `/api/weeks/:weekStart/goals` |
 
 ## 2. HTTP Method
 
@@ -101,7 +100,6 @@ chỉ chặn mã **mới** chưa đăng ký — không bắt gắn code cho lỗ
 - Project hệ thống "Khác" không xóa/đóng và chỉ hỗ trợ task level 1.
 - Project task tối đa 3 cấp.
 - Parent project task derive từ task con.
-- Đổi ngày task làm mất overlap với weekly goal hiện tại/tương lai trả `409 GOAL_CONFLICT` nếu chưa xác nhận.
 - Release template token phải hợp lệ.
 - Luyện đề rút theo `lan_ra` rồi random, import dedupe theo `fileName`.
 

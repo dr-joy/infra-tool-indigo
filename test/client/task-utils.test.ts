@@ -1,10 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
-  trangThaiLabel, splitAssignees, clientAutoStatus, parseGoalConflict, goalConflictMessage,
+  trangThaiLabel, splitAssignees, clientAutoStatus,
   buildProjectTaskNumbers, normalizedTaskLinks, sapXepTask, taoSortHienTai, sortButtonClass,
   progressSelectOptions
 } from '../../src/lib/task-utils';
-import { ApiError } from '../../src/api';
 import type { ProjectTaskItem, Task } from '../../src/types';
 
 describe('lib/task-utils', () => {
@@ -25,14 +24,6 @@ describe('lib/task-utils', () => {
     expect(clientAutoStatus(80, 70)).toBe('vuot');
     expect(clientAutoStatus(70, 70)).toBe('dat');
     expect(clientAutoStatus(50, 70)).toBe('khong_dat');
-  });
-
-  it('parseGoalConflict chỉ nhận ApiError GOAL_CONFLICT', () => {
-    const err = new ApiError(409, 'x', 'GOAL_CONFLICT', { weeks: ['2026-01-05'] });
-    expect(parseGoalConflict(err)).toEqual({ weeks: ['2026-01-05'] });
-    expect(parseGoalConflict(new ApiError(400, 'x', 'OTHER'))).toBeNull();
-    expect(parseGoalConflict(new Error('x'))).toBeNull();
-    expect(goalConflictMessage(['2026-01-05'])).toContain('05/01');
   });
 
   it('buildProjectTaskNumbers đánh số cây phân cấp', () => {

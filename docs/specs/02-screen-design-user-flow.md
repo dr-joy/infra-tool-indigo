@@ -1,4 +1,4 @@
-# 02 - Screen Design & User Flow
+
 
 > Nguồn: `src/main.tsx`, `src/mind-map.tsx`, `src/shortcuts.tsx`, `src/ui.tsx`, `src/i18n.ts`, `src/styles.css`, và handoff "Screens & Flows Digest".
 > Tài liệu mô tả UI/flow thực tế trong code. Chỗ còn là quyết định sản phẩm sẽ đánh dấu `> ⏳ User điền nốt`.
@@ -8,7 +8,7 @@
 - App là workbench nội bộ, không có landing page.
 - Backend bind `127.0.0.1:4000`; frontend Vite trong dev; bản exe serve `dist/`.
 - Tab hiện tại sync với URL query `?tab=`.
-- Điều hướng nhanh: `Alt+1..6` đổi tab; `Ctrl+Q` mở thêm task nhanh.
+- Điều hướng nhanh: `Alt+1..5` đổi tab; `Ctrl+Q` mở thêm task nhanh.
 - Modal primitive dùng component `Modal` trong `src/main.tsx`; overlay khai báo `role="dialog"` và `aria-modal`.
 
 ## 2. Danh Sách Tab
@@ -17,7 +17,6 @@
 |---|---|---|---|
 | `task_ca_nhan` | Tasks | Task cá nhân | Board inline 3 cột |
 | `project` | Projects | Quản lý project | `ManHinhProject` |
-| `bao_cao_tuan` | Reports | Báo cáo tuần | `ManHinhBaoCaoTuan` |
 | `len_lich` | Releases | Lên lịch | `ManHinhLenLich` |
 | `so_do` | MindMap | Sơ đồ | `ManHinhMindMap` |
 | `quan_ly_pic` | Settings | Cài đặt | `ManHinhQuanLyDanhMuc` |
@@ -46,18 +45,6 @@ Popup/modal: `TaoTask`, `SuaTask`, `XacNhanHoanThanh`, `XacNhanCancel`, `LichSu`
 | Gantt / roadmap | Roadmap project và Gantt tổng; lọc project/PIC; lane theo PIC |
 
 Popup/modal: `TaoProject`, `LichSuProjectClose`, `ProjectRoadmap`, `ProjectInfo`, `GanttTong`, `TaoProjectTask`, `XacNhanXoa`.
-
-### 3.3 Báo Cáo Tuần
-
-| Region | Nội dung / hành vi |
-|---|---|
-| Week navigator | Chọn tuần Thứ 2-CN |
-| Kind select | `internal` hoặc `vn_management` |
-| Editor / preview | Text báo cáo render từ dữ liệu project/goal/evaluation |
-| Goals list | Mục tiêu tuần hiện tại/carry-over |
-| History | Báo cáo đã duyệt, unique theo week+kind+mode |
-
-Popup/modal: `TaoBaoCao` wizard 4 bước, `RiskDM`.
 
 ### 3.4 Releases
 
@@ -108,17 +95,6 @@ Sub-tab: PIC, Redmine, Phím tắt.
 4. Giờ dùng `TimeInput`, range `07:30`-`18:00`.
 5. Kiểu lặp gồm hằng ngày, Thứ 2-Thứ 6, hằng tuần, hằng tháng; có thứ/ngày và khóa loại trừ tùy UI.
 6. Submit gọi `POST /api/tasks`.
-
-### Flow 2 - Báo cáo tuần
-
-1. User chọn tuần và loại báo cáo.
-2. Wizard bước 1 nhập tiến độ.
-3. Bước 2 chọn đánh giá `dat`/`vuot`/`khong_dat`; nếu không đạt phải nhập lý do.
-4. Bước 3 nhập summary theo project; summary bắt buộc theo flow hiện tại.
-5. Bước 4 duyệt mục tiêu tuần tới; target gợi ý theo ngày còn lại.
-6. Mục "Khác" tạo task thật trong project hệ thống.
-7. Apply gọi `POST /api/weeks/:weekStart/apply`.
-8. Xuất text; duyệt vào history. Nếu `409 REPORT_EXISTS`, user chọn ghi đè.
 
 ### Flow 3 - Release
 

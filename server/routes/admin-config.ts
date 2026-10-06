@@ -31,7 +31,7 @@ router.patch('/admin/feature-visibility', requireSession, requireActiveAccount, 
   const teamId = Number(body.teamId);
   const feature = body.feature;
   const level = body.level;
-  const validFeatures = ['personal_task', 'project', 'weekly_report', 'release', 'mind_map'];
+  const validFeatures = ['personal_task', 'project', 'release', 'mind_map'];
   if (!Number.isInteger(teamId)) return res.status(400).json({ message: 'teamId không hợp lệ' });
   if (!feature || !validFeatures.includes(feature)) return res.status(400).json({ message: 'feature không hợp lệ' });
   if (level !== 'off' && level !== 'on') return res.status(400).json({ message: 'level phải là off hoặc on' });
@@ -45,20 +45,6 @@ router.patch('/admin/feature-visibility', requireSession, requireActiveAccount, 
       `).run(level, now, req.user!.id, teamId, feature, body.rowVersion ?? -1);
       if (updated.changes === 0) throw new HttpError(409, 'Có người vừa đổi cấu hình này, vui lòng tải lại', 'VERSION_CONFLICT');
       writeAudit(req.user!.id, teamId, 'feature_visibility.update', `team:${teamId}:${feature}`, { feature, level });
-
-      // FR-7a: tắt project -> tự tắt weekly_report CÙNG transaction, kèm audit riêng cho hệ quả cascade.
-      // KHÔNG tự bật lại weekly_report khi bật lại project (bất biến 1 chiều).
-      if (feature === 'project' && level === 'off') {
-        const cascaded = db.prepare(`
-          UPDATE team_feature_visibility SET level = 'off', updated_at = ?, updated_by = ?, row_version = row_version + 1
-          WHERE team_id = ? AND feature = 'weekly_report' AND level = 'on'
-        `).run(now, req.user!.id, teamId);
-        if (cascaded.changes > 0) {
-          writeAudit(req.user!.id, teamId, 'feature_visibility.cascade_off', `team:${teamId}:weekly_report`, {
-            reason: 'project bị tắt', feature: 'weekly_report'
-          });
-        }
-      }
     });
     res.json({ ok: true });
   } catch (error) {

@@ -6,7 +6,7 @@
 
 **Personal Tool (Task Manager)** — công cụ cá nhân chạy cục bộ, gói thành `TaskManager.exe` (Node SEA) với giao diện React và dữ liệu SQLite trên máy.
 
-- **Vấn đề giải quyết:** quản lý công việc cá nhân/định kỳ, project và Gantt, báo cáo tuần, lịch release, luyện thi chứng chỉ, sơ đồ tư duy và các cấu hình hỗ trợ.
+- **Vấn đề giải quyết:** quản lý công việc cá nhân/định kỳ, project và Gantt, lịch release, luyện thi chứng chỉ, sơ đồ tư duy và các cấu hình hỗ trợ.
 - **Tích hợp hiện hành:** Redmine để kiểm tra kết nối; MCP task-manager để Claude Desktop gọi một số API local. App không tự gọi AI để thực hiện task.
 > ⏳ User điền nốt: **tầm nhìn sản phẩm**, **đối tượng chính** và **mục tiêu đo lường thành công**.
 
@@ -33,13 +33,6 @@
 - FR-2.3 Task cha rollup ngày, estimate và tiến độ từ task con.
 - FR-2.4 Gantt tổng có lọc project/PIC và kéo/resize giai đoạn.
 - FR-2.5 Chỉ đóng project khi mọi task hoàn thành 100%.
-
-### FR-3 Báo cáo tuần
-- FR-3.1 Wizard 4 bước: nhập tiến độ, đánh giá, tổng kết project và duyệt mục tiêu tuần.
-- FR-3.2 Mục tiêu bám project/task, hỗ trợ carry-over và target progress.
-- FR-3.3 Báo cáo nội bộ và báo cáo DM, xuất nội dung để copy; báo cáo DM có thêm nút tải file Excel
-  (Project → PIC → Task, 2 vùng tiến độ tuần trước/mục tiêu tuần này) — CR-20260915.
-- FR-3.4 Lưu lịch sử báo cáo đã duyệt, duy nhất theo tuần và loại.
 
 ### FR-4 Release định kỳ và khẩn cấp
 - FR-4.1 Định nghĩa task mẫu và template có token để sinh task release.

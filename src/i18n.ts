@@ -12,7 +12,6 @@ const dict = {
   'tab.personal': 'Tasks',
   'tab.project': 'Projects',
   'tab.schedule': 'Releases',
-  'tab.weekly': 'Reports',
   'tab.pics': 'Settings',
   'tab.so_do': 'MindMap',
   'tab.admin': 'Admin',

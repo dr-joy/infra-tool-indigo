@@ -39,7 +39,7 @@ Khuôn chuẩn (xem [test/integration/tasks.test.ts](../../test/integration/task
 2. **Không tự listen ở app:** `server/app.ts` export `app` không listen (side-effect listen/mở browser nằm ở `index.ts`) → test `app.listen(0, ...)` port ngẫu nhiên.
 3. **Dọn dẹp:** `after()` đóng server + xóa thư mục tạm.
 
-Nên phủ: mọi route CRUD (tasks ✓, cần thêm projects/schedules/weekly), các nhánh lỗi (400/404/409), và tương tác nhiều bước (transaction).
+Nên phủ: mọi route CRUD (tasks ✓, cần thêm projects/schedules), các nhánh lỗi (400/404/409), và tương tác nhiều bước (transaction).
 
 ## Tầng 3 — Component frontend (render + tương tác, jsdom)
 
@@ -58,7 +58,7 @@ Dùng `@testing-library/react`. Xem [test/client/components.test.tsx](../../test
 
 ## Phần còn thiếu / roadmap
 
-1. **Render smoke test cho 3 màn lớn** (Project/Weekly/Release) — sẽ thêm khi tách chúng ra file riêng (đang làm dở P0.2). Mỗi màn: mount với `fetch` mock, assert render không nổ + vài tương tác chính. Đây là lưới bắt hồi quy khi refactor tiếp.
-2. **Integration route còn trống:** projects, schedules, weekly, mindmaps.
+1. **Render smoke test cho 3 màn lớn** (Project/Release) — sẽ thêm khi tách chúng ra file riêng (đang làm dở P0.2). Mỗi màn: mount với `fetch` mock, assert render không nổ + vài tương tác chính. Đây là lưới bắt hồi quy khi refactor tiếp.
+2. **Integration route còn trống:** projects, schedules, mindmaps.
 3. **E2E (tùy chọn):** Playwright chạy app SEA thật + click qua các tab — giá trị cao nhất cho app desktop, nhưng nặng; cân nhắc sau khi có render smoke test.
 4. ~~**CI**~~ — đã chốt **không dùng CI** ([ADR-P2](team-operating-standard.md)); thay bằng `npm run check` + pre-push hook chạy tại máy.

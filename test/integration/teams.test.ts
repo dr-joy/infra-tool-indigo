@@ -130,11 +130,11 @@ async function makeTeam(adminSession: string, name: string): Promise<number> {
 
 // ── Test ─────────────────────────────────────────────────────────────────────────────
 
-test('POST /admin/teams: tạo team mới -> seed đủ 5 dòng feature-visibility off', async () => {
+test('POST /admin/teams: tạo team mới -> seed đủ 4 dòng feature-visibility off', async () => {
   const adminSession = await loginAsAdmin();
   const teamId = await makeTeam(adminSession, 'Team Alpha');
   const rows = db.prepare('SELECT feature, level FROM team_feature_visibility WHERE team_id = ?').all(teamId) as { feature: string; level: string }[];
-  assert.equal(rows.length, 5);
+  assert.equal(rows.length, 4);
   assert.ok(rows.every((r) => r.level === 'off'));
 });
 

@@ -18,7 +18,6 @@
 |---|---|
 | Task cá nhân | Tạo/sửa/xoá task đơn lẻ và định kỳ; board 3 cột đúng theo ngày; link tối đa 4; schedule hợp lệ; task hoàn thành/hủy xuất hiện trong lịch sử |
 | Project | Project “Khác” không xoá/đóng; task tối đa 3 cấp; parent rollup từ con; task lá có assignment theo phase; chỉ đóng project khi mọi task 100% |
-| Báo cáo tuần | Wizard 4 bước; lý do bắt buộc khi không đạt; apply tạo goal/task đúng tuần; history duy nhất; conflict `REPORT_EXISTS` có đường xác nhận ghi đè |
 | Release | Template token hợp lệ; task map definition bằng `origin_ref`; sửa definition không tạo task trùng; drift preview/apply đúng; release khẩn cấp tách immediate/scheduled |
 | Batch release khẩn cấp | Team/hệ thống là nguồn canonical của batch; cờ `da_dang` hiển thị và cập nhật được; đổi team/hệ thống sau khi đã đăng trả `409 EMERGENCY_BATCH_ALREADY_POSTED` nếu chưa xác nhận |
 | Luyện đề | Import chống trùng `fileName`; câu có ít nhất 2 đáp án; rút câu ưu tiên `lan_ra`; lưu phiên luyện và câu trả lời |
@@ -30,14 +29,14 @@
 
 ### 3.1 Unit test
 
-- Logic thuần trong `server/lib/*`: ngày/giờ, recurring, weekly report, release render và cleanup MindMap.
+- Logic thuần trong `server/lib/*`: ngày/giờ, recurring, release render và cleanup MindMap.
 - Parser/mapper: JSON hỏng không làm sập mapper; DB snake_case map đúng sang API camelCase.
 - Validation helper: ngày, giờ, enum, link scheme và giới hạn payload.
 
 ### 3.2 Integration test
 
 - Route Express với DB tạm/cô lập.
-- Luồng nhiều bước có transaction: weekly apply, project task assignment, release bulk create/sync và cập nhật batch.
+- Luồng nhiều bước có transaction: project task assignment, release bulk create/sync và cập nhật batch.
 - Error contract: `400/404/409/500` trả `{message, code?}`; lỗi không lộ stack, SQL, path hoặc API key.
 - Migration xoá schema cũ phải chạy tiếp được từ trạng thái dở dang, archive trước khi drop và checksum khớp nội dung thật.
 

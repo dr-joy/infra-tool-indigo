@@ -47,7 +47,7 @@ function mockApi(teams: TeamStub[], systemRole: 'user' | 'admin' = 'user', notif
       return jsonResponse({ teams: teams.map((t) => ({ id: t.id, name: t.name, description: null, row_version: 1, created_at: '' })), nextCursor: null });
     }
     if (url.pathname === '/api/admin/feature-visibility' && method === 'GET') {
-      const ALL_FEATURES = ['personal_task', 'project', 'weekly_report', 'release', 'mind_map'];
+      const ALL_FEATURES = ['personal_task', 'project', 'release', 'mind_map'];
       const visibility = teams.flatMap((t) => ALL_FEATURES.map((feature) => ({
         team_id: t.id, feature, level: t.features.includes(feature) ? 'on' : 'off', row_version: 1, updated_at: ''
       })));
@@ -85,14 +85,13 @@ beforeEach(() => {
 });
 
 describe('App() — ẩn tab theo team_feature_visibility (CR-20260913 FR-7)', () => {
-  it('team mới (mọi feature off) -> chỉ còn tab không bị gate (Settings/Team), ẩn hết Tasks/Projects/Reports/Releases/MindMap', async () => {
+  it('team mới (mọi feature off) -> chỉ còn tab không bị gate (Settings/Team), ẩn hết Tasks/Projects/Releases/MindMap', async () => {
     mockApi([{ id: 1, name: 'Team Mới', role: 'leader', features: [] }]);
     renderApp();
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Team' })).toBeInTheDocument());
     expect(screen.queryByRole('button', { name: 'Tasks' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Projects' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Reports' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Releases' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'MindMap' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument();
@@ -104,7 +103,6 @@ describe('App() — ẩn tab theo team_feature_visibility (CR-20260913 FR-7)', (
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Tasks' })).toBeInTheDocument());
     expect(screen.getByRole('button', { name: 'Projects' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Reports' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Releases' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'MindMap' })).toBeNull();
   });
@@ -112,7 +110,7 @@ describe('App() — ẩn tab theo team_feature_visibility (CR-20260913 FR-7)', (
   it('đổi sang team khác đang mở tab Projects nhưng team mới tắt feature project -> tự chuyển về tab còn hiện, không để màn trống', async () => {
     mockApi([
       { id: 1, name: 'Team A', role: 'leader', features: ['personal_task', 'project'] },
-      { id: 2, name: 'Team B', role: 'member', features: ['weekly_report'] }
+      { id: 2, name: 'Team B', role: 'member', features: ['release'] }
     ]);
     renderApp();
 
@@ -126,9 +124,9 @@ describe('App() — ẩn tab theo team_feature_visibility (CR-20260913 FR-7)', (
     fireEvent.click(screen.getByRole('option', { name: /Team B/ }));
 
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Projects' })).toBeNull());
-    // Tasks (personal_task) cũng tắt ở Team B -> Reports (weekly_report, đang bật) phải là tab được
+    // Tasks (personal_task) cũng tắt ở Team B -> Releases (release, đang bật) phải là tab được
     // tự chuyển tới, không phải màn trống không tab nào active.
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Reports' })).toHaveClass('side-item-active'));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Releases' })).toHaveClass('side-item-active'));
   });
 
   it('2026-09-25: Admin bật feature ở màn Hiển thị chức năng -> tab hiện ngay trên nav, không cần F5', async () => {

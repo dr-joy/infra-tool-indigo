@@ -4,7 +4,6 @@ import { LangProvider } from '../../src/useLang';
 import { PicProvider, ToastProvider, usePics } from '../../src/context';
 import { AuthProvider, useAuth } from '../../src/auth-context';
 import { ManHinhProject } from '../../src/screens/project';
-import { ManHinhBaoCaoTuan } from '../../src/screens/weekly';
 import { ManHinhLenLich } from '../../src/screens/release';
 import { ManHinhQuanLyDanhMuc } from '../../src/screens/settings';
 
@@ -54,12 +53,6 @@ describe('Render smoke — màn hình lớn (mount không nổ với fetch mock)
 
   it('ManHinhProject mount + hiển thị mà không throw', async () => {
     const { container } = renderWithProviders(<ManHinhProject />);
-    await waitFor(() => expect(container.querySelector('section, div')).toBeTruthy());
-    expect(container).toBeTruthy();
-  });
-
-  it('ManHinhBaoCaoTuan mount không throw', async () => {
-    const { container } = renderWithProviders(<ManHinhBaoCaoTuan />);
     await waitFor(() => expect(container.querySelector('section, div')).toBeTruthy());
     expect(container).toBeTruthy();
   });
@@ -154,36 +147,6 @@ describe('Race condition khi đổi team nhanh (Council review Lát 7 giai đo�
     await delay(120);
     expect(screen.queryAllByText('Du an team Dev13 (cu)')).toHaveLength(0);
     expect(screen.getAllByText('Du an team QA (moi)').length).toBeGreaterThan(0);
-  });
-
-  it('ManHinhBaoCaoTuan: đổi team A -> B trước khi response report-kinds của A về -> vẫn hiển thị đúng loại báo cáo của team B', async () => {
-    mockTwoTeamsRace({
-      match: (p) => p === '/api/weeks/report-kinds',
-      slowBody: { currentWeek: '2026-01-05', kinds: [{ id: 'internal', label: 'Bao cao Dev13 (cu)', lang: 'vi' }] },
-      fastBody: { currentWeek: '2026-02-02', kinds: [{ id: 'internal', label: 'Bao cao QA (moi)', lang: 'vi' }] }
-    });
-
-    render(
-      <LangProvider>
-        <AuthProvider>
-          <ToastProvider>
-            <PicProvider>
-              <ActiveTeamProbe />
-              <SwitchTeamButton toTeamId={2} />
-              <ManHinhBaoCaoTuan />
-            </PicProvider>
-          </ToastProvider>
-        </AuthProvider>
-      </LangProvider>
-    );
-
-    await waitFor(() => expect(screen.getByTestId('active-team-probe').textContent).toBe('1'));
-    fireEvent.click(screen.getByText('switch-to-2'));
-
-    await waitFor(() => expect(screen.getByText('Bao cao QA (moi)')).toBeInTheDocument());
-    await delay(120);
-    expect(screen.queryByText('Bao cao Dev13 (cu)')).not.toBeInTheDocument();
-    expect(screen.getByText('Bao cao QA (moi)')).toBeInTheDocument();
   });
 
   it('PicProvider.reloadPics(): đổi team A -> B trước khi response PIC của A về -> danh sách PIC vẫn đúng team B', async () => {

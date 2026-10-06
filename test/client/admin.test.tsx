@@ -17,12 +17,10 @@ const TEAMS = [
 const VISIBILITY = [
   { team_id: 1, feature: 'personal_task', level: 'on', row_version: 1, updated_at: '' },
   { team_id: 1, feature: 'project', level: 'off', row_version: 1, updated_at: '' },
-  { team_id: 1, feature: 'weekly_report', level: 'off', row_version: 1, updated_at: '' },
   { team_id: 1, feature: 'release', level: 'off', row_version: 1, updated_at: '' },
   { team_id: 1, feature: 'mind_map', level: 'off', row_version: 1, updated_at: '' },
   { team_id: 2, feature: 'personal_task', level: 'on', row_version: 1, updated_at: '' },
   { team_id: 2, feature: 'project', level: 'on', row_version: 1, updated_at: '' },
-  { team_id: 2, feature: 'weekly_report', level: 'off', row_version: 1, updated_at: '' },
   { team_id: 2, feature: 'release', level: 'off', row_version: 1, updated_at: '' },
   { team_id: 2, feature: 'mind_map', level: 'off', row_version: 1, updated_at: '' }
 ];

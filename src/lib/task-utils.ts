@@ -102,20 +102,6 @@ export function clientAutoStatus(current: number, target: number): 'dat' | 'vuot
   return 'khong_dat';
 }
 
-// Lỗi 409 khi đổi ngày dự kiến làm task rớt khỏi tuần đang là mục tiêu.
-export function parseGoalConflict(error: unknown): { weeks: string[] } | null {
-  if (error instanceof ApiError && error.code === 'GOAL_CONFLICT') {
-    const weeks = (error.details as { weeks?: string[] } | undefined)?.weeks;
-    return { weeks: weeks || [] };
-  }
-  return null;
-}
-
-export function goalConflictMessage(weeks: string[]): string {
-  const ds = weeks.map((w) => { const [, m, d] = w.split('-'); return `${d}/${m}`; }).join(', ');
-  return `Ngày dự kiến mới không còn thuộc tuần mà task đang là MỤC TIÊU TUẦN (tuần ${ds}).\n\nBấm OK để vẫn cập nhật ngày — task sẽ bị gỡ khỏi mục tiêu tuần và mất badge 🎯.\nBấm Cancel để giữ nguyên.`;
-}
-
 export function buildProjectTaskNumbers(tasks: ProjectTaskItem[]) {
   const byParent = new Map<string, ProjectTaskItem[]>();
   for (const task of tasks) {

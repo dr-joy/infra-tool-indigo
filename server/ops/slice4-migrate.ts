@@ -34,7 +34,6 @@ import { mapProjectTasksWithCalculatedRollups } from '../lib/mappers.js';
 // đổi gì ở Lát 4).
 const CORE_TABLES = [
   'projects', 'project_tasks', 'project_task_assignments', 'pics',
-  'weekly_goals', 'weekly_task_evaluations', 'weekly_project_summaries', 'weekly_report_history',
   'tasks', 'mindmaps'
 ] as const;
 
@@ -73,8 +72,7 @@ function countRowsByTable(db: DatabaseSync, tables: readonly string[]): Record<s
 
 // ── Cấu hình "cột canonical" cho bước 6 verifySlice4Migration ───────────────────────────────────
 // Với mỗi bảng trong CORE_TABLES: idColumns = khoá định danh 1 dòng (đa số là `id`, riêng
-// weekly_task_evaluations/weekly_project_summaries dùng PRIMARY KEY ghép — 2 bảng này KHÔNG có cột
-// `id`, xem server/schema/weekly-report.ts); canonicalColumns = các cột ĐÃ TỒN TẠI TRƯỚC Lát 4, phải
+// bảng nào dùng khoá khác thì khai báo riêng); canonicalColumns = các cột ĐÃ TỒN TẠI TRƯỚC Lát 4, phải
 // giữ nguyên giá trị qua di trú (CR §6.3 bước 6: "hash nội dung canonical, cột cũ không đổi giá trị").
 // CHỦ Ý LOẠI TRỪ khỏi canonicalColumns: mọi cột Lát 4 mới thêm/backfill (team_id, owner_user_id,
 // responsible_user_id, legacy_pic_label, visibility/shared_team_id của mindmaps — visibility bị
@@ -120,22 +118,6 @@ const CANONICAL_TABLE_CONFIG: Record<string, CanonicalTableConfig> = {
   pics: {
     idColumns: ['id'],
     canonicalColumns: ['id', 'name', 'color', 'sort_order', 'created_at', 'updated_at']
-  },
-  weekly_goals: {
-    idColumns: ['id'],
-    canonicalColumns: ['id', 'week_start', 'project_id', 'project_task_id', 'assignee', 'goal_text', 'reason', 'start_progress', 'target_progress', 'manual_done', 'sort_order', 'created_at', 'updated_at']
-  },
-  weekly_task_evaluations: {
-    idColumns: ['week_start', 'project_task_id'],
-    canonicalColumns: ['week_start', 'project_task_id', 'status', 'note', 'unplanned']
-  },
-  weekly_project_summaries: {
-    idColumns: ['week_start', 'project_id'],
-    canonicalColumns: ['week_start', 'project_id', 'content']
-  },
-  weekly_report_history: {
-    idColumns: ['id'],
-    canonicalColumns: ['id', 'week_start', 'kind', 'mode', 'content', 'created_at', 'updated_at']
   },
   tasks: {
     idColumns: ['id'],
@@ -423,7 +405,7 @@ export function ensureDev13Identity(targetDb: DatabaseSync, leaderUserId: number
       const insertVisibility = targetDb.prepare(
         "INSERT INTO team_feature_visibility (team_id, feature, level, updated_at) VALUES (?, ?, 'off', ?)"
       );
-      for (const feature of ['personal_task', 'project', 'weekly_report', 'release', 'mind_map']) {
+      for (const feature of ['personal_task', 'project', 'release', 'mind_map']) {
         insertVisibility.run(teamId, feature, now);
       }
       targetDb.exec('COMMIT');
@@ -456,10 +438,6 @@ export interface BackfillCounts {
   projects: number;
   projectTasks: number;
   pics: number;
-  weeklyGoals: number;
-  weeklyTaskEvaluations: number;
-  weeklyProjectSummaries: number;
-  weeklyReportHistory: number;
   tasks: number;
   mindmaps: number;
   // 2026-09-26 (bug thật gặp trên production, xem docs/exchanges/2026-09-26.md) — khác 0 khi team
@@ -491,12 +469,8 @@ export function backfillDev13Scope(targetDb: DatabaseSync, dev13TeamId: number, 
         // trỏ vào project cũ sang project hệ thống đã có, rồi xoá dòng cũ (giờ rỗng). Idempotent: nếu
         // chạy lại, legacySystemProject không còn tồn tại (đã xoá) nên không vào nhánh này nữa.
         const movedProjectTasks = targetDb.prepare('UPDATE project_tasks SET project_id = ? WHERE project_id = ?').run(existingTeamSystemProject.id, legacySystemProject.id);
-        const movedWeeklyGoals = targetDb.prepare('UPDATE weekly_goals SET project_id = ? WHERE project_id = ?').run(existingTeamSystemProject.id, legacySystemProject.id);
-        const movedWeeklySummaries = targetDb.prepare('UPDATE weekly_project_summaries SET project_id = ? WHERE project_id = ?').run(existingTeamSystemProject.id, legacySystemProject.id);
-        const movedWeeklyRisks = targetDb.prepare('UPDATE weekly_project_risks SET project_id = ? WHERE project_id = ?').run(existingTeamSystemProject.id, legacySystemProject.id);
         targetDb.prepare('DELETE FROM projects WHERE id = ?').run(legacySystemProject.id);
-        legacySystemProjectMergedRows = Number(movedProjectTasks.changes) + Number(movedWeeklyGoals.changes)
-          + Number(movedWeeklySummaries.changes) + Number(movedWeeklyRisks.changes);
+        legacySystemProjectMergedRows = Number(movedProjectTasks.changes);
       }
     }
 
@@ -508,10 +482,6 @@ export function backfillDev13Scope(targetDb: DatabaseSync, dev13TeamId: number, 
       WHERE team_id IS NULL
     `).run();
     const pics = targetDb.prepare('UPDATE pics SET team_id = ? WHERE team_id IS NULL').run(dev13TeamId);
-    const weeklyGoals = targetDb.prepare('UPDATE weekly_goals SET team_id = ? WHERE team_id IS NULL').run(dev13TeamId);
-    const weeklyTaskEvaluations = targetDb.prepare('UPDATE weekly_task_evaluations SET team_id = ? WHERE team_id IS NULL').run(dev13TeamId);
-    const weeklyProjectSummaries = targetDb.prepare('UPDATE weekly_project_summaries SET team_id = ? WHERE team_id IS NULL').run(dev13TeamId);
-    const weeklyReportHistory = targetDb.prepare('UPDATE weekly_report_history SET team_id = ? WHERE team_id IS NULL').run(dev13TeamId);
     // Task cá nhân + Mind Map: owner_user_id = Leader hiện tại (dữ liệu desktop cũ vốn chỉ 1 người
     // dùng). Mind Map cũ mặc định private, KHÔNG tự chia sẻ (CR §6.3).
     const tasks = targetDb.prepare('UPDATE tasks SET owner_user_id = ? WHERE owner_user_id IS NULL').run(leaderUserId);
@@ -522,8 +492,6 @@ export function backfillDev13Scope(targetDb: DatabaseSync, dev13TeamId: number, 
     targetDb.exec('COMMIT');
     return {
       projects: Number(projects.changes), projectTasks: Number(projectTasks.changes), pics: Number(pics.changes),
-      weeklyGoals: Number(weeklyGoals.changes), weeklyTaskEvaluations: Number(weeklyTaskEvaluations.changes),
-      weeklyProjectSummaries: Number(weeklyProjectSummaries.changes), weeklyReportHistory: Number(weeklyReportHistory.changes),
       tasks: Number(tasks.changes), mindmaps: Number(mindmaps.changes), legacySystemProjectMergedRows
     };
   } catch (error) {
@@ -568,15 +536,13 @@ export function backfillReleasePersonalOwnership(targetDb: DatabaseSync, leaderU
 
 // ── Bước 5: migrateLegacyPicLabels ───────────────────────────────────────────────────────────
 // Copy NGUYÊN VĂN (không tách chuỗi nhiều tên, không so khớp hoa/thường, không tra pics/
-// users.display_name, không đoán tài khoản — CR §6.3). CHÚ Ý: 3 UPDATE đầu (projects/project_tasks/
-// weekly_goals) và rebuild project_task_assignments ĐÃ chạy tự động mỗi boot qua
+// users.display_name, không đoán tài khoản — CR §6.3). CHÚ Ý: 2 UPDATE đầu (projects/project_tasks) và rebuild project_task_assignments ĐÃ chạy tự động mỗi boot qua
 // runSlice4Migrations() (gọi trong applySlice4Schema() ở bước 3, qua bootstrapDatabase()) — hàm này
 // lặp lại CHÍNH XÁC cùng câu lệnh (idempotent, WHERE legacy_pic_label IS NULL) để là một bước tường
 // minh, độc lập kiểm chứng được trong hợp đồng 7 bước, không phải vì bước 3 chưa làm.
 export interface LegacyPicLabelCounts {
   projects: number;
   projectTasks: number;
-  weeklyGoals: number;
 }
 
 export function migrateLegacyPicLabels(targetDb: DatabaseSync): LegacyPicLabelCounts {
@@ -588,11 +554,8 @@ export function migrateLegacyPicLabels(targetDb: DatabaseSync): LegacyPicLabelCo
     const projectTasks = targetDb.prepare(
       "UPDATE project_tasks SET legacy_pic_label = assignee WHERE legacy_pic_label IS NULL AND assignee IS NOT NULL AND TRIM(assignee) <> ''"
     ).run();
-    const weeklyGoals = targetDb.prepare(
-      "UPDATE weekly_goals SET legacy_pic_label = assignee WHERE legacy_pic_label IS NULL AND assignee IS NOT NULL AND TRIM(assignee) <> ''"
-    ).run();
     targetDb.exec('COMMIT');
-    return { projects: Number(projects.changes), projectTasks: Number(projectTasks.changes), weeklyGoals: Number(weeklyGoals.changes) };
+    return { projects: Number(projects.changes), projectTasks: Number(projectTasks.changes) };
   } catch (error) {
     if (targetDb.isTransaction) targetDb.exec('ROLLBACK');
     throw error;
@@ -713,33 +676,6 @@ function diffProjectRollups(sourceDb: DatabaseSync, targetDb: DatabaseSync, prob
   }
 }
 
-// Kiểm weekly goal/evaluation/summary trỏ đúng project/task CÙNG TEAM (CR §6.3 bước 6).
-function verifyWeeklyScoping(targetDb: DatabaseSync, problems: string[]): void {
-  const MAX_EXAMPLES = 5;
-  const projectTeamById = new Map((targetDb.prepare('SELECT id, team_id FROM projects').all() as { id: number; team_id: number | null }[]).map((r) => [r.id, r.team_id]));
-  const taskTeamById = new Map((targetDb.prepare('SELECT id, team_id FROM project_tasks').all() as { id: number; team_id: number | null }[]).map((r) => [r.id, r.team_id]));
-
-  if (tableExists(targetDb, 'weekly_goals')) {
-    const rows = targetDb.prepare('SELECT id, team_id, project_id, project_task_id FROM weekly_goals').all() as
-      { id: number; team_id: number | null; project_id: number | null; project_task_id: number | null }[];
-    const mismatched = rows.filter((r) =>
-      (r.project_id != null && projectTeamById.get(r.project_id) !== r.team_id) ||
-      (r.project_task_id != null && taskTeamById.get(r.project_task_id) !== r.team_id)
-    );
-    if (mismatched.length > 0) problems.push(`weekly_goals: ${mismatched.length} dòng trỏ project/task KHÔNG cùng team — id: ${mismatched.slice(0, MAX_EXAMPLES).map((r) => r.id).join(', ')}`);
-  }
-  if (tableExists(targetDb, 'weekly_task_evaluations')) {
-    const rows = targetDb.prepare('SELECT project_task_id, team_id FROM weekly_task_evaluations').all() as { project_task_id: number; team_id: number | null }[];
-    const mismatched = rows.filter((r) => taskTeamById.get(r.project_task_id) !== r.team_id);
-    if (mismatched.length > 0) problems.push(`weekly_task_evaluations: ${mismatched.length} dòng trỏ project_task KHÔNG cùng team — project_task_id: ${mismatched.slice(0, MAX_EXAMPLES).map((r) => r.project_task_id).join(', ')}`);
-  }
-  if (tableExists(targetDb, 'weekly_project_summaries')) {
-    const rows = targetDb.prepare('SELECT project_id, team_id FROM weekly_project_summaries').all() as { project_id: number; team_id: number | null }[];
-    const mismatched = rows.filter((r) => projectTeamById.get(r.project_id) !== r.team_id);
-    if (mismatched.length > 0) problems.push(`weekly_project_summaries: ${mismatched.length} dòng trỏ project KHÔNG cùng team — project_id: ${mismatched.slice(0, MAX_EXAMPLES).map((r) => r.project_id).join(', ')}`);
-  }
-}
-
 // Trích danh sách "storedName" file đính kèm được nhắc trong JSON Mind Map — dùng lại NGUYÊN VĂN quy
 // tắc regex/decode của server/lib/mindmap-gc.ts (URL_RE) để không lệch với logic GC thật đang chạy.
 const MINDMAP_FILE_URL_RE = /\/api\/mindmaps\/files\/([^"'\s]+)/g;
@@ -831,7 +767,7 @@ function verifyMindmapAttachmentHashes(targetDb: DatabaseSync, targetDataDir: st
 // (cột cũ không đổi giá trị); scope/owner không còn NULL ngoài chỗ thiết kế nullable; cây project
 // không vòng lặp; assignment (task tồn tại, ngày hợp lệ, nhãn legacy khớp nguồn, user mới đúng team);
 // rollup trước/sau (ngày min/max + tổng estimate + % task cha, tái dùng đúng thuật toán thật);
-// weekly goal/evaluation/summary trỏ đúng project/task cùng team; Mind Map JSON hợp lệ + file đính
+// Mind Map JSON hợp lệ + file đính
 // kèm còn tồn tại (đính kèm kiểu CŨ trước Lát 5 — không kiểm được hash, xem comment
 // verifyMindmapAttachments) VÀ hash khớp manifest cho đính kèm kiểu MỚI Lát 5 (bảng
 // `mindmap_attachments`, xem verifyMindmapAttachmentHashes); PRAGMA foreign_key_check + quick_check.
@@ -919,7 +855,6 @@ export function verifySlice4Migration(
     }
   }
 
-  verifyWeeklyScoping(targetDb, problems);
   verifyMindmapAttachments(targetDb, targetDataDir, problems);
   verifyMindmapAttachmentHashes(targetDb, targetDataDir, problems);
 
@@ -976,9 +911,9 @@ export function verifySlice4Migration(
 //
 // ⚠️ QUYẾT ĐỊNH THỨ BA: team MỚI mặc định TẮT cả 5 chức năng (ensureDev13Identity seed level='off') —
 // đúng quyết định sản phẩm đã chốt (xem AGENTS.md-style ghi chú R-SCOPE trong docs dự án này). Nếu
-// không bật tạm, mọi API đọc (project/weekly/mindmap) sẽ trả 403 FEATURE_DISABLED dù dữ liệu di trú
+// không bật tạm, mọi API đọc (project/mindmap) sẽ trả 403 FEATURE_DISABLED dù dữ liệu di trú
 // hoàn toàn đúng — không phản ánh lỗi migration. Hàm này BẬT TẠM 4 chức năng cần đọc
-// (personal_task/project/weekly_report/mind_map) ngay trước khi gọi, rồi TRẢ VỀ ĐÚNG mức cũ ngay sau
+// (personal_task/project/mind_map) ngay trước khi gọi, rồi TRẢ VỀ ĐÚNG mức cũ ngay sau
 // khi xong (xem restoreTempState()) — việc "Admin bật chức năng thật cho Dev13" vẫn là hành động
 // riêng, con người quyết, KHÔNG bị hàm này âm thầm bật vĩnh viễn.
 //
@@ -1089,7 +1024,7 @@ function mintSessionToken(db: DatabaseSync, userId: number): string {
   return token;
 }
 
-const SMOKE_TEST_FEATURES = ['personal_task', 'project', 'weekly_report', 'mind_map'] as const;
+const SMOKE_TEST_FEATURES = ['personal_task', 'project', 'mind_map'] as const;
 
 function snapshotForIdempotencyCheck(db: DatabaseSync): unknown {
   const counts = countRowsByTable(db, CORE_TABLES);
@@ -1147,7 +1082,7 @@ export async function smokeBootMigratedServer(dataDirWithMigratedDb: string, lea
     }
   }
 
-  // ── Lần boot thứ nhất: health + đăng nhập Leader + chọn Dev13 + đọc project/tree/weekly/
+  // ── Lần boot thứ nhất: health + đăng nhập Leader + chọn Dev13 + đọc project/tree/
   // tasks/mindmaps thật qua HTTP thật tới tiến trình con.
   const firstBoot = await bootServerChildProcess(dataDirWithMigratedDb);
   if ('error' in firstBoot) {
@@ -1188,11 +1123,6 @@ export async function smokeBootMigratedServer(dataDirWithMigratedDb: string, lea
       const treeRes = await fetch(`${firstBoot.baseUrl}/api/projects/${firstProjectId}/tasks`, { headers: authHeaders });
       if (treeRes.status !== 200) problems.push(`GET /api/projects/${firstProjectId}/tasks trả ${treeRes.status}, kỳ vọng 200`);
     }
-
-    // weekly (tuần hiện tại).
-    const weekStart = new Date().toISOString().slice(0, 10);
-    const weeklyRes = await fetch(`${firstBoot.baseUrl}/api/weeks/${weekStart}/goals?teamId=${dev13TeamId}`, { headers: authHeaders });
-    if (weeklyRes.status !== 200) problems.push(`GET /api/weeks/${weekStart}/goals?teamId=${dev13TeamId} trả ${weeklyRes.status}, kỳ vọng 200`);
 
     // tasks (cá nhân — không theo team).
     const tasksRes = await fetch(`${firstBoot.baseUrl}/api/tasks`, { headers: authHeaders });

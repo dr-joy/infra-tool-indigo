@@ -26,7 +26,6 @@
     "busboy": "^1.6.0",
     "concurrently": "^9.2.1",
     "cors": "^2.8.5",
-    "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "file-type": "^22.1.1",
     "jose": "^6.2.12",

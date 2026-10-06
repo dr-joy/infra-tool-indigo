@@ -15,10 +15,6 @@ export interface ErrorCodeEntry {
 }
 
 export const ERROR_CODE_REGISTRY: Record<string, ErrorCodeEntry> = {
-  GOAL_CONFLICT: {
-    status: 409,
-    note: 'Đổi ngày dự kiến của task ra khỏi tuần đang là mục tiêu (weekly goal), chưa xác nhận confirmRemoveGoal'
-  },
   REGULAR_RELEASE_EXISTS: {
     status: 409,
     note: 'Release định kỳ của tháng đó đã sinh task, chưa xác nhận force để tạo lại'

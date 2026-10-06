@@ -60,17 +60,6 @@ export function runLegacyMigrations(db: DatabaseSync, context: DbMigrationContex
     picsNoColor.forEach((p, i) => updColor.run(defaultPicPalette[(usedCount + i) % defaultPicPalette.length], p.id));
   }
 
-  const weeklyGoalColumns = db.prepare('PRAGMA table_info(weekly_goals)').all() as { name: string }[];
-  if (weeklyGoalColumns.length > 0 && !weeklyGoalColumns.some((c) => c.name === 'target_progress')) {
-    db.exec('ALTER TABLE weekly_goals ADD COLUMN target_progress INTEGER');
-  }
-  if (weeklyGoalColumns.length > 0 && !weeklyGoalColumns.some((c) => c.name === 'start_progress')) {
-    db.exec('ALTER TABLE weekly_goals ADD COLUMN start_progress INTEGER');
-  }
-  if (weeklyGoalColumns.length > 0 && !weeklyGoalColumns.some((c) => c.name === 'manual_done')) {
-    db.exec('ALTER TABLE weekly_goals ADD COLUMN manual_done INTEGER');
-  }
-
   const projectTaskColumns = db.prepare('PRAGMA table_info(project_tasks)').all() as { name: string }[];
   if (!projectTaskColumns.some((c) => c.name === 'assignee')) db.exec('ALTER TABLE project_tasks ADD COLUMN assignee TEXT');
   if (!projectTaskColumns.some((c) => c.name === 'ghi_chu')) db.exec("ALTER TABLE project_tasks ADD COLUMN ghi_chu TEXT NOT NULL DEFAULT ''");
@@ -155,9 +144,6 @@ export function runLegacyMigrations(db: DatabaseSync, context: DbMigrationContex
       COMMIT;
     `);
   }
-
-  // Bỏ lý do chung theo project: đã thay bằng đánh giá/lý do theo từng task (weekly_task_evaluations).
-  db.exec('DROP TABLE IF EXISTS weekly_project_reasons');
 
   // Bỏ trường ngày thực tế: không còn dùng trên toàn hệ thống (PIC hiển thị thay vị trí này).
   const projectTaskColumnsAfterRebuild = db.prepare('PRAGMA table_info(project_tasks)').all() as { name: string }[];
@@ -470,37 +456,16 @@ function rebuildProjectTaskAssignmentsForSlice4(db: DatabaseSync, context: DbMig
   console.log('[db] Lat 4: da rebuild project_task_assignments (pic NOT NULL -> user_id nullable + legacy_pic_label)');
 }
 
-// Rebuild vì UNIQUE cũ (week_start,kind,mode) chặn cứng 2 team cùng có báo cáo cùng loại cùng tuần.
-function rebuildWeeklyReportHistoryForSlice4(db: DatabaseSync, context: DbMigrationContext): void {
-  const tableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'weekly_report_history'").get() as { sql: string } | undefined;
-  if (!tableInfo) return;
-  if (tableInfo.sql.includes('team_id')) return; // đã rebuild rồi (idempotent)
+// CR-20261006 (BL-20261006-001): bỏ hẳn chức năng Báo cáo tuần — DROP toàn bộ bảng weekly_* (mất dữ liệu
+// vĩnh viễn, đã backup trước khi deploy) và xoá dòng feature 'weekly_report'. Idempotent: chạy lại mỗi boot không lỗi.
+const WEEKLY_REPORT_TABLES = [
+  'weekly_goals', 'weekly_task_evaluations', 'weekly_project_summaries',
+  'weekly_report_history', 'weekly_report_kinds', 'weekly_project_risks', 'weekly_project_reasons'
+] as const;
 
-  context.withTransaction(() => {
-    db.exec(`
-      CREATE TABLE weekly_report_history_new (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        week_start TEXT NOT NULL,
-        team_id INTEGER REFERENCES teams(id),
-        kind TEXT NOT NULL,
-        mode TEXT NOT NULL DEFAULT 'by_project',
-        content TEXT NOT NULL,
-        row_version INTEGER NOT NULL DEFAULT 1,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        UNIQUE (team_id, week_start, kind, mode)
-      );
-      INSERT INTO weekly_report_history_new (
-        id, week_start, team_id, kind, mode, content, row_version, created_at, updated_at
-      )
-      SELECT id, week_start, NULL, kind, mode, content, 1, created_at, updated_at
-      FROM weekly_report_history;
-      DROP TABLE weekly_report_history;
-      ALTER TABLE weekly_report_history_new RENAME TO weekly_report_history;
-      CREATE INDEX IF NOT EXISTS idx_weekly_report_history_week ON weekly_report_history(week_start);
-    `);
-  });
-  console.log('[db] Lat 4: da rebuild weekly_report_history (UNIQUE them team_id)');
+function dropWeeklyReportFeature(db: DatabaseSync): void {
+  for (const table of WEEKLY_REPORT_TABLES) db.exec(`DROP TABLE IF EXISTS ${table}`);
+  db.exec("DELETE FROM team_feature_visibility WHERE feature = 'weekly_report'");
 }
 
 export function runSlice4Migrations(db: DatabaseSync, context: DbMigrationContext): void {
@@ -515,16 +480,6 @@ export function runSlice4Migrations(db: DatabaseSync, context: DbMigrationContex
 
   themCotNeuThieu(db, 'pics', 'team_id', 'team_id INTEGER REFERENCES teams(id)');
 
-  themCotNeuThieu(db, 'weekly_goals', 'team_id', 'team_id INTEGER REFERENCES teams(id)');
-  themCotNeuThieu(db, 'weekly_goals', 'legacy_pic_label', 'legacy_pic_label TEXT');
-  themCotNeuThieu(db, 'weekly_goals', 'row_version', 'row_version INTEGER NOT NULL DEFAULT 1');
-
-  themCotNeuThieu(db, 'weekly_task_evaluations', 'team_id', 'team_id INTEGER REFERENCES teams(id)');
-  themCotNeuThieu(db, 'weekly_task_evaluations', 'row_version', 'row_version INTEGER NOT NULL DEFAULT 1');
-
-  themCotNeuThieu(db, 'weekly_project_summaries', 'team_id', 'team_id INTEGER REFERENCES teams(id)');
-  themCotNeuThieu(db, 'weekly_project_summaries', 'row_version', 'row_version INTEGER NOT NULL DEFAULT 1');
-
   themCotNeuThieu(db, 'tasks', 'owner_user_id', 'owner_user_id INTEGER REFERENCES users(id)');
 
   themCotNeuThieu(db, 'mindmaps', 'owner_user_id', 'owner_user_id INTEGER REFERENCES users(id)');
@@ -537,10 +492,9 @@ export function runSlice4Migrations(db: DatabaseSync, context: DbMigrationContex
   // đây, chạy tự động mỗi boot; idempotent vì chỉ điền chỗ còn NULL, không đè giá trị đã có).
   db.exec("UPDATE projects SET legacy_pic_label = pic WHERE legacy_pic_label IS NULL AND pic IS NOT NULL AND TRIM(pic) <> ''");
   db.exec("UPDATE project_tasks SET legacy_pic_label = assignee WHERE legacy_pic_label IS NULL AND assignee IS NOT NULL AND TRIM(assignee) <> ''");
-  db.exec("UPDATE weekly_goals SET legacy_pic_label = assignee WHERE legacy_pic_label IS NULL AND assignee IS NOT NULL AND TRIM(assignee) <> ''");
 
   rebuildProjectTaskAssignmentsForSlice4(db, context);
-  rebuildWeeklyReportHistoryForSlice4(db, context);
+  dropWeeklyReportFeature(db);
 
   // ── Index/trigger tham chiếu cột MỚI — đặt Ở ĐÂY, không phải schema/project.ts ────────────────
   // Lý do (tự bắt được trước khi chạm DB Dev13 thật): applyProjectSchema() chạy TRƯỚC các ALTER
